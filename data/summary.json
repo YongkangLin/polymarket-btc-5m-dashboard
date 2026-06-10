@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-10T12:11:32.346871-07:00",
+  "generated_at": "2026-06-10T12:21:39.891170-07:00",
   "source": "Telonex Polymarket markets, crypto_prices, book_snapshot_5, trades, and onchain_fills",
   "requested_history": "1 year",
   "scope": "strict_complete_data_only",
@@ -30,13 +30,13 @@
   "trades": {
     "rows": 373518,
     "markets": 65,
-    "notional": 7032775.941759915,
+    "notional": 7032775.9417599235,
     "first_trade": "2026-04-02 07:17:09.974000-07:00",
     "last_trade": "2026-06-09 14:20:21.708000-07:00"
   },
   "fills": {
     "entry_rows": 720606,
-    "entry_notional": 6698206.820493171,
+    "entry_notional": 6698206.82049319,
     "wallets": 25789,
     "large_wallets": 812,
     "first_entry": "2026-04-02 07:35:07-07:00",
@@ -45,108 +45,108 @@
   "top_wallets": [
     {
       "wallet": "0x5fcf73bd4265f1d8f73d87ddab078db5361375c1",
-      "notional": 223980.42169799985,
+      "notional": 223980.42169799996,
       "entries": 1292,
-      "maker_notional": 223780.42169999986,
+      "maker_notional": 223780.42169999995,
       "taker_notional": 199.999998
     },
     {
       "wallet": "0xeebde7a0e019a63e6b476eb425505b7b3e6eba30",
-      "notional": 160865.4122386489,
+      "notional": 160865.41223864898,
       "entries": 10184,
-      "maker_notional": 61217.67513864892,
-      "taker_notional": 99647.73709999997
+      "maker_notional": 61217.6751386489,
+      "taker_notional": 99647.73710000006
     },
     {
       "wallet": "0xb27bc932bf8110d8f78e55da7d5f0497a18b5b82",
-      "notional": 135782.47802393604,
+      "notional": 135782.4780239362,
       "entries": 14730,
-      "maker_notional": 84767.39743655037,
-      "taker_notional": 51015.080587385695
+      "maker_notional": 84767.39743655045,
+      "taker_notional": 51015.0805873857
     },
     {
       "wallet": "0xaad03b403c831d0a8b484abe59ac25188b49f61d",
-      "notional": 97845.71650946091,
+      "notional": 97845.71650946088,
       "entries": 865,
-      "maker_notional": 87641.8058094609,
+      "maker_notional": 87641.80580946087,
       "taker_notional": 10203.910699999995
     },
     {
       "wallet": "0xc73a48558adb6e1c2a660ee68a92a78db32f51e1",
       "notional": 85347.8353,
       "entries": 711,
-      "maker_notional": 47989.61639999999,
-      "taker_notional": 37358.218900000014
+      "maker_notional": 47989.616400000006,
+      "taker_notional": 37358.21890000001
     },
     {
       "wallet": "0xee65685de42f8de9a03b4c53ee77d56a20d2cfc9",
       "notional": 84525.709961,
       "entries": 462,
-      "maker_notional": 48537.127090999995,
-      "taker_notional": 35988.58287
+      "maker_notional": 48537.127091,
+      "taker_notional": 35988.58286999999
     },
     {
       "wallet": "0x3c66be3836708aa875715a488a9169be535835dc",
-      "notional": 77976.89758396475,
+      "notional": 77976.89758396476,
       "entries": 663,
-      "maker_notional": 69259.66178396474,
+      "maker_notional": 69259.66178396477,
       "taker_notional": 8717.235799999999
     },
     {
       "wallet": "0x04b6d7e930cf9e493c5e6ef24b496294f95594c8",
       "notional": 65742.16140575471,
       "entries": 4284,
-      "maker_notional": 62543.79131584472,
+      "maker_notional": 62543.79131584471,
       "taker_notional": 3198.3700899100004
     },
     {
       "wallet": "0xf8e35e78265c83de7e18204502b3842710bcfd17",
-      "notional": 65327.70682042134,
+      "notional": 65327.70682042139,
       "entries": 5525,
-      "maker_notional": 65108.858220421345,
-      "taker_notional": 218.84860000000003
+      "maker_notional": 65108.85822042138,
+      "taker_notional": 218.84859999999998
     },
     {
       "wallet": "0x45bc74efa620b45c02308acaecdff1f7c06f978b",
-      "notional": 64616.89041185001,
+      "notional": 64616.890411850014,
       "entries": 949,
       "maker_notional": 61404.70211185001,
-      "taker_notional": 3212.1883
+      "taker_notional": 3212.1883000000003
     },
     {
       "wallet": "0xd189664c5308903476f9f079820431e4fd7d06f4",
-      "notional": 52753.89931116007,
+      "notional": 52753.899311160065,
       "entries": 620,
       "maker_notional": 47077.42781116007,
       "taker_notional": 5676.471499999996
     },
     {
       "wallet": "0xf3ce251f9c4ae0f3940a9f32de5dd1a1d05b8bc6",
-      "notional": 50026.42570000001,
+      "notional": 50026.42570000003,
       "entries": 649,
       "maker_notional": 10961.745299999999,
-      "taker_notional": 39064.680400000005
+      "taker_notional": 39064.68040000003
     },
     {
       "wallet": "0xa6bbe81981432f48cec66c5bc0bedb3b657b8515",
-      "notional": 48254.36638335594,
+      "notional": 48254.366383356,
       "entries": 5200,
-      "maker_notional": 45548.06638766595,
-      "taker_notional": 2706.29999569
+      "maker_notional": 45548.066387666,
+      "taker_notional": 2706.2999956899994
     },
     {
       "wallet": "0x31393e2f8333d4a6e2e31ca6424defe8b6cb9e2e",
-      "notional": 43080.29117761691,
+      "notional": 43080.29117761689,
       "entries": 3932,
-      "maker_notional": 40222.49807761691,
-      "taker_notional": 2857.7930999999967
+      "maker_notional": 40222.49807761688,
+      "taker_notional": 2857.793099999998
     },
     {
       "wallet": "0xa362f01ae2fd54e73b63e7fb774262726273df67",
-      "notional": 42391.287883871446,
+      "notional": 42391.28788387145,
       "entries": 639,
-      "maker_notional": 37078.60428387144,
-      "taker_notional": 5312.683599999999
+      "maker_notional": 37078.60428387145,
+      "taker_notional": 5312.683600000001
     }
   ],
   "entry_map": [
@@ -211,7 +211,7 @@
       "seconds_left_bucket": 0,
       "distance_bps_bucket": -65,
       "entries": 24,
-      "notional": 1292.06235
+      "notional": 1292.0623500000002
     },
     {
       "role": "maker",
@@ -253,14 +253,14 @@
       "seconds_left_bucket": 0,
       "distance_bps_bucket": -35,
       "entries": 13,
-      "notional": 430.69949999999994
+      "notional": 430.6995
     },
     {
       "role": "maker",
       "seconds_left_bucket": 0,
       "distance_bps_bucket": -30,
       "entries": 21,
-      "notional": 1604.4435
+      "notional": 1604.4434999999999
     },
     {
       "role": "maker",
@@ -316,7 +316,7 @@
       "seconds_left_bucket": 0,
       "distance_bps_bucket": 55,
       "entries": 12,
-      "notional": 1919.1673400000002
+      "notional": 1919.16734
     },
     {
       "role": "maker",
@@ -337,7 +337,7 @@
       "seconds_left_bucket": 0,
       "distance_bps_bucket": 70,
       "entries": 14,
-      "notional": 1932.7131100000001
+      "notional": 1932.71311
     },
     {
       "role": "maker",
@@ -351,7 +351,7 @@
       "seconds_left_bucket": 0,
       "distance_bps_bucket": 80,
       "entries": 11,
-      "notional": 927.0855
+      "notional": 927.0855000000001
     },
     {
       "role": "maker",
@@ -365,7 +365,7 @@
       "seconds_left_bucket": 0,
       "distance_bps_bucket": 95,
       "entries": 5,
-      "notional": 337.6494
+      "notional": 337.64939999999996
     },
     {
       "role": "maker",
@@ -449,14 +449,14 @@
       "seconds_left_bucket": 10,
       "distance_bps_bucket": -70,
       "entries": 22,
-      "notional": 1554.5168999999999
+      "notional": 1554.5169
     },
     {
       "role": "maker",
       "seconds_left_bucket": 10,
       "distance_bps_bucket": -65,
       "entries": 7,
-      "notional": 2050.10433
+      "notional": 2050.1043299999997
     },
     {
       "role": "maker",
@@ -491,7 +491,7 @@
       "seconds_left_bucket": 10,
       "distance_bps_bucket": -35,
       "entries": 15,
-      "notional": 362.34989999999993
+      "notional": 362.34990000000005
     },
     {
       "role": "maker",
@@ -533,14 +533,14 @@
       "seconds_left_bucket": 10,
       "distance_bps_bucket": 40,
       "entries": 16,
-      "notional": 448.19847
+      "notional": 448.19846999999993
     },
     {
       "role": "maker",
       "seconds_left_bucket": 10,
       "distance_bps_bucket": 45,
       "entries": 4,
-      "notional": 199.98
+      "notional": 199.98000000000002
     },
     {
       "role": "maker",
@@ -561,7 +561,7 @@
       "seconds_left_bucket": 10,
       "distance_bps_bucket": 60,
       "entries": 152,
-      "notional": 935.4552758999996
+      "notional": 935.4552758999995
     },
     {
       "role": "maker",
@@ -652,7 +652,7 @@
       "seconds_left_bucket": 20,
       "distance_bps_bucket": -70,
       "entries": 10,
-      "notional": 1868.1102
+      "notional": 1868.1102000000003
     },
     {
       "role": "maker",
@@ -673,21 +673,21 @@
       "seconds_left_bucket": 20,
       "distance_bps_bucket": -55,
       "entries": 39,
-      "notional": 1443.1460040000002
+      "notional": 1443.146004
     },
     {
       "role": "maker",
       "seconds_left_bucket": 20,
       "distance_bps_bucket": -50,
       "entries": 68,
-      "notional": 324.660658
+      "notional": 324.66065799999996
     },
     {
       "role": "maker",
       "seconds_left_bucket": 20,
       "distance_bps_bucket": -40,
       "entries": 15,
-      "notional": 1337.3811000000003
+      "notional": 1337.3811
     },
     {
       "role": "maker",
@@ -715,7 +715,7 @@
       "seconds_left_bucket": 20,
       "distance_bps_bucket": 25,
       "entries": 28,
-      "notional": 578.5216480299999
+      "notional": 578.52164803
     },
     {
       "role": "maker",
@@ -757,14 +757,14 @@
       "seconds_left_bucket": 20,
       "distance_bps_bucket": 55,
       "entries": 18,
-      "notional": 5412.835616008
+      "notional": 5412.835616007999
     },
     {
       "role": "maker",
       "seconds_left_bucket": 20,
       "distance_bps_bucket": 60,
       "entries": 147,
-      "notional": 1941.8384626399998
+      "notional": 1941.83846264
     },
     {
       "role": "maker",
@@ -806,7 +806,7 @@
       "seconds_left_bucket": 20,
       "distance_bps_bucket": 90,
       "entries": 12,
-      "notional": 192.0105
+      "notional": 192.01049999999998
     },
     {
       "role": "maker",
@@ -883,35 +883,35 @@
       "seconds_left_bucket": 30,
       "distance_bps_bucket": -70,
       "entries": 6,
-      "notional": 102.61349999999999
+      "notional": 102.6135
     },
     {
       "role": "maker",
       "seconds_left_bucket": 30,
       "distance_bps_bucket": -65,
       "entries": 20,
-      "notional": 5978.32659
+      "notional": 5978.326590000001
     },
     {
       "role": "maker",
       "seconds_left_bucket": 30,
       "distance_bps_bucket": -60,
       "entries": 23,
-      "notional": 3078.4889000000003
+      "notional": 3078.4889
     },
     {
       "role": "maker",
       "seconds_left_bucket": 30,
       "distance_bps_bucket": -55,
       "entries": 80,
-      "notional": 3076.5862315576787
+      "notional": 3076.58623155768
     },
     {
       "role": "maker",
       "seconds_left_bucket": 30,
       "distance_bps_bucket": -50,
       "entries": 93,
-      "notional": 1659.0461059999998
+      "notional": 1659.0461060000002
     },
     {
       "role": "maker",
@@ -925,14 +925,14 @@
       "seconds_left_bucket": 30,
       "distance_bps_bucket": -30,
       "entries": 115,
-      "notional": 4451.481037197166
+      "notional": 4451.481037197168
     },
     {
       "role": "maker",
       "seconds_left_bucket": 30,
       "distance_bps_bucket": -25,
       "entries": 119,
-      "notional": 2008.3202887184873
+      "notional": 2008.3202887184868
     },
     {
       "role": "maker",
@@ -953,21 +953,21 @@
       "seconds_left_bucket": 30,
       "distance_bps_bucket": -10,
       "entries": 104,
-      "notional": 952.902771453183
+      "notional": 952.9027714531828
     },
     {
       "role": "maker",
       "seconds_left_bucket": 30,
       "distance_bps_bucket": 20,
       "entries": 104,
-      "notional": 935.1661162050161
+      "notional": 935.1661162050164
     },
     {
       "role": "maker",
       "seconds_left_bucket": 30,
       "distance_bps_bucket": 25,
       "entries": 165,
-      "notional": 9081.420301909984
+      "notional": 9081.420301909995
     },
     {
       "role": "maker",
@@ -981,7 +981,7 @@
       "seconds_left_bucket": 30,
       "distance_bps_bucket": 35,
       "entries": 15,
-      "notional": 508.7511000000001
+      "notional": 508.75110000000006
     },
     {
       "role": "maker",
@@ -995,7 +995,7 @@
       "seconds_left_bucket": 30,
       "distance_bps_bucket": 45,
       "entries": 19,
-      "notional": 3661.0893
+      "notional": 3661.0892999999996
     },
     {
       "role": "maker",
@@ -1016,14 +1016,14 @@
       "seconds_left_bucket": 30,
       "distance_bps_bucket": 60,
       "entries": 166,
-      "notional": 2943.9829356356126
+      "notional": 2943.9829356356167
     },
     {
       "role": "maker",
       "seconds_left_bucket": 30,
       "distance_bps_bucket": 65,
       "entries": 80,
-      "notional": 831.9377197199999
+      "notional": 831.9377197200001
     },
     {
       "role": "maker",
@@ -1058,7 +1058,7 @@
       "seconds_left_bucket": 30,
       "distance_bps_bucket": 100,
       "entries": 11,
-      "notional": 123.8094
+      "notional": 123.80940000000001
     },
     {
       "role": "maker",
@@ -1072,7 +1072,7 @@
       "seconds_left_bucket": 30,
       "distance_bps_bucket": 110,
       "entries": 5,
-      "notional": 79.6059
+      "notional": 79.60589999999999
     },
     {
       "role": "maker",
@@ -1135,35 +1135,35 @@
       "seconds_left_bucket": 40,
       "distance_bps_bucket": -70,
       "entries": 4,
-      "notional": 156.42
+      "notional": 156.42000000000002
     },
     {
       "role": "maker",
       "seconds_left_bucket": 40,
       "distance_bps_bucket": -65,
       "entries": 18,
-      "notional": 3142.2194999999997
+      "notional": 3142.2195
     },
     {
       "role": "maker",
       "seconds_left_bucket": 40,
       "distance_bps_bucket": -60,
       "entries": 20,
-      "notional": 1652.4513000000002
+      "notional": 1652.4512999999997
     },
     {
       "role": "maker",
       "seconds_left_bucket": 40,
       "distance_bps_bucket": -55,
       "entries": 22,
-      "notional": 11150.3799
+      "notional": 11150.379899999998
     },
     {
       "role": "maker",
       "seconds_left_bucket": 40,
       "distance_bps_bucket": -50,
       "entries": 65,
-      "notional": 1754.339927
+      "notional": 1754.3399270000004
     },
     {
       "role": "maker",
@@ -1177,7 +1177,7 @@
       "seconds_left_bucket": 40,
       "distance_bps_bucket": -30,
       "entries": 11,
-      "notional": 1150.3503
+      "notional": 1150.3503000000003
     },
     {
       "role": "maker",
@@ -1191,7 +1191,7 @@
       "seconds_left_bucket": 40,
       "distance_bps_bucket": -20,
       "entries": 133,
-      "notional": 716.258835116172
+      "notional": 716.2588351161721
     },
     {
       "role": "maker",
@@ -1226,7 +1226,7 @@
       "seconds_left_bucket": 40,
       "distance_bps_bucket": 25,
       "entries": 60,
-      "notional": 3756.1293000000005
+      "notional": 3756.1292999999996
     },
     {
       "role": "maker",
@@ -1261,7 +1261,7 @@
       "seconds_left_bucket": 40,
       "distance_bps_bucket": 50,
       "entries": 11,
-      "notional": 934.7976
+      "notional": 934.7976000000001
     },
     {
       "role": "maker",
@@ -1275,28 +1275,28 @@
       "seconds_left_bucket": 40,
       "distance_bps_bucket": 60,
       "entries": 290,
-      "notional": 16722.015238780004
+      "notional": 16722.015238780063
     },
     {
       "role": "maker",
       "seconds_left_bucket": 40,
       "distance_bps_bucket": 65,
       "entries": 11,
-      "notional": 3251.4372
+      "notional": 3251.4372000000003
     },
     {
       "role": "maker",
       "seconds_left_bucket": 40,
       "distance_bps_bucket": 70,
       "entries": 17,
-      "notional": 1283.882283
+      "notional": 1283.8822830000001
     },
     {
       "role": "maker",
       "seconds_left_bucket": 40,
       "distance_bps_bucket": 75,
       "entries": 27,
-      "notional": 3296.829435
+      "notional": 3296.8294349999996
     },
     {
       "role": "maker",
@@ -1359,14 +1359,14 @@
       "seconds_left_bucket": 50,
       "distance_bps_bucket": -110,
       "entries": 16,
-      "notional": 161.17471000000003
+      "notional": 161.17471
     },
     {
       "role": "maker",
       "seconds_left_bucket": 50,
       "distance_bps_bucket": -90,
       "entries": 3,
-      "notional": 305.839631013
+      "notional": 305.83963101300003
     },
     {
       "role": "maker",
@@ -1387,35 +1387,35 @@
       "seconds_left_bucket": 50,
       "distance_bps_bucket": -70,
       "entries": 10,
-      "notional": 2446.3197
+      "notional": 2446.3197000000005
     },
     {
       "role": "maker",
       "seconds_left_bucket": 50,
       "distance_bps_bucket": -65,
       "entries": 18,
-      "notional": 1487.6234999999997
+      "notional": 1487.6235
     },
     {
       "role": "maker",
       "seconds_left_bucket": 50,
       "distance_bps_bucket": -60,
       "entries": 30,
-      "notional": 4699.639634008001
+      "notional": 4699.639634008
     },
     {
       "role": "maker",
       "seconds_left_bucket": 50,
       "distance_bps_bucket": -55,
       "entries": 183,
-      "notional": 48891.78269999999
+      "notional": 48891.782699999996
     },
     {
       "role": "maker",
       "seconds_left_bucket": 50,
       "distance_bps_bucket": -50,
       "entries": 224,
-      "notional": 7011.1105890000035
+      "notional": 7011.110588999998
     },
     {
       "role": "maker",
@@ -1436,7 +1436,7 @@
       "seconds_left_bucket": 50,
       "distance_bps_bucket": -35,
       "entries": 19,
-      "notional": 4472.4636
+      "notional": 4472.463599999999
     },
     {
       "role": "maker",
@@ -1457,7 +1457,7 @@
       "seconds_left_bucket": 50,
       "distance_bps_bucket": -20,
       "entries": 259,
-      "notional": 2605.054118796339
+      "notional": 2605.054118796337
     },
     {
       "role": "maker",
@@ -1527,7 +1527,7 @@
       "seconds_left_bucket": 50,
       "distance_bps_bucket": 55,
       "entries": 55,
-      "notional": 5405.9295600000005
+      "notional": 5405.929560000001
     },
     {
       "role": "maker",
@@ -1548,14 +1548,14 @@
       "seconds_left_bucket": 50,
       "distance_bps_bucket": 70,
       "entries": 67,
-      "notional": 2159.5952106999994
+      "notional": 2159.5952107
     },
     {
       "role": "maker",
       "seconds_left_bucket": 50,
       "distance_bps_bucket": 75,
       "entries": 19,
-      "notional": 774.3975849999999
+      "notional": 774.397585
     },
     {
       "role": "maker",
@@ -1569,14 +1569,14 @@
       "seconds_left_bucket": 50,
       "distance_bps_bucket": 85,
       "entries": 13,
-      "notional": 630.9468
+      "notional": 630.9467999999999
     },
     {
       "role": "maker",
       "seconds_left_bucket": 50,
       "distance_bps_bucket": 90,
       "entries": 19,
-      "notional": 1142.8263000000002
+      "notional": 1142.8263
     },
     {
       "role": "maker",
@@ -1632,28 +1632,28 @@
       "seconds_left_bucket": 60,
       "distance_bps_bucket": -65,
       "entries": 11,
-      "notional": 2593.998
+      "notional": 2593.9979999999996
     },
     {
       "role": "maker",
       "seconds_left_bucket": 60,
       "distance_bps_bucket": -60,
       "entries": 55,
-      "notional": 2335.9773849999983
+      "notional": 2335.977384999999
     },
     {
       "role": "maker",
       "seconds_left_bucket": 60,
       "distance_bps_bucket": -55,
       "entries": 73,
-      "notional": 14557.059650012
+      "notional": 14557.059650012001
     },
     {
       "role": "maker",
       "seconds_left_bucket": 60,
       "distance_bps_bucket": -50,
       "entries": 118,
-      "notional": 1659.8464520999999
+      "notional": 1659.8464521
     },
     {
       "role": "maker",
@@ -1667,14 +1667,14 @@
       "seconds_left_bucket": 60,
       "distance_bps_bucket": -40,
       "entries": 83,
-      "notional": 14645.107432040006
+      "notional": 14645.107432040004
     },
     {
       "role": "maker",
       "seconds_left_bucket": 60,
       "distance_bps_bucket": -35,
       "entries": 68,
-      "notional": 5534.8861
+      "notional": 5534.8861000000015
     },
     {
       "role": "maker",
@@ -1688,7 +1688,7 @@
       "seconds_left_bucket": 60,
       "distance_bps_bucket": -20,
       "entries": 440,
-      "notional": 2405.487901366134
+      "notional": 2405.4879013661357
     },
     {
       "role": "maker",
@@ -1716,14 +1716,14 @@
       "seconds_left_bucket": 60,
       "distance_bps_bucket": 20,
       "entries": 162,
-      "notional": 2039.7294440223834
+      "notional": 2039.7294440223832
     },
     {
       "role": "maker",
       "seconds_left_bucket": 60,
       "distance_bps_bucket": 25,
       "entries": 483,
-      "notional": 13791.114768886619
+      "notional": 13791.114768886624
     },
     {
       "role": "maker",
@@ -1737,7 +1737,7 @@
       "seconds_left_bucket": 60,
       "distance_bps_bucket": 35,
       "entries": 21,
-      "notional": 1537.5888
+      "notional": 1537.5888000000002
     },
     {
       "role": "maker",
@@ -1758,14 +1758,14 @@
       "seconds_left_bucket": 60,
       "distance_bps_bucket": 50,
       "entries": 17,
-      "notional": 1314.2448
+      "notional": 1314.2448000000002
     },
     {
       "role": "maker",
       "seconds_left_bucket": 60,
       "distance_bps_bucket": 55,
       "entries": 98,
-      "notional": 3272.4945
+      "notional": 3272.494500000002
     },
     {
       "role": "maker",
@@ -1779,7 +1779,7 @@
       "seconds_left_bucket": 60,
       "distance_bps_bucket": 65,
       "entries": 389,
-      "notional": 6478.737565709998
+      "notional": 6478.737565709994
     },
     {
       "role": "maker",
@@ -1793,7 +1793,7 @@
       "seconds_left_bucket": 60,
       "distance_bps_bucket": 75,
       "entries": 32,
-      "notional": 944.9637950230001
+      "notional": 944.9637950229999
     },
     {
       "role": "maker",
@@ -1814,7 +1814,7 @@
       "seconds_left_bucket": 60,
       "distance_bps_bucket": 90,
       "entries": 14,
-      "notional": 3905.2431
+      "notional": 3905.2430999999997
     },
     {
       "role": "maker",
@@ -1849,7 +1849,7 @@
       "seconds_left_bucket": 70,
       "distance_bps_bucket": -90,
       "entries": 17,
-      "notional": 2757.6340950000003
+      "notional": 2757.634095
     },
     {
       "role": "maker",
@@ -1863,7 +1863,7 @@
       "seconds_left_bucket": 70,
       "distance_bps_bucket": -75,
       "entries": 7,
-      "notional": 337.70879999999994
+      "notional": 337.7088
     },
     {
       "role": "maker",
@@ -1877,7 +1877,7 @@
       "seconds_left_bucket": 70,
       "distance_bps_bucket": -65,
       "entries": 11,
-      "notional": 1850.7860999999998
+      "notional": 1850.7861
     },
     {
       "role": "maker",
@@ -1891,21 +1891,21 @@
       "seconds_left_bucket": 70,
       "distance_bps_bucket": -55,
       "entries": 42,
-      "notional": 1518.7717000000002
+      "notional": 1518.7717
     },
     {
       "role": "maker",
       "seconds_left_bucket": 70,
       "distance_bps_bucket": -50,
       "entries": 213,
-      "notional": 8522.822552864347
+      "notional": 8522.822552864345
     },
     {
       "role": "maker",
       "seconds_left_bucket": 70,
       "distance_bps_bucket": -45,
       "entries": 177,
-      "notional": 3165.767900969999
+      "notional": 3165.7679009700005
     },
     {
       "role": "maker",
@@ -1919,14 +1919,14 @@
       "seconds_left_bucket": 70,
       "distance_bps_bucket": -35,
       "entries": 270,
-      "notional": 6388.939815746235
+      "notional": 6388.9398157462365
     },
     {
       "role": "maker",
       "seconds_left_bucket": 70,
       "distance_bps_bucket": -30,
       "entries": 102,
-      "notional": 1509.18696904
+      "notional": 1509.1869690400001
     },
     {
       "role": "maker",
@@ -1940,7 +1940,7 @@
       "seconds_left_bucket": 70,
       "distance_bps_bucket": -20,
       "entries": 80,
-      "notional": 2267.4599040299995
+      "notional": 2267.4599040300004
     },
     {
       "role": "maker",
@@ -1954,28 +1954,28 @@
       "seconds_left_bucket": 70,
       "distance_bps_bucket": -10,
       "entries": 64,
-      "notional": 191.61717112
+      "notional": 191.61717111999997
     },
     {
       "role": "maker",
       "seconds_left_bucket": 70,
       "distance_bps_bucket": -5,
       "entries": 252,
-      "notional": 1355.964369827895
+      "notional": 1355.9643698278949
     },
     {
       "role": "maker",
       "seconds_left_bucket": 70,
       "distance_bps_bucket": 10,
       "entries": 243,
-      "notional": 2188.5886060487765
+      "notional": 2188.588606048776
     },
     {
       "role": "maker",
       "seconds_left_bucket": 70,
       "distance_bps_bucket": 15,
       "entries": 218,
-      "notional": 940.2798903277171
+      "notional": 940.2798903277172
     },
     {
       "role": "maker",
@@ -1996,7 +1996,7 @@
       "seconds_left_bucket": 70,
       "distance_bps_bucket": 30,
       "entries": 109,
-      "notional": 4485.570375080002
+      "notional": 4485.570375080001
     },
     {
       "role": "maker",
@@ -2010,21 +2010,21 @@
       "seconds_left_bucket": 70,
       "distance_bps_bucket": 40,
       "entries": 34,
-      "notional": 1023.7522089700001
+      "notional": 1023.7522089700002
     },
     {
       "role": "maker",
       "seconds_left_bucket": 70,
       "distance_bps_bucket": 45,
       "entries": 42,
-      "notional": 1010.6429189600001
+      "notional": 1010.64291896
     },
     {
       "role": "maker",
       "seconds_left_bucket": 70,
       "distance_bps_bucket": 50,
       "entries": 17,
-      "notional": 1834.4700000000003
+      "notional": 1834.47
     },
     {
       "role": "maker",
@@ -2038,7 +2038,7 @@
       "seconds_left_bucket": 70,
       "distance_bps_bucket": 60,
       "entries": 46,
-      "notional": 2904.8778
+      "notional": 2904.8778000000007
     },
     {
       "role": "maker",
@@ -2087,7 +2087,7 @@
       "seconds_left_bucket": 80,
       "distance_bps_bucket": -90,
       "entries": 14,
-      "notional": 3719.63153
+      "notional": 3719.6315299999997
     },
     {
       "role": "maker",
@@ -2101,7 +2101,7 @@
       "seconds_left_bucket": 80,
       "distance_bps_bucket": -80,
       "entries": 20,
-      "notional": 1614.0069
+      "notional": 1614.0068999999999
     },
     {
       "role": "maker",
@@ -2150,7 +2150,7 @@
       "seconds_left_bucket": 80,
       "distance_bps_bucket": -45,
       "entries": 178,
-      "notional": 4052.26059026083
+      "notional": 4052.260590260831
     },
     {
       "role": "maker",
@@ -2164,14 +2164,14 @@
       "seconds_left_bucket": 80,
       "distance_bps_bucket": -35,
       "entries": 151,
-      "notional": 5970.7399862500015
+      "notional": 5970.739986249999
     },
     {
       "role": "maker",
       "seconds_left_bucket": 80,
       "distance_bps_bucket": -30,
       "entries": 275,
-      "notional": 5589.107172059991
+      "notional": 5589.107172060001
     },
     {
       "role": "maker",
@@ -2192,49 +2192,49 @@
       "seconds_left_bucket": 80,
       "distance_bps_bucket": -15,
       "entries": 307,
-      "notional": 2238.273301990002
+      "notional": 2238.2733019900015
     },
     {
       "role": "maker",
       "seconds_left_bucket": 80,
       "distance_bps_bucket": -10,
       "entries": 259,
-      "notional": 1562.2710829482098
+      "notional": 1562.27108294821
     },
     {
       "role": "maker",
       "seconds_left_bucket": 80,
       "distance_bps_bucket": 0,
       "entries": 149,
-      "notional": 1036.47394285
+      "notional": 1036.4739428499997
     },
     {
       "role": "maker",
       "seconds_left_bucket": 80,
       "distance_bps_bucket": 5,
       "entries": 237,
-      "notional": 1228.0738759446451
+      "notional": 1228.0738759446454
     },
     {
       "role": "maker",
       "seconds_left_bucket": 80,
       "distance_bps_bucket": 10,
       "entries": 110,
-      "notional": 251.03542124
+      "notional": 251.03542123999992
     },
     {
       "role": "maker",
       "seconds_left_bucket": 80,
       "distance_bps_bucket": 15,
       "entries": 332,
-      "notional": 3453.10887674685
+      "notional": 3453.1088767468495
     },
     {
       "role": "maker",
       "seconds_left_bucket": 80,
       "distance_bps_bucket": 20,
       "entries": 258,
-      "notional": 2027.5013365990694
+      "notional": 2027.501336599069
     },
     {
       "role": "maker",
@@ -2248,14 +2248,14 @@
       "seconds_left_bucket": 80,
       "distance_bps_bucket": 30,
       "entries": 85,
-      "notional": 3201.663132040001
+      "notional": 3201.6631320400006
     },
     {
       "role": "maker",
       "seconds_left_bucket": 80,
       "distance_bps_bucket": 35,
       "entries": 153,
-      "notional": 3256.2773670499996
+      "notional": 3256.2773670499987
     },
     {
       "role": "maker",
@@ -2269,7 +2269,7 @@
       "seconds_left_bucket": 80,
       "distance_bps_bucket": 45,
       "entries": 151,
-      "notional": 3116.2851169399987
+      "notional": 3116.28511694
     },
     {
       "role": "maker",
@@ -2283,14 +2283,14 @@
       "seconds_left_bucket": 80,
       "distance_bps_bucket": 55,
       "entries": 146,
-      "notional": 21642.874229999994
+      "notional": 21642.87423
     },
     {
       "role": "maker",
       "seconds_left_bucket": 80,
       "distance_bps_bucket": 60,
       "entries": 109,
-      "notional": 8262.562500000002
+      "notional": 8262.5625
     },
     {
       "role": "maker",
@@ -2304,7 +2304,7 @@
       "seconds_left_bucket": 80,
       "distance_bps_bucket": 70,
       "entries": 77,
-      "notional": 1586.22317772
+      "notional": 1586.2231777200002
     },
     {
       "role": "maker",
@@ -2388,7 +2388,7 @@
       "seconds_left_bucket": 90,
       "distance_bps_bucket": -60,
       "entries": 42,
-      "notional": 1409.53567
+      "notional": 1409.5356700000002
     },
     {
       "role": "maker",
@@ -2402,49 +2402,49 @@
       "seconds_left_bucket": 90,
       "distance_bps_bucket": -50,
       "entries": 179,
-      "notional": 4677.104713769284
+      "notional": 4677.104713769282
     },
     {
       "role": "maker",
       "seconds_left_bucket": 90,
       "distance_bps_bucket": -45,
       "entries": 66,
-      "notional": 19508.967708029995
+      "notional": 19508.96770803
     },
     {
       "role": "maker",
       "seconds_left_bucket": 90,
       "distance_bps_bucket": -40,
       "entries": 33,
-      "notional": 3126.8853026926104
+      "notional": 3126.88530269261
     },
     {
       "role": "maker",
       "seconds_left_bucket": 90,
       "distance_bps_bucket": -35,
       "entries": 182,
-      "notional": 2151.137161887316
+      "notional": 2151.1371618873154
     },
     {
       "role": "maker",
       "seconds_left_bucket": 90,
       "distance_bps_bucket": -30,
       "entries": 196,
-      "notional": 2445.9043511400005
+      "notional": 2445.904351140002
     },
     {
       "role": "maker",
       "seconds_left_bucket": 90,
       "distance_bps_bucket": -20,
       "entries": 77,
-      "notional": 1069.0826148947401
+      "notional": 1069.08261489474
     },
     {
       "role": "maker",
       "seconds_left_bucket": 90,
       "distance_bps_bucket": -15,
       "entries": 94,
-      "notional": 638.885871405273
+      "notional": 638.8858714052731
     },
     {
       "role": "maker",
@@ -2458,14 +2458,14 @@
       "seconds_left_bucket": 90,
       "distance_bps_bucket": -5,
       "entries": 68,
-      "notional": 339.01468501734803
+      "notional": 339.014685017348
     },
     {
       "role": "maker",
       "seconds_left_bucket": 90,
       "distance_bps_bucket": 0,
       "entries": 260,
-      "notional": 1313.2513371934056
+      "notional": 1313.2513371934047
     },
     {
       "role": "maker",
@@ -2479,21 +2479,21 @@
       "seconds_left_bucket": 90,
       "distance_bps_bucket": 10,
       "entries": 211,
-      "notional": 1455.956738883589
+      "notional": 1455.9567388835892
     },
     {
       "role": "maker",
       "seconds_left_bucket": 90,
       "distance_bps_bucket": 15,
       "entries": 386,
-      "notional": 2394.5679093181307
+      "notional": 2394.5679093181298
     },
     {
       "role": "maker",
       "seconds_left_bucket": 90,
       "distance_bps_bucket": 20,
       "entries": 340,
-      "notional": 5214.712469899998
+      "notional": 5214.712469899997
     },
     {
       "role": "maker",
@@ -2528,14 +2528,14 @@
       "seconds_left_bucket": 90,
       "distance_bps_bucket": 45,
       "entries": 606,
-      "notional": 14198.16103192607
+      "notional": 14198.161031926062
     },
     {
       "role": "maker",
       "seconds_left_bucket": 90,
       "distance_bps_bucket": 50,
       "entries": 261,
-      "notional": 17898.585000940013
+      "notional": 17898.585000940006
     },
     {
       "role": "maker",
@@ -2549,21 +2549,21 @@
       "seconds_left_bucket": 90,
       "distance_bps_bucket": 60,
       "entries": 124,
-      "notional": 2546.7767193783707
+      "notional": 2546.77671937837
     },
     {
       "role": "maker",
       "seconds_left_bucket": 90,
       "distance_bps_bucket": 65,
       "entries": 102,
-      "notional": 4249.235521355617
+      "notional": 4249.235521355616
     },
     {
       "role": "maker",
       "seconds_left_bucket": 90,
       "distance_bps_bucket": 70,
       "entries": 86,
-      "notional": 6859.7001
+      "notional": 6859.700099999999
     },
     {
       "role": "maker",
@@ -2584,7 +2584,7 @@
       "seconds_left_bucket": 90,
       "distance_bps_bucket": 110,
       "entries": 8,
-      "notional": 136.86749999999998
+      "notional": 136.8675
     },
     {
       "role": "maker",
@@ -2619,21 +2619,21 @@
       "seconds_left_bucket": 100,
       "distance_bps_bucket": -70,
       "entries": 53,
-      "notional": 745.85113404
+      "notional": 745.8511340399998
     },
     {
       "role": "maker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": -65,
       "entries": 36,
-      "notional": 1595.6236170000004
+      "notional": 1595.6236170000002
     },
     {
       "role": "maker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": -60,
       "entries": 31,
-      "notional": 457.92680000000007
+      "notional": 457.92679999999996
     },
     {
       "role": "maker",
@@ -2654,35 +2654,35 @@
       "seconds_left_bucket": 100,
       "distance_bps_bucket": -45,
       "entries": 104,
-      "notional": 3757.596720040002
+      "notional": 3757.5967200400005
     },
     {
       "role": "maker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": -40,
       "entries": 295,
-      "notional": 4550.834190780001
+      "notional": 4550.83419078
     },
     {
       "role": "maker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": -35,
       "entries": 171,
-      "notional": 2670.9424862165033
+      "notional": 2670.942486216501
     },
     {
       "role": "maker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": -30,
       "entries": 236,
-      "notional": 7352.74911328
+      "notional": 7352.749113279997
     },
     {
       "role": "maker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": -25,
       "entries": 97,
-      "notional": 1307.6407829500001
+      "notional": 1307.6407829500004
     },
     {
       "role": "maker",
@@ -2696,14 +2696,14 @@
       "seconds_left_bucket": 100,
       "distance_bps_bucket": -15,
       "entries": 137,
-      "notional": 943.8482754700002
+      "notional": 943.8482754700003
     },
     {
       "role": "maker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": -5,
       "entries": 75,
-      "notional": 607.7518487620389
+      "notional": 607.751848762039
     },
     {
       "role": "maker",
@@ -2724,21 +2724,21 @@
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 10,
       "entries": 124,
-      "notional": 624.1816416635509
+      "notional": 624.1816416635511
     },
     {
       "role": "maker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 15,
       "entries": 340,
-      "notional": 2717.5523361469627
+      "notional": 2717.5523361469645
     },
     {
       "role": "maker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 20,
       "entries": 396,
-      "notional": 4432.120410465925
+      "notional": 4432.120410465926
     },
     {
       "role": "maker",
@@ -2759,7 +2759,7 @@
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 35,
       "entries": 398,
-      "notional": 3692.050367419181
+      "notional": 3692.0503674191827
     },
     {
       "role": "maker",
@@ -2773,7 +2773,7 @@
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 45,
       "entries": 78,
-      "notional": 981.7939308357991
+      "notional": 981.7939308357988
     },
     {
       "role": "maker",
@@ -2787,35 +2787,35 @@
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 55,
       "entries": 221,
-      "notional": 7182.282470120001
+      "notional": 7182.2824701200025
     },
     {
       "role": "maker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 60,
       "entries": 349,
-      "notional": 20647.580931708573
+      "notional": 20647.58093170858
     },
     {
       "role": "maker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 65,
       "entries": 145,
-      "notional": 1893.0789413999994
+      "notional": 1893.0789413999996
     },
     {
       "role": "maker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 70,
       "entries": 74,
-      "notional": 2400.509332747721
+      "notional": 2400.5093327477207
     },
     {
       "role": "maker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 75,
       "entries": 202,
-      "notional": 1879.830771968335
+      "notional": 1879.8307719683353
     },
     {
       "role": "maker",
@@ -2836,7 +2836,7 @@
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 95,
       "entries": 6,
-      "notional": 586.3671
+      "notional": 586.3670999999999
     },
     {
       "role": "maker",
@@ -2885,7 +2885,7 @@
       "seconds_left_bucket": 110,
       "distance_bps_bucket": -65,
       "entries": 217,
-      "notional": 4058.70966813
+      "notional": 4058.709668129999
     },
     {
       "role": "maker",
@@ -2913,21 +2913,21 @@
       "seconds_left_bucket": 110,
       "distance_bps_bucket": -45,
       "entries": 116,
-      "notional": 4992.65358209
+      "notional": 4992.653582090001
     },
     {
       "role": "maker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": -40,
       "entries": 340,
-      "notional": 6624.896837279185
+      "notional": 6624.896837279184
     },
     {
       "role": "maker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": -35,
       "entries": 161,
-      "notional": 940.7499190966686
+      "notional": 940.7499190966685
     },
     {
       "role": "maker",
@@ -2948,28 +2948,28 @@
       "seconds_left_bucket": 110,
       "distance_bps_bucket": -20,
       "entries": 269,
-      "notional": 3914.6856465600004
+      "notional": 3914.685646560001
     },
     {
       "role": "maker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": -15,
       "entries": 73,
-      "notional": 395.405643365115
+      "notional": 395.40564336511477
     },
     {
       "role": "maker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": -10,
       "entries": 190,
-      "notional": 1307.32206634
+      "notional": 1307.3220663400002
     },
     {
       "role": "maker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": -5,
       "entries": 333,
-      "notional": 2190.8668143529535
+      "notional": 2190.866814352953
     },
     {
       "role": "maker",
@@ -2990,49 +2990,49 @@
       "seconds_left_bucket": 110,
       "distance_bps_bucket": 10,
       "entries": 439,
-      "notional": 3029.6329359290994
+      "notional": 3029.6329359291003
     },
     {
       "role": "maker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": 15,
       "entries": 705,
-      "notional": 3944.151547146308
+      "notional": 3944.151547146306
     },
     {
       "role": "maker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": 20,
       "entries": 525,
-      "notional": 4485.128433809188
+      "notional": 4485.128433809189
     },
     {
       "role": "maker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": 25,
       "entries": 171,
-      "notional": 1309.3163809599996
+      "notional": 1309.31638096
     },
     {
       "role": "maker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": 30,
       "entries": 273,
-      "notional": 3780.920933564287
+      "notional": 3780.9209335642877
     },
     {
       "role": "maker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": 35,
       "entries": 816,
-      "notional": 20373.570406625768
+      "notional": 20373.570406625757
     },
     {
       "role": "maker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": 40,
       "entries": 297,
-      "notional": 8160.705957949998
+      "notional": 8160.705957950002
     },
     {
       "role": "maker",
@@ -3088,14 +3088,14 @@
       "seconds_left_bucket": 110,
       "distance_bps_bucket": 80,
       "entries": 52,
-      "notional": 234.592763315616
+      "notional": 234.59276331561603
     },
     {
       "role": "maker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": 85,
       "entries": 155,
-      "notional": 1134.2627869921075
+      "notional": 1134.262786992108
     },
     {
       "role": "maker",
@@ -3144,7 +3144,7 @@
       "seconds_left_bucket": 120,
       "distance_bps_bucket": -65,
       "entries": 39,
-      "notional": 628.3511150999999
+      "notional": 628.3511151
     },
     {
       "role": "maker",
@@ -3165,7 +3165,7 @@
       "seconds_left_bucket": 120,
       "distance_bps_bucket": -50,
       "entries": 105,
-      "notional": 1141.7345450999997
+      "notional": 1141.7345450999999
     },
     {
       "role": "maker",
@@ -3179,14 +3179,14 @@
       "seconds_left_bucket": 120,
       "distance_bps_bucket": -40,
       "entries": 212,
-      "notional": 6630.7218937372245
+      "notional": 6630.721893737225
     },
     {
       "role": "maker",
       "seconds_left_bucket": 120,
       "distance_bps_bucket": -35,
       "entries": 72,
-      "notional": 4604.05091864889
+      "notional": 4604.050918648889
     },
     {
       "role": "maker",
@@ -3200,49 +3200,49 @@
       "seconds_left_bucket": 120,
       "distance_bps_bucket": -25,
       "entries": 500,
-      "notional": 8893.579570723314
+      "notional": 8893.579570723317
     },
     {
       "role": "maker",
       "seconds_left_bucket": 120,
       "distance_bps_bucket": -20,
       "entries": 210,
-      "notional": 1770.768087372441
+      "notional": 1770.7680873724398
     },
     {
       "role": "maker",
       "seconds_left_bucket": 120,
       "distance_bps_bucket": -15,
       "entries": 104,
-      "notional": 875.3228552100002
+      "notional": 875.3228552100004
     },
     {
       "role": "maker",
       "seconds_left_bucket": 120,
       "distance_bps_bucket": -10,
       "entries": 514,
-      "notional": 3472.9171778535906
+      "notional": 3472.91717785359
     },
     {
       "role": "maker",
       "seconds_left_bucket": 120,
       "distance_bps_bucket": 0,
       "entries": 204,
-      "notional": 1402.0555212383103
+      "notional": 1402.05552123831
     },
     {
       "role": "maker",
       "seconds_left_bucket": 120,
       "distance_bps_bucket": 5,
       "entries": 404,
-      "notional": 2969.3997221624027
+      "notional": 2969.399722162404
     },
     {
       "role": "maker",
       "seconds_left_bucket": 120,
       "distance_bps_bucket": 10,
       "entries": 408,
-      "notional": 2247.9744049716683
+      "notional": 2247.9744049716674
     },
     {
       "role": "maker",
@@ -3256,42 +3256,42 @@
       "seconds_left_bucket": 120,
       "distance_bps_bucket": 20,
       "entries": 208,
-      "notional": 1728.0043145411305
+      "notional": 1728.0043145411316
     },
     {
       "role": "maker",
       "seconds_left_bucket": 120,
       "distance_bps_bucket": 25,
       "entries": 108,
-      "notional": 1516.78090483
+      "notional": 1516.7809048300005
     },
     {
       "role": "maker",
       "seconds_left_bucket": 120,
       "distance_bps_bucket": 30,
       "entries": 647,
-      "notional": 14558.03257966788
+      "notional": 14558.03257966787
     },
     {
       "role": "maker",
       "seconds_left_bucket": 120,
       "distance_bps_bucket": 35,
       "entries": 392,
-      "notional": 4550.149557103295
+      "notional": 4550.149557103297
     },
     {
       "role": "maker",
       "seconds_left_bucket": 120,
       "distance_bps_bucket": 40,
       "entries": 212,
-      "notional": 5177.05980186
+      "notional": 5177.059801860002
     },
     {
       "role": "maker",
       "seconds_left_bucket": 120,
       "distance_bps_bucket": 45,
       "entries": 248,
-      "notional": 13260.01116538619
+      "notional": 13260.011165386193
     },
     {
       "role": "maker",
@@ -3305,7 +3305,7 @@
       "seconds_left_bucket": 120,
       "distance_bps_bucket": 55,
       "entries": 189,
-      "notional": 4372.560570006844
+      "notional": 4372.5605700068445
     },
     {
       "role": "maker",
@@ -3319,14 +3319,14 @@
       "seconds_left_bucket": 120,
       "distance_bps_bucket": 65,
       "entries": 122,
-      "notional": 4753.139888049996
+      "notional": 4753.139888049997
     },
     {
       "role": "maker",
       "seconds_left_bucket": 120,
       "distance_bps_bucket": 70,
       "entries": 59,
-      "notional": 2133.74692112
+      "notional": 2133.7469211200005
     },
     {
       "role": "maker",
@@ -3347,21 +3347,21 @@
       "seconds_left_bucket": 120,
       "distance_bps_bucket": 85,
       "entries": 69,
-      "notional": 732.1722140032115
+      "notional": 732.172214003211
     },
     {
       "role": "maker",
       "seconds_left_bucket": 120,
       "distance_bps_bucket": 90,
       "entries": 36,
-      "notional": 255.35740007727398
+      "notional": 255.35740007727395
     },
     {
       "role": "maker",
       "seconds_left_bucket": 120,
       "distance_bps_bucket": 95,
       "entries": 9,
-      "notional": 385.1298
+      "notional": 385.12980000000005
     },
     {
       "role": "maker",
@@ -3389,7 +3389,7 @@
       "seconds_left_bucket": 130,
       "distance_bps_bucket": -70,
       "entries": 91,
-      "notional": 3172.5933262233357
+      "notional": 3172.593326223335
     },
     {
       "role": "maker",
@@ -3403,28 +3403,28 @@
       "seconds_left_bucket": 130,
       "distance_bps_bucket": -60,
       "entries": 59,
-      "notional": 368.0802630799999
+      "notional": 368.08026308
     },
     {
       "role": "maker",
       "seconds_left_bucket": 130,
       "distance_bps_bucket": -55,
       "entries": 221,
-      "notional": 4532.749896055052
+      "notional": 4532.74989605505
     },
     {
       "role": "maker",
       "seconds_left_bucket": 130,
       "distance_bps_bucket": -50,
       "entries": 76,
-      "notional": 1487.9459248700002
+      "notional": 1487.94592487
     },
     {
       "role": "maker",
       "seconds_left_bucket": 130,
       "distance_bps_bucket": -45,
       "entries": 174,
-      "notional": 4232.303871846869
+      "notional": 4232.30387184687
     },
     {
       "role": "maker",
@@ -3438,14 +3438,14 @@
       "seconds_left_bucket": 130,
       "distance_bps_bucket": -35,
       "entries": 141,
-      "notional": 2124.921497590244
+      "notional": 2124.9214975902437
     },
     {
       "role": "maker",
       "seconds_left_bucket": 130,
       "distance_bps_bucket": -30,
       "entries": 29,
-      "notional": 171.96368404999998
+      "notional": 171.96368405
     },
     {
       "role": "maker",
@@ -3459,21 +3459,21 @@
       "seconds_left_bucket": 130,
       "distance_bps_bucket": -20,
       "entries": 507,
-      "notional": 3524.8643852636164
+      "notional": 3524.864385263616
     },
     {
       "role": "maker",
       "seconds_left_bucket": 130,
       "distance_bps_bucket": -15,
       "entries": 140,
-      "notional": 847.75296798
+      "notional": 847.7529679800002
     },
     {
       "role": "maker",
       "seconds_left_bucket": 130,
       "distance_bps_bucket": -10,
       "entries": 383,
-      "notional": 2855.8704506729473
+      "notional": 2855.8704506729464
     },
     {
       "role": "maker",
@@ -3487,21 +3487,21 @@
       "seconds_left_bucket": 130,
       "distance_bps_bucket": 5,
       "entries": 545,
-      "notional": 3662.1510561844166
+      "notional": 3662.151056184416
     },
     {
       "role": "maker",
       "seconds_left_bucket": 130,
       "distance_bps_bucket": 10,
       "entries": 341,
-      "notional": 1951.886021185761
+      "notional": 1951.8860211857614
     },
     {
       "role": "maker",
       "seconds_left_bucket": 130,
       "distance_bps_bucket": 15,
       "entries": 489,
-      "notional": 2813.286476176905
+      "notional": 2813.2864761769065
     },
     {
       "role": "maker",
@@ -3515,21 +3515,21 @@
       "seconds_left_bucket": 130,
       "distance_bps_bucket": 25,
       "entries": 490,
-      "notional": 6602.970122593337
+      "notional": 6602.970122593339
     },
     {
       "role": "maker",
       "seconds_left_bucket": 130,
       "distance_bps_bucket": 30,
       "entries": 446,
-      "notional": 6941.9914397683315
+      "notional": 6941.991439768334
     },
     {
       "role": "maker",
       "seconds_left_bucket": 130,
       "distance_bps_bucket": 35,
       "entries": 66,
-      "notional": 617.6236051399999
+      "notional": 617.62360514
     },
     {
       "role": "maker",
@@ -3543,7 +3543,7 @@
       "seconds_left_bucket": 130,
       "distance_bps_bucket": 45,
       "entries": 243,
-      "notional": 5363.157776257573
+      "notional": 5363.157776257577
     },
     {
       "role": "maker",
@@ -3557,7 +3557,7 @@
       "seconds_left_bucket": 130,
       "distance_bps_bucket": 55,
       "entries": 130,
-      "notional": 2720.8152849099997
+      "notional": 2720.81528491
     },
     {
       "role": "maker",
@@ -3571,7 +3571,7 @@
       "seconds_left_bucket": 130,
       "distance_bps_bucket": 65,
       "entries": 91,
-      "notional": 7248.948998909497
+      "notional": 7248.948998909496
     },
     {
       "role": "maker",
@@ -3585,7 +3585,7 @@
       "seconds_left_bucket": 130,
       "distance_bps_bucket": 75,
       "entries": 94,
-      "notional": 2255.1746819057917
+      "notional": 2255.174681905793
     },
     {
       "role": "maker",
@@ -3599,14 +3599,14 @@
       "seconds_left_bucket": 130,
       "distance_bps_bucket": 85,
       "entries": 168,
-      "notional": 1957.0627336070277
+      "notional": 1957.062733607028
     },
     {
       "role": "maker",
       "seconds_left_bucket": 130,
       "distance_bps_bucket": 90,
       "entries": 50,
-      "notional": 2666.2956
+      "notional": 2666.2955999999995
     },
     {
       "role": "maker",
@@ -3641,14 +3641,14 @@
       "seconds_left_bucket": 140,
       "distance_bps_bucket": -80,
       "entries": 114,
-      "notional": 1405.3373736573342
+      "notional": 1405.337373657334
     },
     {
       "role": "maker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": -75,
       "entries": 26,
-      "notional": 353.63925900000004
+      "notional": 353.639259
     },
     {
       "role": "maker",
@@ -3662,7 +3662,7 @@
       "seconds_left_bucket": 140,
       "distance_bps_bucket": -60,
       "entries": 370,
-      "notional": 6280.907916193472
+      "notional": 6280.907916193475
     },
     {
       "role": "maker",
@@ -3683,14 +3683,14 @@
       "seconds_left_bucket": 140,
       "distance_bps_bucket": -45,
       "entries": 150,
-      "notional": 624.6216559800004
+      "notional": 624.6216559799999
     },
     {
       "role": "maker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": -40,
       "entries": 342,
-      "notional": 3837.92196204959
+      "notional": 3837.921962049596
     },
     {
       "role": "maker",
@@ -3704,7 +3704,7 @@
       "seconds_left_bucket": 140,
       "distance_bps_bucket": -30,
       "entries": 271,
-      "notional": 3603.2433040345472
+      "notional": 3603.243304034546
     },
     {
       "role": "maker",
@@ -3725,35 +3725,35 @@
       "seconds_left_bucket": 140,
       "distance_bps_bucket": -15,
       "entries": 153,
-      "notional": 897.3810938041568
+      "notional": 897.381093804157
     },
     {
       "role": "maker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": -10,
       "entries": 425,
-      "notional": 2750.813039585537
+      "notional": 2750.8130395855364
     },
     {
       "role": "maker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": -5,
       "entries": 188,
-      "notional": 1169.246840614287
+      "notional": 1169.2468406142866
     },
     {
       "role": "maker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": 0,
       "entries": 583,
-      "notional": 4304.44358666325
+      "notional": 4304.443586663247
     },
     {
       "role": "maker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": 5,
       "entries": 593,
-      "notional": 4040.1043280621216
+      "notional": 4040.104328062121
     },
     {
       "role": "maker",
@@ -3767,35 +3767,35 @@
       "seconds_left_bucket": 140,
       "distance_bps_bucket": 15,
       "entries": 495,
-      "notional": 3252.062105205513
+      "notional": 3252.062105205515
     },
     {
       "role": "maker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": 20,
       "entries": 203,
-      "notional": 1017.8610881124969
+      "notional": 1017.8610881124973
     },
     {
       "role": "maker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": 25,
       "entries": 808,
-      "notional": 7759.927827607139
+      "notional": 7759.927827607132
     },
     {
       "role": "maker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": 30,
       "entries": 431,
-      "notional": 6894.110910324972
+      "notional": 6894.1109103249855
     },
     {
       "role": "maker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": 35,
       "entries": 427,
-      "notional": 3644.9680828605733
+      "notional": 3644.9680828605738
     },
     {
       "role": "maker",
@@ -3809,28 +3809,28 @@
       "seconds_left_bucket": 140,
       "distance_bps_bucket": 45,
       "entries": 281,
-      "notional": 4673.619585912804
+      "notional": 4673.619585912803
     },
     {
       "role": "maker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": 50,
       "entries": 41,
-      "notional": 2037.9673150646015
+      "notional": 2037.9673150646013
     },
     {
       "role": "maker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": 55,
       "entries": 368,
-      "notional": 9640.89187321657
+      "notional": 9640.891873216571
     },
     {
       "role": "maker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": 60,
       "entries": 189,
-      "notional": 4083.7262480938193
+      "notional": 4083.7262480938225
     },
     {
       "role": "maker",
@@ -3907,70 +3907,70 @@
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -85,
       "entries": 30,
-      "notional": 1455.97402402
+      "notional": 1455.9740240199997
     },
     {
       "role": "maker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -80,
       "entries": 94,
-      "notional": 2045.099434884
+      "notional": 2045.0994348840004
     },
     {
       "role": "maker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -75,
       "entries": 72,
-      "notional": 3128.8240537636093
+      "notional": 3128.82405376361
     },
     {
       "role": "maker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -65,
       "entries": 182,
-      "notional": 6184.090684080002
+      "notional": 6184.09068408
     },
     {
       "role": "maker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -60,
       "entries": 407,
-      "notional": 14080.484037468377
+      "notional": 14080.484037468374
     },
     {
       "role": "maker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -55,
       "entries": 67,
-      "notional": 2663.7659421100007
+      "notional": 2663.76594211
     },
     {
       "role": "maker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -50,
       "entries": 258,
-      "notional": 15273.371888158366
+      "notional": 15273.371888158372
     },
     {
       "role": "maker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -45,
       "entries": 167,
-      "notional": 2157.964455236012
+      "notional": 2157.9644552360114
     },
     {
       "role": "maker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -40,
       "entries": 368,
-      "notional": 18317.159426782106
+      "notional": 18317.15942678209
     },
     {
       "role": "maker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -35,
       "entries": 397,
-      "notional": 8074.6500302700015
+      "notional": 8074.650030270002
     },
     {
       "role": "maker",
@@ -3984,14 +3984,14 @@
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -25,
       "entries": 283,
-      "notional": 2434.5432854799997
+      "notional": 2434.543285480001
     },
     {
       "role": "maker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -20,
       "entries": 259,
-      "notional": 1991.7331073666699
+      "notional": 1991.7331073666703
     },
     {
       "role": "maker",
@@ -4012,7 +4012,7 @@
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -5,
       "entries": 476,
-      "notional": 3008.2627025365264
+      "notional": 3008.2627025365273
     },
     {
       "role": "maker",
@@ -4026,7 +4026,7 @@
       "seconds_left_bucket": 150,
       "distance_bps_bucket": 5,
       "entries": 908,
-      "notional": 5783.549486739189
+      "notional": 5783.549486739184
     },
     {
       "role": "maker",
@@ -4047,35 +4047,35 @@
       "seconds_left_bucket": 150,
       "distance_bps_bucket": 20,
       "entries": 652,
-      "notional": 3912.099889425559
+      "notional": 3912.0998894255595
     },
     {
       "role": "maker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": 25,
       "entries": 382,
-      "notional": 3742.082183743166
+      "notional": 3742.0821837431677
     },
     {
       "role": "maker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": 30,
       "entries": 580,
-      "notional": 5143.870845233143
+      "notional": 5143.870845233144
     },
     {
       "role": "maker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": 35,
       "entries": 206,
-      "notional": 1695.4604612361886
+      "notional": 1695.4604612361875
     },
     {
       "role": "maker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": 45,
       "entries": 143,
-      "notional": 1480.3021589242467
+      "notional": 1480.3021589242458
     },
     {
       "role": "maker",
@@ -4089,7 +4089,7 @@
       "seconds_left_bucket": 150,
       "distance_bps_bucket": 55,
       "entries": 80,
-      "notional": 6338.341152909496
+      "notional": 6338.3411529094965
     },
     {
       "role": "maker",
@@ -4117,14 +4117,14 @@
       "seconds_left_bucket": 150,
       "distance_bps_bucket": 75,
       "entries": 82,
-      "notional": 1671.280425
+      "notional": 1671.2804250000002
     },
     {
       "role": "maker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": 80,
       "entries": 73,
-      "notional": 4738.359891530003
+      "notional": 4738.359891530001
     },
     {
       "role": "maker",
@@ -4166,7 +4166,7 @@
       "seconds_left_bucket": 160,
       "distance_bps_bucket": -110,
       "entries": 12,
-      "notional": 3658.010399999999
+      "notional": 3658.0104
     },
     {
       "role": "maker",
@@ -4187,7 +4187,7 @@
       "seconds_left_bucket": 160,
       "distance_bps_bucket": -75,
       "entries": 108,
-      "notional": 2840.0635659790005
+      "notional": 2840.063565979
     },
     {
       "role": "maker",
@@ -4208,7 +4208,7 @@
       "seconds_left_bucket": 160,
       "distance_bps_bucket": -60,
       "entries": 165,
-      "notional": 5451.344641771114
+      "notional": 5451.344641771115
     },
     {
       "role": "maker",
@@ -4222,7 +4222,7 @@
       "seconds_left_bucket": 160,
       "distance_bps_bucket": -50,
       "entries": 235,
-      "notional": 4090.0705792500003
+      "notional": 4090.07057925
     },
     {
       "role": "maker",
@@ -4236,56 +4236,56 @@
       "seconds_left_bucket": 160,
       "distance_bps_bucket": -40,
       "entries": 492,
-      "notional": 11217.825627671931
+      "notional": 11217.825627671942
     },
     {
       "role": "maker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": -35,
       "entries": 316,
-      "notional": 4203.790436625534
+      "notional": 4203.790436625535
     },
     {
       "role": "maker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": -30,
       "entries": 512,
-      "notional": 8981.612126635759
+      "notional": 8981.612126635762
     },
     {
       "role": "maker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": -25,
       "entries": 323,
-      "notional": 1302.2274409972551
+      "notional": 1302.227440997254
     },
     {
       "role": "maker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": -15,
       "entries": 280,
-      "notional": 1944.8658837035277
+      "notional": 1944.865883703528
     },
     {
       "role": "maker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": -10,
       "entries": 406,
-      "notional": 2964.360799810954
+      "notional": 2964.360799810952
     },
     {
       "role": "maker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": -5,
       "entries": 893,
-      "notional": 5918.638205986153
+      "notional": 5918.638205986151
     },
     {
       "role": "maker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 0,
       "entries": 289,
-      "notional": 1599.3146147977648
+      "notional": 1599.3146147977645
     },
     {
       "role": "maker",
@@ -4299,42 +4299,42 @@
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 10,
       "entries": 1126,
-      "notional": 7619.436120270812
+      "notional": 7619.436120270815
     },
     {
       "role": "maker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 15,
       "entries": 492,
-      "notional": 3028.0923246877287
+      "notional": 3028.092324687729
     },
     {
       "role": "maker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 20,
       "entries": 625,
-      "notional": 4821.527564373944
+      "notional": 4821.527564373942
     },
     {
       "role": "maker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 25,
       "entries": 406,
-      "notional": 2887.4122528416638
+      "notional": 2887.412252841664
     },
     {
       "role": "maker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 30,
       "entries": 125,
-      "notional": 1696.14780266
+      "notional": 1696.1478026599998
     },
     {
       "role": "maker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 40,
       "entries": 130,
-      "notional": 2616.173702086668
+      "notional": 2616.1737020866676
     },
     {
       "role": "maker",
@@ -4348,21 +4348,21 @@
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 50,
       "entries": 192,
-      "notional": 6377.728076066668
+      "notional": 6377.728076066669
     },
     {
       "role": "maker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 55,
       "entries": 83,
-      "notional": 5593.453300000002
+      "notional": 5593.453299999999
     },
     {
       "role": "maker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 60,
       "entries": 236,
-      "notional": 5272.725390635555
+      "notional": 5272.725390635556
     },
     {
       "role": "maker",
@@ -4376,7 +4376,7 @@
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 70,
       "entries": 363,
-      "notional": 5554.247509081364
+      "notional": 5554.247509081366
     },
     {
       "role": "maker",
@@ -4432,28 +4432,28 @@
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -65,
       "entries": 47,
-      "notional": 885.7444141799999
+      "notional": 885.7444141800001
     },
     {
       "role": "maker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -60,
       "entries": 70,
-      "notional": 1322.2494840000004
+      "notional": 1322.249484
     },
     {
       "role": "maker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -55,
       "entries": 114,
-      "notional": 4103.9541015099985
+      "notional": 4103.95410151
     },
     {
       "role": "maker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -50,
       "entries": 213,
-      "notional": 10920.592076582518
+      "notional": 10920.59207658252
     },
     {
       "role": "maker",
@@ -4467,21 +4467,21 @@
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -40,
       "entries": 247,
-      "notional": 1864.9684867754374
+      "notional": 1864.9684867754377
     },
     {
       "role": "maker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -35,
       "entries": 687,
-      "notional": 8050.745794225764
+      "notional": 8050.745794225761
     },
     {
       "role": "maker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -30,
       "entries": 581,
-      "notional": 6081.0547905110625
+      "notional": 6081.054790511064
     },
     {
       "role": "maker",
@@ -4495,63 +4495,63 @@
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -20,
       "entries": 230,
-      "notional": 1755.64204208
+      "notional": 1755.6420420800002
     },
     {
       "role": "maker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -15,
       "entries": 128,
-      "notional": 983.646630313915
+      "notional": 983.6466303139148
     },
     {
       "role": "maker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -10,
       "entries": 463,
-      "notional": 3524.1826672870484
+      "notional": 3524.1826672870507
     },
     {
       "role": "maker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -5,
       "entries": 1187,
-      "notional": 9100.364783887724
+      "notional": 9100.36478388772
     },
     {
       "role": "maker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 0,
       "entries": 646,
-      "notional": 4552.483983619698
+      "notional": 4552.483983619699
     },
     {
       "role": "maker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 5,
       "entries": 610,
-      "notional": 3475.830724373436
+      "notional": 3475.830724373437
     },
     {
       "role": "maker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 10,
       "entries": 1516,
-      "notional": 10979.374942772512
+      "notional": 10979.374942772516
     },
     {
       "role": "maker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 15,
       "entries": 1029,
-      "notional": 6260.996831956079
+      "notional": 6260.996831956078
     },
     {
       "role": "maker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 20,
       "entries": 537,
-      "notional": 3005.0630714374547
+      "notional": 3005.063071437455
     },
     {
       "role": "maker",
@@ -4565,35 +4565,35 @@
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 30,
       "entries": 235,
-      "notional": 2354.7669596200035
+      "notional": 2354.766959620004
     },
     {
       "role": "maker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 35,
       "entries": 161,
-      "notional": 1659.95517538
+      "notional": 1659.9551753800006
     },
     {
       "role": "maker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 40,
       "entries": 334,
-      "notional": 3575.202389869595
+      "notional": 3575.2023898695943
     },
     {
       "role": "maker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 45,
       "entries": 336,
-      "notional": 3979.204518262829
+      "notional": 3979.20451826283
     },
     {
       "role": "maker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 50,
       "entries": 90,
-      "notional": 4160.329292089999
+      "notional": 4160.32929209
     },
     {
       "role": "maker",
@@ -4607,21 +4607,21 @@
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 60,
       "entries": 213,
-      "notional": 4865.696590259999
+      "notional": 4865.69659026
     },
     {
       "role": "maker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 65,
       "entries": 182,
-      "notional": 1594.5968890500008
+      "notional": 1594.5968890500003
     },
     {
       "role": "maker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 70,
       "entries": 161,
-      "notional": 3410.4363102521083
+      "notional": 3410.43631025211
     },
     {
       "role": "maker",
@@ -4642,7 +4642,7 @@
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 85,
       "entries": 174,
-      "notional": 1796.6382516495928
+      "notional": 1796.6382516495926
     },
     {
       "role": "maker",
@@ -4656,7 +4656,7 @@
       "seconds_left_bucket": 180,
       "distance_bps_bucket": -115,
       "entries": 17,
-      "notional": 84.15
+      "notional": 84.15000000000002
     },
     {
       "role": "maker",
@@ -4684,21 +4684,21 @@
       "seconds_left_bucket": 180,
       "distance_bps_bucket": -70,
       "entries": 51,
-      "notional": 1723.6610192099997
+      "notional": 1723.66101921
     },
     {
       "role": "maker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": -65,
       "entries": 48,
-      "notional": 405.7508480500001
+      "notional": 405.7508480500002
     },
     {
       "role": "maker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": -60,
       "entries": 85,
-      "notional": 1806.3106960399998
+      "notional": 1806.31069604
     },
     {
       "role": "maker",
@@ -4712,28 +4712,28 @@
       "seconds_left_bucket": 180,
       "distance_bps_bucket": -50,
       "entries": 125,
-      "notional": 2179.49242718
+      "notional": 2179.492427180001
     },
     {
       "role": "maker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": -45,
       "entries": 130,
-      "notional": 2586.326870084737
+      "notional": 2586.3268700847375
     },
     {
       "role": "maker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": -40,
       "entries": 182,
-      "notional": 1331.2295806900001
+      "notional": 1331.2295806899997
     },
     {
       "role": "maker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": -35,
       "entries": 542,
-      "notional": 7978.391680797006
+      "notional": 7978.391680797004
     },
     {
       "role": "maker",
@@ -4747,77 +4747,77 @@
       "seconds_left_bucket": 180,
       "distance_bps_bucket": -25,
       "entries": 904,
-      "notional": 7774.5272687050165
+      "notional": 7774.527268705015
     },
     {
       "role": "maker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": -20,
       "entries": 137,
-      "notional": 711.494860947446
+      "notional": 711.4948609474461
     },
     {
       "role": "maker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": -15,
       "entries": 247,
-      "notional": 1840.018879190001
+      "notional": 1840.0188791900005
     },
     {
       "role": "maker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": -10,
       "entries": 387,
-      "notional": 2700.4075737356748
+      "notional": 2700.4075737356757
     },
     {
       "role": "maker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": -5,
       "entries": 945,
-      "notional": 6045.658847676194
+      "notional": 6045.65884767619
     },
     {
       "role": "maker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 0,
       "entries": 390,
-      "notional": 2488.0205507880632
+      "notional": 2488.020550788064
     },
     {
       "role": "maker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 5,
       "entries": 797,
-      "notional": 5044.373558412385
+      "notional": 5044.373558412384
     },
     {
       "role": "maker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 10,
       "entries": 955,
-      "notional": 8012.2418871869095
+      "notional": 8012.241887186909
     },
     {
       "role": "maker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 15,
       "entries": 1381,
-      "notional": 11392.281564275349
+      "notional": 11392.28156427535
     },
     {
       "role": "maker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 20,
       "entries": 794,
-      "notional": 6259.5932765636135
+      "notional": 6259.593276563613
     },
     {
       "role": "maker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 25,
       "entries": 396,
-      "notional": 2601.2800862431754
+      "notional": 2601.280086243175
     },
     {
       "role": "maker",
@@ -4838,7 +4838,7 @@
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 40,
       "entries": 267,
-      "notional": 5517.870873488454
+      "notional": 5517.870873488455
     },
     {
       "role": "maker",
@@ -4859,7 +4859,7 @@
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 55,
       "entries": 99,
-      "notional": 3716.2720791300003
+      "notional": 3716.2720791300007
     },
     {
       "role": "maker",
@@ -4880,28 +4880,28 @@
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 70,
       "entries": 129,
-      "notional": 3378.4337257644793
+      "notional": 3378.4337257644797
     },
     {
       "role": "maker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 75,
       "entries": 158,
-      "notional": 2096.0081038199996
+      "notional": 2096.0081038200005
     },
     {
       "role": "maker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 80,
       "entries": 91,
-      "notional": 932.8617814599999
+      "notional": 932.8617814600002
     },
     {
       "role": "maker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 85,
       "entries": 53,
-      "notional": 1124.6027470000004
+      "notional": 1124.6027470000001
     },
     {
       "role": "maker",
@@ -4929,28 +4929,28 @@
       "seconds_left_bucket": 190,
       "distance_bps_bucket": -95,
       "entries": 23,
-      "notional": 741.7179000000002
+      "notional": 741.7179
     },
     {
       "role": "maker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": -75,
       "entries": 102,
-      "notional": 999.9307017289806
+      "notional": 999.9307017289811
     },
     {
       "role": "maker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": -70,
       "entries": 138,
-      "notional": 1658.1155724965338
+      "notional": 1658.1155724965336
     },
     {
       "role": "maker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": -65,
       "entries": 119,
-      "notional": 657.4859578700002
+      "notional": 657.4859578699999
     },
     {
       "role": "maker",
@@ -4964,7 +4964,7 @@
       "seconds_left_bucket": 190,
       "distance_bps_bucket": -55,
       "entries": 62,
-      "notional": 4502.613579000001
+      "notional": 4502.613579
     },
     {
       "role": "maker",
@@ -4978,7 +4978,7 @@
       "seconds_left_bucket": 190,
       "distance_bps_bucket": -45,
       "entries": 271,
-      "notional": 4330.878273326665
+      "notional": 4330.878273326664
     },
     {
       "role": "maker",
@@ -4999,14 +4999,14 @@
       "seconds_left_bucket": 190,
       "distance_bps_bucket": -30,
       "entries": 519,
-      "notional": 3190.2990736010083
+      "notional": 3190.299073601008
     },
     {
       "role": "maker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": -25,
       "entries": 873,
-      "notional": 7091.6898939964885
+      "notional": 7091.689893996481
     },
     {
       "role": "maker",
@@ -5020,63 +5020,63 @@
       "seconds_left_bucket": 190,
       "distance_bps_bucket": -15,
       "entries": 806,
-      "notional": 5388.1337095000545
+      "notional": 5388.133709500051
     },
     {
       "role": "maker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": -10,
       "entries": 559,
-      "notional": 3520.151832909591
+      "notional": 3520.1518329095898
     },
     {
       "role": "maker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": -5,
       "entries": 433,
-      "notional": 2226.50710784108
+      "notional": 2226.507107841082
     },
     {
       "role": "maker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 0,
       "entries": 675,
-      "notional": 4089.8787715666485
+      "notional": 4089.878771566646
     },
     {
       "role": "maker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 5,
       "entries": 1069,
-      "notional": 6057.54323048281
+      "notional": 6057.543230482813
     },
     {
       "role": "maker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 10,
       "entries": 1754,
-      "notional": 10265.073985554413
+      "notional": 10265.073985554402
     },
     {
       "role": "maker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 15,
       "entries": 879,
-      "notional": 6191.66158404413
+      "notional": 6191.661584044127
     },
     {
       "role": "maker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 20,
       "entries": 215,
-      "notional": 1967.1529756210748
+      "notional": 1967.1529756210734
     },
     {
       "role": "maker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 25,
       "entries": 347,
-      "notional": 2262.551358369745
+      "notional": 2262.5513583697452
     },
     {
       "role": "maker",
@@ -5090,14 +5090,14 @@
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 35,
       "entries": 299,
-      "notional": 4699.16695187734
+      "notional": 4699.1669518773415
     },
     {
       "role": "maker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 40,
       "entries": 107,
-      "notional": 1330.0771615033323
+      "notional": 1330.0771615033318
     },
     {
       "role": "maker",
@@ -5111,14 +5111,14 @@
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 50,
       "entries": 283,
-      "notional": 4070.2843183460454
+      "notional": 4070.2843183460445
     },
     {
       "role": "maker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 55,
       "entries": 134,
-      "notional": 3258.6405105800004
+      "notional": 3258.64051058
     },
     {
       "role": "maker",
@@ -5132,14 +5132,14 @@
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 65,
       "entries": 189,
-      "notional": 1702.770468510001
+      "notional": 1702.7704685100007
     },
     {
       "role": "maker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 70,
       "entries": 98,
-      "notional": 2058.2494093900004
+      "notional": 2058.24940939
     },
     {
       "role": "maker",
@@ -5160,7 +5160,7 @@
       "seconds_left_bucket": 200,
       "distance_bps_bucket": -85,
       "entries": 94,
-      "notional": 1643.1490661400042
+      "notional": 1643.1490661400035
     },
     {
       "role": "maker",
@@ -5181,14 +5181,14 @@
       "seconds_left_bucket": 200,
       "distance_bps_bucket": -65,
       "entries": 93,
-      "notional": 499.67417389000013
+      "notional": 499.6741738900002
     },
     {
       "role": "maker",
       "seconds_left_bucket": 200,
       "distance_bps_bucket": -60,
       "entries": 387,
-      "notional": 6413.356858434736
+      "notional": 6413.3568584347395
     },
     {
       "role": "maker",
@@ -5202,42 +5202,42 @@
       "seconds_left_bucket": 200,
       "distance_bps_bucket": -45,
       "entries": 245,
-      "notional": 4500.5322404166645
+      "notional": 4500.532240416664
     },
     {
       "role": "maker",
       "seconds_left_bucket": 200,
       "distance_bps_bucket": -40,
       "entries": 311,
-      "notional": 2947.7960025500006
+      "notional": 2947.79600255
     },
     {
       "role": "maker",
       "seconds_left_bucket": 200,
       "distance_bps_bucket": -35,
       "entries": 324,
-      "notional": 2221.7687592863604
+      "notional": 2221.768759286361
     },
     {
       "role": "maker",
       "seconds_left_bucket": 200,
       "distance_bps_bucket": -30,
       "entries": 274,
-      "notional": 1161.817750626668
+      "notional": 1161.8177506266677
     },
     {
       "role": "maker",
       "seconds_left_bucket": 200,
       "distance_bps_bucket": -25,
       "entries": 1746,
-      "notional": 17538.82742758857
+      "notional": 17538.827427588578
     },
     {
       "role": "maker",
       "seconds_left_bucket": 200,
       "distance_bps_bucket": -20,
       "entries": 357,
-      "notional": 3997.6921767903204
+      "notional": 3997.69217679032
     },
     {
       "role": "maker",
@@ -5251,49 +5251,49 @@
       "seconds_left_bucket": 200,
       "distance_bps_bucket": -10,
       "entries": 451,
-      "notional": 2818.736185345423
+      "notional": 2818.7361853454236
     },
     {
       "role": "maker",
       "seconds_left_bucket": 200,
       "distance_bps_bucket": -5,
       "entries": 1132,
-      "notional": 7093.3612443837155
+      "notional": 7093.361244383722
     },
     {
       "role": "maker",
       "seconds_left_bucket": 200,
       "distance_bps_bucket": 0,
       "entries": 1397,
-      "notional": 8782.358113065222
+      "notional": 8782.358113065213
     },
     {
       "role": "maker",
       "seconds_left_bucket": 200,
       "distance_bps_bucket": 5,
       "entries": 1223,
-      "notional": 7485.780184105251
+      "notional": 7485.780184105253
     },
     {
       "role": "maker",
       "seconds_left_bucket": 200,
       "distance_bps_bucket": 10,
       "entries": 2425,
-      "notional": 24241.99918738705
+      "notional": 24241.99918738704
     },
     {
       "role": "maker",
       "seconds_left_bucket": 200,
       "distance_bps_bucket": 15,
       "entries": 765,
-      "notional": 6470.169372910906
+      "notional": 6470.169372910914
     },
     {
       "role": "maker",
       "seconds_left_bucket": 200,
       "distance_bps_bucket": 25,
       "entries": 91,
-      "notional": 415.79608064667
+      "notional": 415.79608064666996
     },
     {
       "role": "maker",
@@ -5307,7 +5307,7 @@
       "seconds_left_bucket": 200,
       "distance_bps_bucket": 35,
       "entries": 647,
-      "notional": 8834.924833639814
+      "notional": 8834.924833639818
     },
     {
       "role": "maker",
@@ -5342,42 +5342,42 @@
       "seconds_left_bucket": 200,
       "distance_bps_bucket": 60,
       "entries": 128,
-      "notional": 1001.5780260913323
+      "notional": 1001.578026091332
     },
     {
       "role": "maker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -75,
       "entries": 92,
-      "notional": 1298.9593273333355
+      "notional": 1298.9593273333364
     },
     {
       "role": "maker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -70,
       "entries": 279,
-      "notional": 8475.739466124953
+      "notional": 8475.739466124956
     },
     {
       "role": "maker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -65,
       "entries": 255,
-      "notional": 1999.9616253576323
+      "notional": 1999.9616253576319
     },
     {
       "role": "maker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -60,
       "entries": 97,
-      "notional": 1376.5067682600002
+      "notional": 1376.5067682599997
     },
     {
       "role": "maker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -55,
       "entries": 141,
-      "notional": 2299.609342233413
+      "notional": 2299.609342233414
     },
     {
       "role": "maker",
@@ -5398,84 +5398,84 @@
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -40,
       "entries": 179,
-      "notional": 1829.0016813466677
+      "notional": 1829.0016813466673
     },
     {
       "role": "maker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -35,
       "entries": 260,
-      "notional": 3633.1798029300016
+      "notional": 3633.17980293
     },
     {
       "role": "maker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -30,
       "entries": 60,
-      "notional": 816.301784691871
+      "notional": 816.3017846918709
     },
     {
       "role": "maker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -25,
       "entries": 1417,
-      "notional": 11643.567466514854
+      "notional": 11643.567466514844
     },
     {
       "role": "maker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -20,
       "entries": 915,
-      "notional": 7241.462147490834
+      "notional": 7241.462147490831
     },
     {
       "role": "maker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -15,
       "entries": 915,
-      "notional": 6222.615393913593
+      "notional": 6222.615393913595
     },
     {
       "role": "maker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -10,
       "entries": 474,
-      "notional": 3707.545566757326
+      "notional": 3707.545566757327
     },
     {
       "role": "maker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -5,
       "entries": 1035,
-      "notional": 6700.399384884272
+      "notional": 6700.399384884268
     },
     {
       "role": "maker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": 0,
       "entries": 1701,
-      "notional": 12692.69703859905
+      "notional": 12692.697038599046
     },
     {
       "role": "maker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": 5,
       "entries": 1416,
-      "notional": 9035.26101292311
+      "notional": 9035.261012923114
     },
     {
       "role": "maker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": 10,
       "entries": 1518,
-      "notional": 10457.98640532083
+      "notional": 10457.986405320826
     },
     {
       "role": "maker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": 15,
       "entries": 478,
-      "notional": 2974.534527734959
+      "notional": 2974.534527734958
     },
     {
       "role": "maker",
@@ -5489,28 +5489,28 @@
       "seconds_left_bucket": 210,
       "distance_bps_bucket": 25,
       "entries": 82,
-      "notional": 834.3487992115752
+      "notional": 834.348799211575
     },
     {
       "role": "maker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": 30,
       "entries": 566,
-      "notional": 5499.972336130647
+      "notional": 5499.972336130649
     },
     {
       "role": "maker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": 35,
       "entries": 802,
-      "notional": 7102.730145577954
+      "notional": 7102.730145577957
     },
     {
       "role": "maker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": 40,
       "entries": 271,
-      "notional": 4037.2151101399986
+      "notional": 4037.2151101399995
     },
     {
       "role": "maker",
@@ -5524,14 +5524,14 @@
       "seconds_left_bucket": 210,
       "distance_bps_bucket": 50,
       "entries": 360,
-      "notional": 2780.149415085701
+      "notional": 2780.149415085703
     },
     {
       "role": "maker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": 55,
       "entries": 292,
-      "notional": 4400.529767914181
+      "notional": 4400.52976791418
     },
     {
       "role": "maker",
@@ -5552,14 +5552,14 @@
       "seconds_left_bucket": 220,
       "distance_bps_bucket": -75,
       "entries": 84,
-      "notional": 1364.7241980000001
+      "notional": 1364.7241980000003
     },
     {
       "role": "maker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": -70,
       "entries": 364,
-      "notional": 7103.114141263933
+      "notional": 7103.11414126393
     },
     {
       "role": "maker",
@@ -5573,7 +5573,7 @@
       "seconds_left_bucket": 220,
       "distance_bps_bucket": -60,
       "entries": 69,
-      "notional": 752.5261841033351
+      "notional": 752.526184103335
     },
     {
       "role": "maker",
@@ -5587,7 +5587,7 @@
       "seconds_left_bucket": 220,
       "distance_bps_bucket": -50,
       "entries": 226,
-      "notional": 2339.9852748404155
+      "notional": 2339.985274840417
     },
     {
       "role": "maker",
@@ -5622,35 +5622,35 @@
       "seconds_left_bucket": 220,
       "distance_bps_bucket": -25,
       "entries": 742,
-      "notional": 4499.892162024642
+      "notional": 4499.892162024646
     },
     {
       "role": "maker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": -20,
       "entries": 939,
-      "notional": 5836.910381291541
+      "notional": 5836.910381291539
     },
     {
       "role": "maker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": -15,
       "entries": 1424,
-      "notional": 11574.344414229234
+      "notional": 11574.344414229221
     },
     {
       "role": "maker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": -10,
       "entries": 789,
-      "notional": 6162.2971616585655
+      "notional": 6162.297161658566
     },
     {
       "role": "maker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": -5,
       "entries": 1034,
-      "notional": 6119.868108882942
+      "notional": 6119.868108882938
     },
     {
       "role": "maker",
@@ -5664,21 +5664,21 @@
       "seconds_left_bucket": 220,
       "distance_bps_bucket": 5,
       "entries": 1061,
-      "notional": 5319.585012986536
+      "notional": 5319.585012986532
     },
     {
       "role": "maker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": 10,
       "entries": 1580,
-      "notional": 9894.934183483858
+      "notional": 9894.934183483852
     },
     {
       "role": "maker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": 15,
       "entries": 597,
-      "notional": 3161.788051207619
+      "notional": 3161.7880512076213
     },
     {
       "role": "maker",
@@ -5692,35 +5692,35 @@
       "seconds_left_bucket": 220,
       "distance_bps_bucket": 25,
       "entries": 421,
-      "notional": 4437.362540604229
+      "notional": 4437.362540604228
     },
     {
       "role": "maker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": 30,
       "entries": 415,
-      "notional": 2010.280645284785
+      "notional": 2010.2806452847858
     },
     {
       "role": "maker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": 35,
       "entries": 540,
-      "notional": 4438.573419467532
+      "notional": 4438.57341946753
     },
     {
       "role": "maker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": 40,
       "entries": 156,
-      "notional": 3853.11325433
+      "notional": 3853.1132543299987
     },
     {
       "role": "maker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": 55,
       "entries": 259,
-      "notional": 7749.9141791171405
+      "notional": 7749.914179117144
     },
     {
       "role": "maker",
@@ -5748,7 +5748,7 @@
       "seconds_left_bucket": 230,
       "distance_bps_bucket": -85,
       "entries": 131,
-      "notional": 1493.7410657199996
+      "notional": 1493.7410657199994
     },
     {
       "role": "maker",
@@ -5797,56 +5797,56 @@
       "seconds_left_bucket": 230,
       "distance_bps_bucket": -35,
       "entries": 87,
-      "notional": 769.7445964899999
+      "notional": 769.74459649
     },
     {
       "role": "maker",
       "seconds_left_bucket": 230,
       "distance_bps_bucket": -25,
       "entries": 687,
-      "notional": 5173.57336706475
+      "notional": 5173.573367064751
     },
     {
       "role": "maker",
       "seconds_left_bucket": 230,
       "distance_bps_bucket": -20,
       "entries": 946,
-      "notional": 7108.5674046684435
+      "notional": 7108.56740466845
     },
     {
       "role": "maker",
       "seconds_left_bucket": 230,
       "distance_bps_bucket": -15,
       "entries": 2001,
-      "notional": 14900.05802261885
+      "notional": 14900.058022618847
     },
     {
       "role": "maker",
       "seconds_left_bucket": 230,
       "distance_bps_bucket": -10,
       "entries": 1420,
-      "notional": 9661.375742268177
+      "notional": 9661.375742268185
     },
     {
       "role": "maker",
       "seconds_left_bucket": 230,
       "distance_bps_bucket": -5,
       "entries": 2063,
-      "notional": 14000.003619801086
+      "notional": 14000.003619801093
     },
     {
       "role": "maker",
       "seconds_left_bucket": 230,
       "distance_bps_bucket": 0,
       "entries": 1400,
-      "notional": 9847.269744761059
+      "notional": 9847.26974476106
     },
     {
       "role": "maker",
       "seconds_left_bucket": 230,
       "distance_bps_bucket": 5,
       "entries": 1176,
-      "notional": 8127.712193832405
+      "notional": 8127.712193832407
     },
     {
       "role": "maker",
@@ -5867,14 +5867,14 @@
       "seconds_left_bucket": 230,
       "distance_bps_bucket": 20,
       "entries": 1236,
-      "notional": 11441.79234420469
+      "notional": 11441.792344204692
     },
     {
       "role": "maker",
       "seconds_left_bucket": 230,
       "distance_bps_bucket": 25,
       "entries": 694,
-      "notional": 4950.083658435278
+      "notional": 4950.083658435281
     },
     {
       "role": "maker",
@@ -5888,7 +5888,7 @@
       "seconds_left_bucket": 230,
       "distance_bps_bucket": 40,
       "entries": 199,
-      "notional": 2539.3648481899995
+      "notional": 2539.364848189999
     },
     {
       "role": "maker",
@@ -5902,7 +5902,7 @@
       "seconds_left_bucket": 230,
       "distance_bps_bucket": 60,
       "entries": 315,
-      "notional": 7591.436317179998
+      "notional": 7591.436317179999
     },
     {
       "role": "maker",
@@ -5923,28 +5923,28 @@
       "seconds_left_bucket": 240,
       "distance_bps_bucket": -80,
       "entries": 54,
-      "notional": 501.17133699500283
+      "notional": 501.17133699500295
     },
     {
       "role": "maker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": -65,
       "entries": 159,
-      "notional": 1779.0189919821794
+      "notional": 1779.0189919821792
     },
     {
       "role": "maker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": -55,
       "entries": 324,
-      "notional": 2890.2647362732523
+      "notional": 2890.2647362732505
     },
     {
       "role": "maker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": -45,
       "entries": 253,
-      "notional": 2830.763658774469
+      "notional": 2830.76365877447
     },
     {
       "role": "maker",
@@ -5965,77 +5965,77 @@
       "seconds_left_bucket": 240,
       "distance_bps_bucket": -25,
       "entries": 364,
-      "notional": 2425.017649714593
+      "notional": 2425.0176497145944
     },
     {
       "role": "maker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": -20,
       "entries": 920,
-      "notional": 7305.224445602855
+      "notional": 7305.2244456028475
     },
     {
       "role": "maker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": -15,
       "entries": 1278,
-      "notional": 8363.013644631012
+      "notional": 8363.01364463101
     },
     {
       "role": "maker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": -10,
       "entries": 1966,
-      "notional": 13941.536647840883
+      "notional": 13941.536647840889
     },
     {
       "role": "maker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": -5,
       "entries": 1883,
-      "notional": 13858.664471299358
+      "notional": 13858.664471299355
     },
     {
       "role": "maker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": 0,
       "entries": 1166,
-      "notional": 6490.309206703685
+      "notional": 6490.3092067036905
     },
     {
       "role": "maker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": 5,
       "entries": 1780,
-      "notional": 11808.381759071046
+      "notional": 11808.381759071053
     },
     {
       "role": "maker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": 10,
       "entries": 782,
-      "notional": 5454.082787010038
+      "notional": 5454.082787010033
     },
     {
       "role": "maker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": 15,
       "entries": 1510,
-      "notional": 10600.053373694103
+      "notional": 10600.0533736941
     },
     {
       "role": "maker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": 20,
       "entries": 773,
-      "notional": 6644.754454887758
+      "notional": 6644.754454887756
     },
     {
       "role": "maker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": 25,
       "entries": 342,
-      "notional": 2808.7506651311132
+      "notional": 2808.7506651311137
     },
     {
       "role": "maker",
@@ -6049,7 +6049,7 @@
       "seconds_left_bucket": 240,
       "distance_bps_bucket": 35,
       "entries": 35,
-      "notional": 588.7053650900001
+      "notional": 588.7053650899999
     },
     {
       "role": "maker",
@@ -6063,7 +6063,7 @@
       "seconds_left_bucket": 240,
       "distance_bps_bucket": 55,
       "entries": 108,
-      "notional": 1635.8300087744358
+      "notional": 1635.830008774436
     },
     {
       "role": "maker",
@@ -6154,14 +6154,14 @@
       "seconds_left_bucket": 250,
       "distance_bps_bucket": -20,
       "entries": 1484,
-      "notional": 12288.209507505568
+      "notional": 12288.20950750557
     },
     {
       "role": "maker",
       "seconds_left_bucket": 250,
       "distance_bps_bucket": -15,
       "entries": 450,
-      "notional": 3738.2747555876767
+      "notional": 3738.2747555876776
     },
     {
       "role": "maker",
@@ -6175,35 +6175,35 @@
       "seconds_left_bucket": 250,
       "distance_bps_bucket": -5,
       "entries": 1763,
-      "notional": 10043.166173540778
+      "notional": 10043.166173540787
     },
     {
       "role": "maker",
       "seconds_left_bucket": 250,
       "distance_bps_bucket": 0,
       "entries": 1736,
-      "notional": 11691.233444916923
+      "notional": 11691.233444916927
     },
     {
       "role": "maker",
       "seconds_left_bucket": 250,
       "distance_bps_bucket": 5,
       "entries": 2028,
-      "notional": 12584.391263483458
+      "notional": 12584.391263483478
     },
     {
       "role": "maker",
       "seconds_left_bucket": 250,
       "distance_bps_bucket": 10,
       "entries": 1273,
-      "notional": 7046.485871833998
+      "notional": 7046.485871834002
     },
     {
       "role": "maker",
       "seconds_left_bucket": 250,
       "distance_bps_bucket": 15,
       "entries": 848,
-      "notional": 8187.451165752289
+      "notional": 8187.451165752285
     },
     {
       "role": "maker",
@@ -6217,7 +6217,7 @@
       "seconds_left_bucket": 250,
       "distance_bps_bucket": 25,
       "entries": 611,
-      "notional": 4990.965474726083
+      "notional": 4990.965474726081
     },
     {
       "role": "maker",
@@ -6231,7 +6231,7 @@
       "seconds_left_bucket": 250,
       "distance_bps_bucket": 35,
       "entries": 139,
-      "notional": 823.2706793199999
+      "notional": 823.2706793200002
     },
     {
       "role": "maker",
@@ -6308,63 +6308,63 @@
       "seconds_left_bucket": 260,
       "distance_bps_bucket": -25,
       "entries": 1012,
-      "notional": 5087.6022347596845
+      "notional": 5087.602234759675
     },
     {
       "role": "maker",
       "seconds_left_bucket": 260,
       "distance_bps_bucket": -20,
       "entries": 922,
-      "notional": 5742.677359701379
+      "notional": 5742.67735970138
     },
     {
       "role": "maker",
       "seconds_left_bucket": 260,
       "distance_bps_bucket": -15,
       "entries": 1170,
-      "notional": 7877.115900367016
+      "notional": 7877.115900367014
     },
     {
       "role": "maker",
       "seconds_left_bucket": 260,
       "distance_bps_bucket": -10,
       "entries": 1331,
-      "notional": 8355.050597036006
+      "notional": 8355.050597035999
     },
     {
       "role": "maker",
       "seconds_left_bucket": 260,
       "distance_bps_bucket": -5,
       "entries": 3367,
-      "notional": 23964.68986093183
+      "notional": 23964.689860931805
     },
     {
       "role": "maker",
       "seconds_left_bucket": 260,
       "distance_bps_bucket": 0,
       "entries": 2360,
-      "notional": 14306.759389873941
+      "notional": 14306.759389873929
     },
     {
       "role": "maker",
       "seconds_left_bucket": 260,
       "distance_bps_bucket": 5,
       "entries": 2031,
-      "notional": 11442.00508479207
+      "notional": 11442.005084792063
     },
     {
       "role": "maker",
       "seconds_left_bucket": 260,
       "distance_bps_bucket": 10,
       "entries": 987,
-      "notional": 10297.117829291887
+      "notional": 10297.117829291892
     },
     {
       "role": "maker",
       "seconds_left_bucket": 260,
       "distance_bps_bucket": 15,
       "entries": 1043,
-      "notional": 7209.457220655749
+      "notional": 7209.4572206557505
     },
     {
       "role": "maker",
@@ -6378,7 +6378,7 @@
       "seconds_left_bucket": 260,
       "distance_bps_bucket": 25,
       "entries": 336,
-      "notional": 2478.196843910345
+      "notional": 2478.196843910343
     },
     {
       "role": "maker",
@@ -6434,7 +6434,7 @@
       "seconds_left_bucket": 270,
       "distance_bps_bucket": -30,
       "entries": 186,
-      "notional": 1204.3335469987167
+      "notional": 1204.3335469987164
     },
     {
       "role": "maker",
@@ -6448,63 +6448,63 @@
       "seconds_left_bucket": 270,
       "distance_bps_bucket": -20,
       "entries": 714,
-      "notional": 4554.986275387079
+      "notional": 4554.98627538708
     },
     {
       "role": "maker",
       "seconds_left_bucket": 270,
       "distance_bps_bucket": -15,
       "entries": 1573,
-      "notional": 9534.716393886185
+      "notional": 9534.716393886196
     },
     {
       "role": "maker",
       "seconds_left_bucket": 270,
       "distance_bps_bucket": -10,
       "entries": 1789,
-      "notional": 14167.251473699644
+      "notional": 14167.251473699645
     },
     {
       "role": "maker",
       "seconds_left_bucket": 270,
       "distance_bps_bucket": -5,
       "entries": 1901,
-      "notional": 12954.838880560237
+      "notional": 12954.838880560226
     },
     {
       "role": "maker",
       "seconds_left_bucket": 270,
       "distance_bps_bucket": 0,
       "entries": 3704,
-      "notional": 23511.451576970052
+      "notional": 23511.451576970045
     },
     {
       "role": "maker",
       "seconds_left_bucket": 270,
       "distance_bps_bucket": 5,
       "entries": 1875,
-      "notional": 11514.54276058091
+      "notional": 11514.542760580916
     },
     {
       "role": "maker",
       "seconds_left_bucket": 270,
       "distance_bps_bucket": 10,
       "entries": 1750,
-      "notional": 8741.695422759036
+      "notional": 8741.695422759043
     },
     {
       "role": "maker",
       "seconds_left_bucket": 270,
       "distance_bps_bucket": 15,
       "entries": 722,
-      "notional": 3795.2879927740605
+      "notional": 3795.287992774062
     },
     {
       "role": "maker",
       "seconds_left_bucket": 270,
       "distance_bps_bucket": 20,
       "entries": 159,
-      "notional": 2469.96465026
+      "notional": 2469.9646502599994
     },
     {
       "role": "maker",
@@ -6553,35 +6553,35 @@
       "seconds_left_bucket": 280,
       "distance_bps_bucket": -15,
       "entries": 795,
-      "notional": 5477.085852185715
+      "notional": 5477.085852185712
     },
     {
       "role": "maker",
       "seconds_left_bucket": 280,
       "distance_bps_bucket": -10,
       "entries": 2975,
-      "notional": 17684.91095099365
+      "notional": 17684.910950993635
     },
     {
       "role": "maker",
       "seconds_left_bucket": 280,
       "distance_bps_bucket": -5,
       "entries": 3334,
-      "notional": 22336.546616631036
+      "notional": 22336.54661663102
     },
     {
       "role": "maker",
       "seconds_left_bucket": 280,
       "distance_bps_bucket": 0,
       "entries": 5508,
-      "notional": 33834.2292340088
+      "notional": 33834.22923400879
     },
     {
       "role": "maker",
       "seconds_left_bucket": 280,
       "distance_bps_bucket": 5,
       "entries": 1750,
-      "notional": 10663.175680735167
+      "notional": 10663.17568073517
     },
     {
       "role": "maker",
@@ -6623,7 +6623,7 @@
       "seconds_left_bucket": 280,
       "distance_bps_bucket": 50,
       "entries": 129,
-      "notional": 934.1443699498273
+      "notional": 934.1443699498269
     },
     {
       "role": "maker",
@@ -6644,35 +6644,35 @@
       "seconds_left_bucket": 290,
       "distance_bps_bucket": -5,
       "entries": 4328,
-      "notional": 27499.243291397248
+      "notional": 27499.243291397215
     },
     {
       "role": "maker",
       "seconds_left_bucket": 290,
       "distance_bps_bucket": 0,
       "entries": 4032,
-      "notional": 31461.74490598903
+      "notional": 31461.744905988977
     },
     {
       "role": "maker",
       "seconds_left_bucket": 290,
       "distance_bps_bucket": 5,
       "entries": 1200,
-      "notional": 7414.310927528748
+      "notional": 7414.3109275287525
     },
     {
       "role": "maker",
       "seconds_left_bucket": 290,
       "distance_bps_bucket": 10,
       "entries": 663,
-      "notional": 4160.5435569747515
+      "notional": 4160.543556974753
     },
     {
       "role": "maker",
       "seconds_left_bucket": 290,
       "distance_bps_bucket": 15,
       "entries": 122,
-      "notional": 792.14649324
+      "notional": 792.1464932400002
     },
     {
       "role": "maker",
@@ -6686,7 +6686,7 @@
       "seconds_left_bucket": 300,
       "distance_bps_bucket": 0,
       "entries": 117,
-      "notional": 2165.0504242185166
+      "notional": 2165.050424218517
     },
     {
       "role": "taker",
@@ -6938,7 +6938,7 @@
       "seconds_left_bucket": 10,
       "distance_bps_bucket": 60,
       "entries": 106,
-      "notional": 372.57015614999995
+      "notional": 372.5701561499999
     },
     {
       "role": "taker",
@@ -6973,7 +6973,7 @@
       "seconds_left_bucket": 20,
       "distance_bps_bucket": -50,
       "entries": 48,
-      "notional": 8979.567203999999
+      "notional": 8979.567203999997
     },
     {
       "role": "taker",
@@ -6987,7 +6987,7 @@
       "seconds_left_bucket": 20,
       "distance_bps_bucket": -20,
       "entries": 80,
-      "notional": 3567.849900000001
+      "notional": 3567.8499000000015
     },
     {
       "role": "taker",
@@ -7015,7 +7015,7 @@
       "seconds_left_bucket": 20,
       "distance_bps_bucket": 40,
       "entries": 6,
-      "notional": 2.2740000000000022
+      "notional": 2.274000000000002
     },
     {
       "role": "taker",
@@ -7043,7 +7043,7 @@
       "seconds_left_bucket": 20,
       "distance_bps_bucket": 60,
       "entries": 93,
-      "notional": 412.06916828999977
+      "notional": 412.0691682899996
     },
     {
       "role": "taker",
@@ -7134,21 +7134,21 @@
       "seconds_left_bucket": 30,
       "distance_bps_bucket": -60,
       "entries": 7,
-      "notional": 111.75192999999999
+      "notional": 111.75193
     },
     {
       "role": "taker",
       "seconds_left_bucket": 30,
       "distance_bps_bucket": -55,
       "entries": 29,
-      "notional": 855.4542999999998
+      "notional": 855.4542999999999
     },
     {
       "role": "taker",
       "seconds_left_bucket": 30,
       "distance_bps_bucket": -50,
       "entries": 41,
-      "notional": 31369.12986
+      "notional": 31369.129860000005
     },
     {
       "role": "taker",
@@ -7169,28 +7169,28 @@
       "seconds_left_bucket": 30,
       "distance_bps_bucket": -25,
       "entries": 183,
-      "notional": 6242.8256999999985
+      "notional": 6242.825699999999
     },
     {
       "role": "taker",
       "seconds_left_bucket": 30,
       "distance_bps_bucket": -20,
       "entries": 75,
-      "notional": 1824.4721529600001
+      "notional": 1824.47215296
     },
     {
       "role": "taker",
       "seconds_left_bucket": 30,
       "distance_bps_bucket": -15,
       "entries": 69,
-      "notional": 762.6972800000001
+      "notional": 762.6972799999999
     },
     {
       "role": "taker",
       "seconds_left_bucket": 30,
       "distance_bps_bucket": -10,
       "entries": 72,
-      "notional": 390.79866628318314
+      "notional": 390.7986662831831
     },
     {
       "role": "taker",
@@ -7204,7 +7204,7 @@
       "seconds_left_bucket": 30,
       "distance_bps_bucket": 25,
       "entries": 48,
-      "notional": 2492.8324930299996
+      "notional": 2492.8324930300005
     },
     {
       "role": "taker",
@@ -7239,14 +7239,14 @@
       "seconds_left_bucket": 30,
       "distance_bps_bucket": 60,
       "entries": 86,
-      "notional": 825.7402838299997
+      "notional": 825.7402838300001
     },
     {
       "role": "taker",
       "seconds_left_bucket": 30,
       "distance_bps_bucket": 65,
       "entries": 55,
-      "notional": 323.20039098999973
+      "notional": 323.2003909899999
     },
     {
       "role": "taker",
@@ -7344,7 +7344,7 @@
       "seconds_left_bucket": 40,
       "distance_bps_bucket": -50,
       "entries": 27,
-      "notional": 1134.7749
+      "notional": 1134.7748999999997
     },
     {
       "role": "taker",
@@ -7365,21 +7365,21 @@
       "seconds_left_bucket": 40,
       "distance_bps_bucket": -20,
       "entries": 59,
-      "notional": 1217.2589753133352
+      "notional": 1217.258975313335
     },
     {
       "role": "taker",
       "seconds_left_bucket": 40,
       "distance_bps_bucket": -15,
       "entries": 27,
-      "notional": 117.47169239234199
+      "notional": 117.47169239234202
     },
     {
       "role": "taker",
       "seconds_left_bucket": 40,
       "distance_bps_bucket": -10,
       "entries": 105,
-      "notional": 250.68529593857298
+      "notional": 250.68529593857303
     },
     {
       "role": "taker",
@@ -7393,14 +7393,14 @@
       "seconds_left_bucket": 40,
       "distance_bps_bucket": 20,
       "entries": 58,
-      "notional": 244.377472393335
+      "notional": 244.37747239333498
     },
     {
       "role": "taker",
       "seconds_left_bucket": 40,
       "distance_bps_bucket": 25,
       "entries": 34,
-      "notional": 15.12500000000001
+      "notional": 15.125000000000012
     },
     {
       "role": "taker",
@@ -7442,7 +7442,7 @@
       "seconds_left_bucket": 40,
       "distance_bps_bucket": 60,
       "entries": 149,
-      "notional": 1614.7670669600004
+      "notional": 1614.76706696
     },
     {
       "role": "taker",
@@ -7533,21 +7533,21 @@
       "seconds_left_bucket": 50,
       "distance_bps_bucket": -55,
       "entries": 257,
-      "notional": 779.8081
+      "notional": 779.8080999999995
     },
     {
       "role": "taker",
       "seconds_left_bucket": 50,
       "distance_bps_bucket": -50,
       "entries": 74,
-      "notional": 2693.2810950000003
+      "notional": 2693.281095
     },
     {
       "role": "taker",
       "seconds_left_bucket": 50,
       "distance_bps_bucket": -45,
       "entries": 18,
-      "notional": 1587.2685
+      "notional": 1587.2685000000001
     },
     {
       "role": "taker",
@@ -7575,14 +7575,14 @@
       "seconds_left_bucket": 50,
       "distance_bps_bucket": -20,
       "entries": 115,
-      "notional": 732.5507711124751
+      "notional": 732.550771112475
     },
     {
       "role": "taker",
       "seconds_left_bucket": 50,
       "distance_bps_bucket": -10,
       "entries": 118,
-      "notional": 579.75068963
+      "notional": 579.7506896300001
     },
     {
       "role": "taker",
@@ -7603,14 +7603,14 @@
       "seconds_left_bucket": 50,
       "distance_bps_bucket": 25,
       "entries": 448,
-      "notional": 9519.533714880848
+      "notional": 9519.533714880856
     },
     {
       "role": "taker",
       "seconds_left_bucket": 50,
       "distance_bps_bucket": 30,
       "entries": 136,
-      "notional": 2874.5627818599996
+      "notional": 2874.56278186
     },
     {
       "role": "taker",
@@ -7659,7 +7659,7 @@
       "seconds_left_bucket": 50,
       "distance_bps_bucket": 65,
       "entries": 211,
-      "notional": 2169.673901255556
+      "notional": 2169.673901255557
     },
     {
       "role": "taker",
@@ -7729,14 +7729,14 @@
       "seconds_left_bucket": 60,
       "distance_bps_bucket": -55,
       "entries": 20,
-      "notional": 247.28369899999998
+      "notional": 247.283699
     },
     {
       "role": "taker",
       "seconds_left_bucket": 60,
       "distance_bps_bucket": -50,
       "entries": 56,
-      "notional": 974.7354869200001
+      "notional": 974.7354869199996
     },
     {
       "role": "taker",
@@ -7750,28 +7750,28 @@
       "seconds_left_bucket": 60,
       "distance_bps_bucket": -40,
       "entries": 102,
-      "notional": 1096.80639996
+      "notional": 1096.8063999600001
     },
     {
       "role": "taker",
       "seconds_left_bucket": 60,
       "distance_bps_bucket": -35,
       "entries": 98,
-      "notional": 4664.7329
+      "notional": 4664.732899999999
     },
     {
       "role": "taker",
       "seconds_left_bucket": 60,
       "distance_bps_bucket": -20,
       "entries": 273,
-      "notional": 9680.4852976328
+      "notional": 9680.485297632798
     },
     {
       "role": "taker",
       "seconds_left_bucket": 60,
       "distance_bps_bucket": -10,
       "entries": 58,
-      "notional": 546.78889731
+      "notional": 546.7888973100002
     },
     {
       "role": "taker",
@@ -7799,7 +7799,7 @@
       "seconds_left_bucket": 60,
       "distance_bps_bucket": 25,
       "entries": 432,
-      "notional": 8364.129876957628
+      "notional": 8364.129876957624
     },
     {
       "role": "taker",
@@ -7841,7 +7841,7 @@
       "seconds_left_bucket": 60,
       "distance_bps_bucket": 65,
       "entries": 219,
-      "notional": 2025.6424501400015
+      "notional": 2025.6424501399993
     },
     {
       "role": "taker",
@@ -7939,7 +7939,7 @@
       "seconds_left_bucket": 70,
       "distance_bps_bucket": -50,
       "entries": 213,
-      "notional": 7133.144299999996
+      "notional": 7133.144299999999
     },
     {
       "role": "taker",
@@ -7960,14 +7960,14 @@
       "seconds_left_bucket": 70,
       "distance_bps_bucket": -35,
       "entries": 235,
-      "notional": 4342.376176709391
+      "notional": 4342.376176709392
     },
     {
       "role": "taker",
       "seconds_left_bucket": 70,
       "distance_bps_bucket": -30,
       "entries": 76,
-      "notional": 1350.5799999999997
+      "notional": 1350.58
     },
     {
       "role": "taker",
@@ -7995,42 +7995,42 @@
       "seconds_left_bucket": 70,
       "distance_bps_bucket": -10,
       "entries": 51,
-      "notional": 459.48308785000006
+      "notional": 459.48308785
     },
     {
       "role": "taker",
       "seconds_left_bucket": 70,
       "distance_bps_bucket": -5,
       "entries": 148,
-      "notional": 1147.6913815799999
+      "notional": 1147.6913815799996
     },
     {
       "role": "taker",
       "seconds_left_bucket": 70,
       "distance_bps_bucket": 10,
       "entries": 129,
-      "notional": 1789.3419901842499
+      "notional": 1789.3419901842497
     },
     {
       "role": "taker",
       "seconds_left_bucket": 70,
       "distance_bps_bucket": 15,
       "entries": 107,
-      "notional": 1255.75740763
+      "notional": 1255.7574076299995
     },
     {
       "role": "taker",
       "seconds_left_bucket": 70,
       "distance_bps_bucket": 20,
       "entries": 136,
-      "notional": 2025.7435195450525
+      "notional": 2025.743519545052
     },
     {
       "role": "taker",
       "seconds_left_bucket": 70,
       "distance_bps_bucket": 25,
       "entries": 110,
-      "notional": 4637.936365
+      "notional": 4637.936364999999
     },
     {
       "role": "taker",
@@ -8044,7 +8044,7 @@
       "seconds_left_bucket": 70,
       "distance_bps_bucket": 35,
       "entries": 55,
-      "notional": 577.7799920000002
+      "notional": 577.779992
     },
     {
       "role": "taker",
@@ -8072,7 +8072,7 @@
       "seconds_left_bucket": 70,
       "distance_bps_bucket": 55,
       "entries": 28,
-      "notional": 392.2074000000001
+      "notional": 392.2074
     },
     {
       "role": "taker",
@@ -8086,7 +8086,7 @@
       "seconds_left_bucket": 70,
       "distance_bps_bucket": 65,
       "entries": 21,
-      "notional": 4.060000000000003
+      "notional": 4.060000000000004
     },
     {
       "role": "taker",
@@ -8170,7 +8170,7 @@
       "seconds_left_bucket": 80,
       "distance_bps_bucket": -55,
       "entries": 34,
-      "notional": 366.36407401
+      "notional": 366.36407400999997
     },
     {
       "role": "taker",
@@ -8191,21 +8191,21 @@
       "seconds_left_bucket": 80,
       "distance_bps_bucket": -40,
       "entries": 43,
-      "notional": 194.49646800000002
+      "notional": 194.496468
     },
     {
       "role": "taker",
       "seconds_left_bucket": 80,
       "distance_bps_bucket": -35,
       "entries": 96,
-      "notional": 3064.304357829998
+      "notional": 3064.30435783
     },
     {
       "role": "taker",
       "seconds_left_bucket": 80,
       "distance_bps_bucket": -30,
       "entries": 205,
-      "notional": 3314.479778
+      "notional": 3314.4797780000013
     },
     {
       "role": "taker",
@@ -8226,7 +8226,7 @@
       "seconds_left_bucket": 80,
       "distance_bps_bucket": -15,
       "entries": 164,
-      "notional": 2607.844067000002
+      "notional": 2607.844066999999
     },
     {
       "role": "taker",
@@ -8240,21 +8240,21 @@
       "seconds_left_bucket": 80,
       "distance_bps_bucket": 0,
       "entries": 120,
-      "notional": 1018.1168874500001
+      "notional": 1018.11688745
     },
     {
       "role": "taker",
       "seconds_left_bucket": 80,
       "distance_bps_bucket": 5,
       "entries": 140,
-      "notional": 831.3608734314299
+      "notional": 831.36087343143
     },
     {
       "role": "taker",
       "seconds_left_bucket": 80,
       "distance_bps_bucket": 10,
       "entries": 89,
-      "notional": 857.6138513677561
+      "notional": 857.6138513677562
     },
     {
       "role": "taker",
@@ -8268,7 +8268,7 @@
       "seconds_left_bucket": 80,
       "distance_bps_bucket": 20,
       "entries": 188,
-      "notional": 3196.398837373908
+      "notional": 3196.3988373739085
     },
     {
       "role": "taker",
@@ -8289,7 +8289,7 @@
       "seconds_left_bucket": 80,
       "distance_bps_bucket": 35,
       "entries": 200,
-      "notional": 4638.4576640000005
+      "notional": 4638.457663999998
     },
     {
       "role": "taker",
@@ -8303,7 +8303,7 @@
       "seconds_left_bucket": 80,
       "distance_bps_bucket": 45,
       "entries": 134,
-      "notional": 3561.476070009997
+      "notional": 3561.4760700100014
     },
     {
       "role": "taker",
@@ -8317,21 +8317,21 @@
       "seconds_left_bucket": 80,
       "distance_bps_bucket": 55,
       "entries": 155,
-      "notional": 4722.176799999999
+      "notional": 4722.176799999998
     },
     {
       "role": "taker",
       "seconds_left_bucket": 80,
       "distance_bps_bucket": 60,
       "entries": 115,
-      "notional": 4440.394099999999
+      "notional": 4440.394099999998
     },
     {
       "role": "taker",
       "seconds_left_bucket": 80,
       "distance_bps_bucket": 65,
       "entries": 21,
-      "notional": 138.3347990300001
+      "notional": 138.33479903
     },
     {
       "role": "taker",
@@ -8415,14 +8415,14 @@
       "seconds_left_bucket": 90,
       "distance_bps_bucket": -50,
       "entries": 187,
-      "notional": 9564.5661
+      "notional": 9564.566099999995
     },
     {
       "role": "taker",
       "seconds_left_bucket": 90,
       "distance_bps_bucket": -45,
       "entries": 52,
-      "notional": 706.7466999999999
+      "notional": 706.7467
     },
     {
       "role": "taker",
@@ -8436,14 +8436,14 @@
       "seconds_left_bucket": 90,
       "distance_bps_bucket": -35,
       "entries": 198,
-      "notional": 6364.3610705689825
+      "notional": 6364.361070568982
     },
     {
       "role": "taker",
       "seconds_left_bucket": 90,
       "distance_bps_bucket": -30,
       "entries": 116,
-      "notional": 1417.2600558399997
+      "notional": 1417.26005584
     },
     {
       "role": "taker",
@@ -8457,7 +8457,7 @@
       "seconds_left_bucket": 90,
       "distance_bps_bucket": -15,
       "entries": 33,
-      "notional": 356.08938312263297
+      "notional": 356.0893831226329
     },
     {
       "role": "taker",
@@ -8471,7 +8471,7 @@
       "seconds_left_bucket": 90,
       "distance_bps_bucket": -5,
       "entries": 41,
-      "notional": 247.30999402000006
+      "notional": 247.30999401999998
     },
     {
       "role": "taker",
@@ -8485,7 +8485,7 @@
       "seconds_left_bucket": 90,
       "distance_bps_bucket": 5,
       "entries": 82,
-      "notional": 491.2886906199999
+      "notional": 491.28869061999984
     },
     {
       "role": "taker",
@@ -8499,14 +8499,14 @@
       "seconds_left_bucket": 90,
       "distance_bps_bucket": 15,
       "entries": 136,
-      "notional": 2513.1588798400007
+      "notional": 2513.1588798399994
     },
     {
       "role": "taker",
       "seconds_left_bucket": 90,
       "distance_bps_bucket": 20,
       "entries": 201,
-      "notional": 1723.6563738600012
+      "notional": 1723.6563738599993
     },
     {
       "role": "taker",
@@ -8520,7 +8520,7 @@
       "seconds_left_bucket": 90,
       "distance_bps_bucket": 30,
       "entries": 157,
-      "notional": 3659.8586279500046
+      "notional": 3659.858627950001
     },
     {
       "role": "taker",
@@ -8534,21 +8534,21 @@
       "seconds_left_bucket": 90,
       "distance_bps_bucket": 40,
       "entries": 116,
-      "notional": 3192.746804999999
+      "notional": 3192.7468050000007
     },
     {
       "role": "taker",
       "seconds_left_bucket": 90,
       "distance_bps_bucket": 45,
       "entries": 592,
-      "notional": 16401.8829539908
+      "notional": 16401.882953990807
     },
     {
       "role": "taker",
       "seconds_left_bucket": 90,
       "distance_bps_bucket": 50,
       "entries": 220,
-      "notional": 6641.02781698973
+      "notional": 6641.027816989735
     },
     {
       "role": "taker",
@@ -8562,7 +8562,7 @@
       "seconds_left_bucket": 90,
       "distance_bps_bucket": 60,
       "entries": 48,
-      "notional": 933.92919835
+      "notional": 933.9291983500001
     },
     {
       "role": "taker",
@@ -8576,7 +8576,7 @@
       "seconds_left_bucket": 90,
       "distance_bps_bucket": 70,
       "entries": 30,
-      "notional": 7.896100000000004
+      "notional": 7.896100000000005
     },
     {
       "role": "taker",
@@ -8653,28 +8653,28 @@
       "seconds_left_bucket": 100,
       "distance_bps_bucket": -45,
       "entries": 115,
-      "notional": 4225.665974999998
+      "notional": 4225.665975
     },
     {
       "role": "taker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": -40,
       "entries": 190,
-      "notional": 2707.8395303800003
+      "notional": 2707.83953038
     },
     {
       "role": "taker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": -35,
       "entries": 104,
-      "notional": 1660.9292825689809
+      "notional": 1660.9292825689802
     },
     {
       "role": "taker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": -30,
       "entries": 173,
-      "notional": 5830.268486839997
+      "notional": 5830.268486839999
     },
     {
       "role": "taker",
@@ -8702,28 +8702,28 @@
       "seconds_left_bucket": 100,
       "distance_bps_bucket": -5,
       "entries": 47,
-      "notional": 463.86129857000003
+      "notional": 463.86129857
     },
     {
       "role": "taker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 0,
       "entries": 389,
-      "notional": 3078.129724112216
+      "notional": 3078.129724112217
     },
     {
       "role": "taker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 5,
       "entries": 165,
-      "notional": 1111.5882756177768
+      "notional": 1111.588275617777
     },
     {
       "role": "taker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 10,
       "entries": 77,
-      "notional": 1014.6895738109689
+      "notional": 1014.6895738109688
     },
     {
       "role": "taker",
@@ -8737,14 +8737,14 @@
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 20,
       "entries": 357,
-      "notional": 3399.8291648599206
+      "notional": 3399.829164859921
     },
     {
       "role": "taker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 25,
       "entries": 272,
-      "notional": 4889.469538804166
+      "notional": 4889.469538804165
     },
     {
       "role": "taker",
@@ -8758,42 +8758,42 @@
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 35,
       "entries": 351,
-      "notional": 8282.5914777
+      "notional": 8282.591477700002
     },
     {
       "role": "taker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 40,
       "entries": 221,
-      "notional": 6120.838413361666
+      "notional": 6120.838413361667
     },
     {
       "role": "taker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 45,
       "entries": 57,
-      "notional": 849.9883775426329
+      "notional": 849.9883775426331
     },
     {
       "role": "taker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 50,
       "entries": 83,
-      "notional": 2827.87155803
+      "notional": 2827.8715580300004
     },
     {
       "role": "taker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 55,
       "entries": 154,
-      "notional": 2371.337634119172
+      "notional": 2371.3376341191724
     },
     {
       "role": "taker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 60,
       "entries": 268,
-      "notional": 15078.316417608981
+      "notional": 15078.316417608976
     },
     {
       "role": "taker",
@@ -8807,14 +8807,14 @@
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 70,
       "entries": 54,
-      "notional": 900.6325091777211
+      "notional": 900.632509177721
     },
     {
       "role": "taker",
       "seconds_left_bucket": 100,
       "distance_bps_bucket": 75,
       "entries": 74,
-      "notional": 768.015361998335
+      "notional": 768.0153619983346
     },
     {
       "role": "taker",
@@ -8884,35 +8884,35 @@
       "seconds_left_bucket": 110,
       "distance_bps_bucket": -65,
       "entries": 42,
-      "notional": 876.9568
+      "notional": 876.9568000000002
     },
     {
       "role": "taker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": -60,
       "entries": 60,
-      "notional": 1603.717299
+      "notional": 1603.7172989999997
     },
     {
       "role": "taker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": -50,
       "entries": 24,
-      "notional": 732.820975
+      "notional": 732.8209750000001
     },
     {
       "role": "taker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": -45,
       "entries": 155,
-      "notional": 8270.566121000003
+      "notional": 8270.566120999998
     },
     {
       "role": "taker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": -40,
       "entries": 364,
-      "notional": 10748.874515829182
+      "notional": 10748.87451582918
     },
     {
       "role": "taker",
@@ -8933,7 +8933,7 @@
       "seconds_left_bucket": 110,
       "distance_bps_bucket": -25,
       "entries": 110,
-      "notional": 1759.99388671
+      "notional": 1759.9938867100004
     },
     {
       "role": "taker",
@@ -8954,7 +8954,7 @@
       "seconds_left_bucket": 110,
       "distance_bps_bucket": -10,
       "entries": 118,
-      "notional": 554.58018624
+      "notional": 554.5801862400001
     },
     {
       "role": "taker",
@@ -8968,7 +8968,7 @@
       "seconds_left_bucket": 110,
       "distance_bps_bucket": 0,
       "entries": 230,
-      "notional": 1680.2122394537946
+      "notional": 1680.212239453795
     },
     {
       "role": "taker",
@@ -8982,42 +8982,42 @@
       "seconds_left_bucket": 110,
       "distance_bps_bucket": 10,
       "entries": 244,
-      "notional": 2870.9639474599985
+      "notional": 2870.96394746
     },
     {
       "role": "taker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": 15,
       "entries": 379,
-      "notional": 3821.98384024
+      "notional": 3821.9838402400005
     },
     {
       "role": "taker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": 20,
       "entries": 314,
-      "notional": 6785.988573464533
+      "notional": 6785.988573464535
     },
     {
       "role": "taker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": 25,
       "entries": 76,
-      "notional": 403.275084
+      "notional": 403.27508399999994
     },
     {
       "role": "taker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": 30,
       "entries": 166,
-      "notional": 1882.9417243499997
+      "notional": 1882.9417243500004
     },
     {
       "role": "taker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": 35,
       "entries": 434,
-      "notional": 6224.105014990003
+      "notional": 6224.105014990001
     },
     {
       "role": "taker",
@@ -9038,7 +9038,7 @@
       "seconds_left_bucket": 110,
       "distance_bps_bucket": 50,
       "entries": 241,
-      "notional": 7180.1402519899975
+      "notional": 7180.140251989998
     },
     {
       "role": "taker",
@@ -9052,21 +9052,21 @@
       "seconds_left_bucket": 110,
       "distance_bps_bucket": 60,
       "entries": 26,
-      "notional": 119.01100000000002
+      "notional": 119.01099999999997
     },
     {
       "role": "taker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": 65,
       "entries": 30,
-      "notional": 584.7483999599999
+      "notional": 584.74839996
     },
     {
       "role": "taker",
       "seconds_left_bucket": 110,
       "distance_bps_bucket": 70,
       "entries": 21,
-      "notional": 220.84740000000005
+      "notional": 220.84740000000002
     },
     {
       "role": "taker",
@@ -9087,7 +9087,7 @@
       "seconds_left_bucket": 110,
       "distance_bps_bucket": 85,
       "entries": 71,
-      "notional": 468.2984919699999
+      "notional": 468.29849197
     },
     {
       "role": "taker",
@@ -9143,7 +9143,7 @@
       "seconds_left_bucket": 120,
       "distance_bps_bucket": -55,
       "entries": 82,
-      "notional": 1468.834169
+      "notional": 1468.8341689999997
     },
     {
       "role": "taker",
@@ -9157,7 +9157,7 @@
       "seconds_left_bucket": 120,
       "distance_bps_bucket": -45,
       "entries": 151,
-      "notional": 3675.4523900199997
+      "notional": 3675.45239002
     },
     {
       "role": "taker",
@@ -9171,7 +9171,7 @@
       "seconds_left_bucket": 120,
       "distance_bps_bucket": -35,
       "entries": 27,
-      "notional": 435.06479003000004
+      "notional": 435.06479003
     },
     {
       "role": "taker",
@@ -9185,7 +9185,7 @@
       "seconds_left_bucket": 120,
       "distance_bps_bucket": -25,
       "entries": 324,
-      "notional": 2745.1720152602074
+      "notional": 2745.172015260209
     },
     {
       "role": "taker",
@@ -9199,35 +9199,35 @@
       "seconds_left_bucket": 120,
       "distance_bps_bucket": -15,
       "entries": 192,
-      "notional": 4982.520554680001
+      "notional": 4982.520554679997
     },
     {
       "role": "taker",
       "seconds_left_bucket": 120,
       "distance_bps_bucket": -10,
       "entries": 360,
-      "notional": 2125.332265408098
+      "notional": 2125.3322654080976
     },
     {
       "role": "taker",
       "seconds_left_bucket": 120,
       "distance_bps_bucket": 0,
       "entries": 132,
-      "notional": 906.4450641810361
+      "notional": 906.4450641810358
     },
     {
       "role": "taker",
       "seconds_left_bucket": 120,
       "distance_bps_bucket": 5,
       "entries": 305,
-      "notional": 2535.1603594681164
+      "notional": 2535.1603594681173
     },
     {
       "role": "taker",
       "seconds_left_bucket": 120,
       "distance_bps_bucket": 10,
       "entries": 180,
-      "notional": 1431.747755646925
+      "notional": 1431.7477556469253
     },
     {
       "role": "taker",
@@ -9241,7 +9241,7 @@
       "seconds_left_bucket": 120,
       "distance_bps_bucket": 20,
       "entries": 145,
-      "notional": 1241.7748709022276
+      "notional": 1241.7748709022285
     },
     {
       "role": "taker",
@@ -9276,14 +9276,14 @@
       "seconds_left_bucket": 120,
       "distance_bps_bucket": 45,
       "entries": 168,
-      "notional": 5090.564684342861
+      "notional": 5090.56468434286
     },
     {
       "role": "taker",
       "seconds_left_bucket": 120,
       "distance_bps_bucket": 50,
       "entries": 224,
-      "notional": 5654.731586070002
+      "notional": 5654.731586069999
     },
     {
       "role": "taker",
@@ -9388,35 +9388,35 @@
       "seconds_left_bucket": 130,
       "distance_bps_bucket": -55,
       "entries": 128,
-      "notional": 1102.9271019999996
+      "notional": 1102.9271019999999
     },
     {
       "role": "taker",
       "seconds_left_bucket": 130,
       "distance_bps_bucket": -50,
       "entries": 48,
-      "notional": 1714.86422408
+      "notional": 1714.8642240799993
     },
     {
       "role": "taker",
       "seconds_left_bucket": 130,
       "distance_bps_bucket": -45,
       "entries": 149,
-      "notional": 7144.116296706865
+      "notional": 7144.116296706867
     },
     {
       "role": "taker",
       "seconds_left_bucket": 130,
       "distance_bps_bucket": -40,
       "entries": 129,
-      "notional": 2379.3160419999995
+      "notional": 2379.3160420000013
     },
     {
       "role": "taker",
       "seconds_left_bucket": 130,
       "distance_bps_bucket": -35,
       "entries": 67,
-      "notional": 1546.550845226124
+      "notional": 1546.5508452261236
     },
     {
       "role": "taker",
@@ -9430,14 +9430,14 @@
       "seconds_left_bucket": 130,
       "distance_bps_bucket": -25,
       "entries": 100,
-      "notional": 566.1627669846841
+      "notional": 566.1627669846839
     },
     {
       "role": "taker",
       "seconds_left_bucket": 130,
       "distance_bps_bucket": -20,
       "entries": 289,
-      "notional": 3995.808289930621
+      "notional": 3995.8082899306223
     },
     {
       "role": "taker",
@@ -9451,14 +9451,14 @@
       "seconds_left_bucket": 130,
       "distance_bps_bucket": -10,
       "entries": 192,
-      "notional": 1836.7429807644457
+      "notional": 1836.7429807644462
     },
     {
       "role": "taker",
       "seconds_left_bucket": 130,
       "distance_bps_bucket": 0,
       "entries": 83,
-      "notional": 771.5083961500002
+      "notional": 771.5083961500001
     },
     {
       "role": "taker",
@@ -9472,42 +9472,42 @@
       "seconds_left_bucket": 130,
       "distance_bps_bucket": 10,
       "entries": 227,
-      "notional": 1707.7099678874997
+      "notional": 1707.7099678875002
     },
     {
       "role": "taker",
       "seconds_left_bucket": 130,
       "distance_bps_bucket": 15,
       "entries": 301,
-      "notional": 3714.034872667413
+      "notional": 3714.0348726674138
     },
     {
       "role": "taker",
       "seconds_left_bucket": 130,
       "distance_bps_bucket": 20,
       "entries": 109,
-      "notional": 2482.2402602807097
+      "notional": 2482.2402602807083
     },
     {
       "role": "taker",
       "seconds_left_bucket": 130,
       "distance_bps_bucket": 25,
       "entries": 257,
-      "notional": 3392.547949833335
+      "notional": 3392.5479498333357
     },
     {
       "role": "taker",
       "seconds_left_bucket": 130,
       "distance_bps_bucket": 30,
       "entries": 292,
-      "notional": 5758.541573109999
+      "notional": 5758.54157311
     },
     {
       "role": "taker",
       "seconds_left_bucket": 130,
       "distance_bps_bucket": 35,
       "entries": 60,
-      "notional": 728.7829410400001
+      "notional": 728.78294104
     },
     {
       "role": "taker",
@@ -9521,7 +9521,7 @@
       "seconds_left_bucket": 130,
       "distance_bps_bucket": 45,
       "entries": 165,
-      "notional": 2641.39883794
+      "notional": 2641.3988379400002
     },
     {
       "role": "taker",
@@ -9535,7 +9535,7 @@
       "seconds_left_bucket": 130,
       "distance_bps_bucket": 55,
       "entries": 59,
-      "notional": 1185.54173504
+      "notional": 1185.5417350399998
     },
     {
       "role": "taker",
@@ -9577,7 +9577,7 @@
       "seconds_left_bucket": 130,
       "distance_bps_bucket": 85,
       "entries": 171,
-      "notional": 10034.965804480003
+      "notional": 10034.965804480005
     },
     {
       "role": "taker",
@@ -9619,7 +9619,7 @@
       "seconds_left_bucket": 140,
       "distance_bps_bucket": -60,
       "entries": 242,
-      "notional": 3837.41011805
+      "notional": 3837.410118050001
     },
     {
       "role": "taker",
@@ -9633,70 +9633,70 @@
       "seconds_left_bucket": 140,
       "distance_bps_bucket": -50,
       "entries": 40,
-      "notional": 1295.63722911
+      "notional": 1295.6372291100001
     },
     {
       "role": "taker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": -45,
       "entries": 60,
-      "notional": 1412.2286660199993
+      "notional": 1412.2286660199995
     },
     {
       "role": "taker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": -40,
       "entries": 192,
-      "notional": 5210.199758040001
+      "notional": 5210.199758040002
     },
     {
       "role": "taker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": -35,
       "entries": 238,
-      "notional": 7966.318546713332
+      "notional": 7966.318546713337
     },
     {
       "role": "taker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": -30,
       "entries": 110,
-      "notional": 1663.6626874925237
+      "notional": 1663.662687492524
     },
     {
       "role": "taker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": -25,
       "entries": 92,
-      "notional": 716.9284585175299
+      "notional": 716.9284585175301
     },
     {
       "role": "taker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": -20,
       "entries": 108,
-      "notional": 1240.74952571
+      "notional": 1240.7495257099997
     },
     {
       "role": "taker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": -15,
       "entries": 98,
-      "notional": 647.4782843
+      "notional": 647.4782842999999
     },
     {
       "role": "taker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": -10,
       "entries": 292,
-      "notional": 3052.5174703099997
+      "notional": 3052.51747031
     },
     {
       "role": "taker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": -5,
       "entries": 115,
-      "notional": 709.5245889400001
+      "notional": 709.5245889399998
     },
     {
       "role": "taker",
@@ -9710,7 +9710,7 @@
       "seconds_left_bucket": 140,
       "distance_bps_bucket": 5,
       "entries": 333,
-      "notional": 2132.3883469657476
+      "notional": 2132.388346965748
     },
     {
       "role": "taker",
@@ -9724,7 +9724,7 @@
       "seconds_left_bucket": 140,
       "distance_bps_bucket": 15,
       "entries": 211,
-      "notional": 3613.2076017800027
+      "notional": 3613.207601780003
     },
     {
       "role": "taker",
@@ -9738,21 +9738,21 @@
       "seconds_left_bucket": 140,
       "distance_bps_bucket": 25,
       "entries": 665,
-      "notional": 16957.475998217436
+      "notional": 16957.47599821743
     },
     {
       "role": "taker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": 30,
       "entries": 288,
-      "notional": 7064.402981781649
+      "notional": 7064.40298178165
     },
     {
       "role": "taker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": 35,
       "entries": 304,
-      "notional": 6596.556474949999
+      "notional": 6596.556474950001
     },
     {
       "role": "taker",
@@ -9780,21 +9780,21 @@
       "seconds_left_bucket": 140,
       "distance_bps_bucket": 55,
       "entries": 253,
-      "notional": 8623.98238225999
+      "notional": 8623.982382259994
     },
     {
       "role": "taker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": 60,
       "entries": 66,
-      "notional": 1908.9400117284547
+      "notional": 1908.940011728455
     },
     {
       "role": "taker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": 65,
       "entries": 77,
-      "notional": 1256.669732
+      "notional": 1256.6697319999998
     },
     {
       "role": "taker",
@@ -9808,14 +9808,14 @@
       "seconds_left_bucket": 140,
       "distance_bps_bucket": 75,
       "entries": 34,
-      "notional": 597.233392
+      "notional": 597.2333920000001
     },
     {
       "role": "taker",
       "seconds_left_bucket": 140,
       "distance_bps_bucket": 80,
       "entries": 209,
-      "notional": 4014.354323559182
+      "notional": 4014.354323559181
     },
     {
       "role": "taker",
@@ -9857,7 +9857,7 @@
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -75,
       "entries": 19,
-      "notional": 451.72237777360994
+      "notional": 451.72237777361
     },
     {
       "role": "taker",
@@ -9871,77 +9871,77 @@
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -60,
       "entries": 414,
-      "notional": 3558.9714747083704
+      "notional": 3558.971474708371
     },
     {
       "role": "taker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -55,
       "entries": 26,
-      "notional": 101.96977402
+      "notional": 101.96977401999999
     },
     {
       "role": "taker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -50,
       "entries": 175,
-      "notional": 3325.2893581999997
+      "notional": 3325.2893582
     },
     {
       "role": "taker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -45,
       "entries": 155,
-      "notional": 3682.4046923312785
+      "notional": 3682.404692331278
     },
     {
       "role": "taker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -40,
       "entries": 218,
-      "notional": 3113.4030143436435
+      "notional": 3113.403014343642
     },
     {
       "role": "taker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -35,
       "entries": 293,
-      "notional": 4014.4452180000017
+      "notional": 4014.445218000001
     },
     {
       "role": "taker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -30,
       "entries": 355,
-      "notional": 5030.993977022653
+      "notional": 5030.993977022656
     },
     {
       "role": "taker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -25,
       "entries": 204,
-      "notional": 1263.06807798
+      "notional": 1263.0680779799998
     },
     {
       "role": "taker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -20,
       "entries": 123,
-      "notional": 793.942162268397
+      "notional": 793.9421622683968
     },
     {
       "role": "taker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -15,
       "entries": 193,
-      "notional": 3504.902442435555
+      "notional": 3504.9024424355566
     },
     {
       "role": "taker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": -10,
       "entries": 316,
-      "notional": 3012.2370386377825
+      "notional": 3012.2370386377816
     },
     {
       "role": "taker",
@@ -9955,42 +9955,42 @@
       "seconds_left_bucket": 150,
       "distance_bps_bucket": 0,
       "entries": 90,
-      "notional": 769.6312879346353
+      "notional": 769.631287934635
     },
     {
       "role": "taker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": 5,
       "entries": 484,
-      "notional": 3982.7491913439235
+      "notional": 3982.7491913439253
     },
     {
       "role": "taker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": 10,
       "entries": 418,
-      "notional": 5886.78018711366
+      "notional": 5886.780187113659
     },
     {
       "role": "taker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": 15,
       "entries": 330,
-      "notional": 3144.195279905466
+      "notional": 3144.195279905467
     },
     {
       "role": "taker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": 20,
       "entries": 418,
-      "notional": 4366.569621311082
+      "notional": 4366.569621311084
     },
     {
       "role": "taker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": 25,
       "entries": 321,
-      "notional": 4919.254278004833
+      "notional": 4919.254278004832
     },
     {
       "role": "taker",
@@ -10011,14 +10011,14 @@
       "seconds_left_bucket": 150,
       "distance_bps_bucket": 45,
       "entries": 82,
-      "notional": 2497.312492000002
+      "notional": 2497.312492
     },
     {
       "role": "taker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": 50,
       "entries": 30,
-      "notional": 1621.7976999999996
+      "notional": 1621.7976999999998
     },
     {
       "role": "taker",
@@ -10032,14 +10032,14 @@
       "seconds_left_bucket": 150,
       "distance_bps_bucket": 60,
       "entries": 250,
-      "notional": 7228.803701000001
+      "notional": 7228.803701000003
     },
     {
       "role": "taker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": 65,
       "entries": 238,
-      "notional": 2538.5896033200006
+      "notional": 2538.5896033199997
     },
     {
       "role": "taker",
@@ -10074,14 +10074,14 @@
       "seconds_left_bucket": 150,
       "distance_bps_bucket": 90,
       "entries": 14,
-      "notional": 252.45000000000002
+      "notional": 252.45
     },
     {
       "role": "taker",
       "seconds_left_bucket": 150,
       "distance_bps_bucket": 95,
       "entries": 41,
-      "notional": 1976.6267000000007
+      "notional": 1976.6267000000003
     },
     {
       "role": "taker",
@@ -10116,7 +10116,7 @@
       "seconds_left_bucket": 160,
       "distance_bps_bucket": -75,
       "entries": 92,
-      "notional": 7150.764099999995
+      "notional": 7150.7640999999985
     },
     {
       "role": "taker",
@@ -10137,14 +10137,14 @@
       "seconds_left_bucket": 160,
       "distance_bps_bucket": -60,
       "entries": 193,
-      "notional": 4252.224608154446
+      "notional": 4252.224608154447
     },
     {
       "role": "taker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": -55,
       "entries": 243,
-      "notional": 6823.795890240001
+      "notional": 6823.795890239999
     },
     {
       "role": "taker",
@@ -10158,7 +10158,7 @@
       "seconds_left_bucket": 160,
       "distance_bps_bucket": -45,
       "entries": 71,
-      "notional": 1363.57309855
+      "notional": 1363.5730985500002
     },
     {
       "role": "taker",
@@ -10172,7 +10172,7 @@
       "seconds_left_bucket": 160,
       "distance_bps_bucket": -35,
       "entries": 245,
-      "notional": 5813.915389150002
+      "notional": 5813.915389149999
     },
     {
       "role": "taker",
@@ -10186,63 +10186,63 @@
       "seconds_left_bucket": 160,
       "distance_bps_bucket": -25,
       "entries": 192,
-      "notional": 2491.291364419999
+      "notional": 2491.2913644200003
     },
     {
       "role": "taker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": -15,
       "entries": 121,
-      "notional": 934.5554563999998
+      "notional": 934.5554564
     },
     {
       "role": "taker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": -10,
       "entries": 315,
-      "notional": 2717.857865156254
+      "notional": 2717.8578651562543
     },
     {
       "role": "taker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": -5,
       "entries": 688,
-      "notional": 5338.639819568987
+      "notional": 5338.639819568989
     },
     {
       "role": "taker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 0,
       "entries": 178,
-      "notional": 1258.1330902699997
+      "notional": 1258.1330902700001
     },
     {
       "role": "taker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 5,
       "entries": 118,
-      "notional": 697.1192936999997
+      "notional": 697.1192937000002
     },
     {
       "role": "taker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 10,
       "entries": 689,
-      "notional": 8329.601037636934
+      "notional": 8329.601037636938
     },
     {
       "role": "taker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 15,
       "entries": 310,
-      "notional": 2556.6212106326448
+      "notional": 2556.6212106326457
     },
     {
       "role": "taker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 20,
       "entries": 444,
-      "notional": 5705.284237447259
+      "notional": 5705.284237447261
     },
     {
       "role": "taker",
@@ -10256,14 +10256,14 @@
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 30,
       "entries": 109,
-      "notional": 2181.86837228
+      "notional": 2181.8683722800006
     },
     {
       "role": "taker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 40,
       "entries": 108,
-      "notional": 1084.836068706668
+      "notional": 1084.8360687066681
     },
     {
       "role": "taker",
@@ -10277,7 +10277,7 @@
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 50,
       "entries": 261,
-      "notional": 9182.06162106667
+      "notional": 9182.061621066669
     },
     {
       "role": "taker",
@@ -10291,21 +10291,21 @@
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 60,
       "entries": 172,
-      "notional": 2132.0258796177786
+      "notional": 2132.025879617779
     },
     {
       "role": "taker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 65,
       "entries": 404,
-      "notional": 6056.179695734996
+      "notional": 6056.179695735014
     },
     {
       "role": "taker",
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 70,
       "entries": 284,
-      "notional": 4732.746105009998
+      "notional": 4732.746105010001
     },
     {
       "role": "taker",
@@ -10319,7 +10319,7 @@
       "seconds_left_bucket": 160,
       "distance_bps_bucket": 80,
       "entries": 24,
-      "notional": 174.99999995999997
+      "notional": 174.99999996000003
     },
     {
       "role": "taker",
@@ -10347,42 +10347,42 @@
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -75,
       "entries": 83,
-      "notional": 2413.0900809999994
+      "notional": 2413.090081
     },
     {
       "role": "taker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -70,
       "entries": 140,
-      "notional": 6027.193461000001
+      "notional": 6027.193460999996
     },
     {
       "role": "taker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -65,
       "entries": 35,
-      "notional": 683.144867
+      "notional": 683.1448670000002
     },
     {
       "role": "taker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -60,
       "entries": 84,
-      "notional": 2833.8302690000014
+      "notional": 2833.830268999999
     },
     {
       "role": "taker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -55,
       "entries": 87,
-      "notional": 1020.4954956099998
+      "notional": 1020.49549561
     },
     {
       "role": "taker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -50,
       "entries": 62,
-      "notional": 1086.462116963824
+      "notional": 1086.4621169638242
     },
     {
       "role": "taker",
@@ -10396,56 +10396,56 @@
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -40,
       "entries": 157,
-      "notional": 1667.5498433554333
+      "notional": 1667.5498433554335
     },
     {
       "role": "taker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -35,
       "entries": 471,
-      "notional": 8735.711289949462
+      "notional": 8735.71128994946
     },
     {
       "role": "taker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -30,
       "entries": 441,
-      "notional": 7251.579284969798
+      "notional": 7251.579284969799
     },
     {
       "role": "taker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -25,
       "entries": 459,
-      "notional": 4120.721132892739
+      "notional": 4120.721132892737
     },
     {
       "role": "taker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -20,
       "entries": 145,
-      "notional": 956.11764562
+      "notional": 956.1176456199998
     },
     {
       "role": "taker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -15,
       "entries": 76,
-      "notional": 582.456574385492
+      "notional": 582.4565743854919
     },
     {
       "role": "taker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -10,
       "entries": 297,
-      "notional": 3228.449861588097
+      "notional": 3228.4498615880966
     },
     {
       "role": "taker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": -5,
       "entries": 867,
-      "notional": 7765.598090162457
+      "notional": 7765.598090162456
     },
     {
       "role": "taker",
@@ -10459,14 +10459,14 @@
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 5,
       "entries": 391,
-      "notional": 2829.560091955725
+      "notional": 2829.5600919557255
     },
     {
       "role": "taker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 10,
       "entries": 989,
-      "notional": 7034.116158288352
+      "notional": 7034.116158288358
     },
     {
       "role": "taker",
@@ -10480,7 +10480,7 @@
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 20,
       "entries": 347,
-      "notional": 3543.820605099412
+      "notional": 3543.820605099416
     },
     {
       "role": "taker",
@@ -10501,7 +10501,7 @@
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 35,
       "entries": 154,
-      "notional": 5659.256190000005
+      "notional": 5659.256190000002
     },
     {
       "role": "taker",
@@ -10515,42 +10515,42 @@
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 45,
       "entries": 266,
-      "notional": 6313.104376015684
+      "notional": 6313.104376015682
     },
     {
       "role": "taker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 50,
       "entries": 31,
-      "notional": 472.657876
+      "notional": 472.65787599999993
     },
     {
       "role": "taker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 55,
       "entries": 79,
-      "notional": 3077.6612230400015
+      "notional": 3077.661223040001
     },
     {
       "role": "taker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 60,
       "entries": 163,
-      "notional": 3031.5394121599984
+      "notional": 3031.53941216
     },
     {
       "role": "taker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 65,
       "entries": 137,
-      "notional": 1429.1678446844917
+      "notional": 1429.1678446844912
     },
     {
       "role": "taker",
       "seconds_left_bucket": 170,
       "distance_bps_bucket": 70,
       "entries": 196,
-      "notional": 3312.9795067021078
+      "notional": 3312.979506702107
     },
     {
       "role": "taker",
@@ -10585,7 +10585,7 @@
       "seconds_left_bucket": 180,
       "distance_bps_bucket": -75,
       "entries": 105,
-      "notional": 1106.8812219499998
+      "notional": 1106.88122195
     },
     {
       "role": "taker",
@@ -10606,7 +10606,7 @@
       "seconds_left_bucket": 180,
       "distance_bps_bucket": -60,
       "entries": 125,
-      "notional": 2838.839989950001
+      "notional": 2838.839989950003
     },
     {
       "role": "taker",
@@ -10627,7 +10627,7 @@
       "seconds_left_bucket": 180,
       "distance_bps_bucket": -45,
       "entries": 63,
-      "notional": 866.8505276347379
+      "notional": 866.8505276347378
     },
     {
       "role": "taker",
@@ -10641,14 +10641,14 @@
       "seconds_left_bucket": 180,
       "distance_bps_bucket": -35,
       "entries": 332,
-      "notional": 3653.2224805994774
+      "notional": 3653.222480599478
     },
     {
       "role": "taker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": -30,
       "entries": 426,
-      "notional": 5297.7928536147165
+      "notional": 5297.792853614717
     },
     {
       "role": "taker",
@@ -10662,14 +10662,14 @@
       "seconds_left_bucket": 180,
       "distance_bps_bucket": -20,
       "entries": 86,
-      "notional": 948.4065966500001
+      "notional": 948.40659665
     },
     {
       "role": "taker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": -15,
       "entries": 137,
-      "notional": 1293.8076242999998
+      "notional": 1293.8076242999996
     },
     {
       "role": "taker",
@@ -10697,35 +10697,35 @@
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 5,
       "entries": 543,
-      "notional": 4510.046076469091
+      "notional": 4510.0460764690915
     },
     {
       "role": "taker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 10,
       "entries": 561,
-      "notional": 4494.89206892245
+      "notional": 4494.892068922451
     },
     {
       "role": "taker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 15,
       "entries": 1042,
-      "notional": 9438.864110391474
+      "notional": 9438.864110391476
     },
     {
       "role": "taker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 20,
       "entries": 514,
-      "notional": 5395.569438000487
+      "notional": 5395.569438000489
     },
     {
       "role": "taker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 25,
       "entries": 282,
-      "notional": 1836.8625224957154
+      "notional": 1836.862522495715
     },
     {
       "role": "taker",
@@ -10739,49 +10739,49 @@
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 35,
       "entries": 90,
-      "notional": 865.41374935
+      "notional": 865.4137493499999
     },
     {
       "role": "taker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 40,
       "entries": 114,
-      "notional": 2130.3275340300006
+      "notional": 2130.3275340299992
     },
     {
       "role": "taker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 45,
       "entries": 192,
-      "notional": 8028.586025767978
+      "notional": 8028.586025767981
     },
     {
       "role": "taker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 50,
       "entries": 151,
-      "notional": 2027.7572140400002
+      "notional": 2027.7572140399998
     },
     {
       "role": "taker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 55,
       "entries": 85,
-      "notional": 1443.3098212600003
+      "notional": 1443.3098212600005
     },
     {
       "role": "taker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 60,
       "entries": 34,
-      "notional": 973.0987967799999
+      "notional": 973.09879678
     },
     {
       "role": "taker",
       "seconds_left_bucket": 180,
       "distance_bps_bucket": 65,
       "entries": 18,
-      "notional": 58.31160000000001
+      "notional": 58.311600000000006
     },
     {
       "role": "taker",
@@ -10844,7 +10844,7 @@
       "seconds_left_bucket": 190,
       "distance_bps_bucket": -75,
       "entries": 71,
-      "notional": 922.936916578981
+      "notional": 922.9369165789808
     },
     {
       "role": "taker",
@@ -10858,7 +10858,7 @@
       "seconds_left_bucket": 190,
       "distance_bps_bucket": -65,
       "entries": 55,
-      "notional": 1106.29192306
+      "notional": 1106.2919230599998
     },
     {
       "role": "taker",
@@ -10872,28 +10872,28 @@
       "seconds_left_bucket": 190,
       "distance_bps_bucket": -55,
       "entries": 70,
-      "notional": 739.0312000000001
+      "notional": 739.0312
     },
     {
       "role": "taker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": -50,
       "entries": 82,
-      "notional": 1539.977496
+      "notional": 1539.9774959999995
     },
     {
       "role": "taker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": -45,
       "entries": 229,
-      "notional": 6878.438205959996
+      "notional": 6878.438205960001
     },
     {
       "role": "taker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": -40,
       "entries": 70,
-      "notional": 322.5254829399999
+      "notional": 322.52548293999996
     },
     {
       "role": "taker",
@@ -10914,14 +10914,14 @@
       "seconds_left_bucket": 190,
       "distance_bps_bucket": -25,
       "entries": 610,
-      "notional": 7606.452486431091
+      "notional": 7606.452486431088
     },
     {
       "role": "taker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": -20,
       "entries": 512,
-      "notional": 5780.931467236468
+      "notional": 5780.931467236469
     },
     {
       "role": "taker",
@@ -10942,21 +10942,21 @@
       "seconds_left_bucket": 190,
       "distance_bps_bucket": -5,
       "entries": 243,
-      "notional": 1761.8680822676101
+      "notional": 1761.86808226761
     },
     {
       "role": "taker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 0,
       "entries": 502,
-      "notional": 3252.692969473282
+      "notional": 3252.6929694732826
     },
     {
       "role": "taker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 5,
       "entries": 669,
-      "notional": 4658.728182740791
+      "notional": 4658.72818274079
     },
     {
       "role": "taker",
@@ -10970,7 +10970,7 @@
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 15,
       "entries": 637,
-      "notional": 6108.400127101069
+      "notional": 6108.4001271010675
     },
     {
       "role": "taker",
@@ -10984,49 +10984,49 @@
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 25,
       "entries": 323,
-      "notional": 4195.65473914
+      "notional": 4195.654739139999
     },
     {
       "role": "taker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 30,
       "entries": 75,
-      "notional": 667.68826478
+      "notional": 667.6882647800002
     },
     {
       "role": "taker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 35,
       "entries": 219,
-      "notional": 3125.3188720200005
+      "notional": 3125.318872020001
     },
     {
       "role": "taker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 40,
       "entries": 82,
-      "notional": 1443.9809579499995
+      "notional": 1443.9809579499997
     },
     {
       "role": "taker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 45,
       "entries": 253,
-      "notional": 3126.6784720299997
+      "notional": 3126.678472030001
     },
     {
       "role": "taker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 50,
       "entries": 271,
-      "notional": 6475.002693206969
+      "notional": 6475.002693206971
     },
     {
       "role": "taker",
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 55,
       "entries": 156,
-      "notional": 4489.178468166668
+      "notional": 4489.178468166669
     },
     {
       "role": "taker",
@@ -11040,7 +11040,7 @@
       "seconds_left_bucket": 190,
       "distance_bps_bucket": 65,
       "entries": 224,
-      "notional": 5843.660149539999
+      "notional": 5843.66014954
     },
     {
       "role": "taker",
@@ -11096,7 +11096,7 @@
       "seconds_left_bucket": 200,
       "distance_bps_bucket": -60,
       "entries": 190,
-      "notional": 1417.9950695147384
+      "notional": 1417.9950695147377
     },
     {
       "role": "taker",
@@ -11117,14 +11117,14 @@
       "seconds_left_bucket": 200,
       "distance_bps_bucket": -40,
       "entries": 243,
-      "notional": 4511.083446745655
+      "notional": 4511.083446745653
     },
     {
       "role": "taker",
       "seconds_left_bucket": 200,
       "distance_bps_bucket": -35,
       "entries": 233,
-      "notional": 2118.6516534899997
+      "notional": 2118.65165349
     },
     {
       "role": "taker",
@@ -11145,35 +11145,35 @@
       "seconds_left_bucket": 200,
       "distance_bps_bucket": -20,
       "entries": 194,
-      "notional": 2152.111533871803
+      "notional": 2152.1115338718037
     },
     {
       "role": "taker",
       "seconds_left_bucket": 200,
       "distance_bps_bucket": -15,
       "entries": 410,
-      "notional": 2002.540413018185
+      "notional": 2002.5404130181846
     },
     {
       "role": "taker",
       "seconds_left_bucket": 200,
       "distance_bps_bucket": -10,
       "entries": 294,
-      "notional": 2411.6171647579017
+      "notional": 2411.6171647579013
     },
     {
       "role": "taker",
       "seconds_left_bucket": 200,
       "distance_bps_bucket": -5,
       "entries": 824,
-      "notional": 6067.2614750943785
+      "notional": 6067.261475094383
     },
     {
       "role": "taker",
       "seconds_left_bucket": 200,
       "distance_bps_bucket": 0,
       "entries": 817,
-      "notional": 6598.05225532085
+      "notional": 6598.052255320848
     },
     {
       "role": "taker",
@@ -11187,7 +11187,7 @@
       "seconds_left_bucket": 200,
       "distance_bps_bucket": 10,
       "entries": 1777,
-      "notional": 17241.953784966918
+      "notional": 17241.953784966907
     },
     {
       "role": "taker",
@@ -11215,98 +11215,98 @@
       "seconds_left_bucket": 200,
       "distance_bps_bucket": 35,
       "entries": 513,
-      "notional": 11831.94591839
+      "notional": 11831.945918390003
     },
     {
       "role": "taker",
       "seconds_left_bucket": 200,
       "distance_bps_bucket": 40,
       "entries": 348,
-      "notional": 5748.540747359381
+      "notional": 5748.5407473593805
     },
     {
       "role": "taker",
       "seconds_left_bucket": 200,
       "distance_bps_bucket": 45,
       "entries": 125,
-      "notional": 2543.1951830099997
+      "notional": 2543.19518301
     },
     {
       "role": "taker",
       "seconds_left_bucket": 200,
       "distance_bps_bucket": 50,
       "entries": 330,
-      "notional": 6580.856670068203
+      "notional": 6580.856670068204
     },
     {
       "role": "taker",
       "seconds_left_bucket": 200,
       "distance_bps_bucket": 55,
       "entries": 177,
-      "notional": 1594.5571962499998
+      "notional": 1594.5571962500003
     },
     {
       "role": "taker",
       "seconds_left_bucket": 200,
       "distance_bps_bucket": 60,
       "entries": 102,
-      "notional": 865.5914831399998
+      "notional": 865.59148314
     },
     {
       "role": "taker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -75,
       "entries": 104,
-      "notional": 1311.9007839199999
+      "notional": 1311.9007839199996
     },
     {
       "role": "taker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -70,
       "entries": 242,
-      "notional": 6323.329669586805
+      "notional": 6323.329669586808
     },
     {
       "role": "taker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -65,
       "entries": 96,
-      "notional": 1200.7073121199999
+      "notional": 1200.70731212
     },
     {
       "role": "taker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -60,
       "entries": 99,
-      "notional": 1554.6162999999997
+      "notional": 1554.6162999999995
     },
     {
       "role": "taker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -55,
       "entries": 130,
-      "notional": 1935.5160236292847
+      "notional": 1935.516023629285
     },
     {
       "role": "taker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -50,
       "entries": 96,
-      "notional": 950.3822111212264
+      "notional": 950.3822111212265
     },
     {
       "role": "taker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -45,
       "entries": 88,
-      "notional": 1403.6080680200002
+      "notional": 1403.60806802
     },
     {
       "role": "taker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -40,
       "entries": 123,
-      "notional": 1135.2050080599997
+      "notional": 1135.2050080600004
     },
     {
       "role": "taker",
@@ -11327,7 +11327,7 @@
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -25,
       "entries": 824,
-      "notional": 7205.496444689104
+      "notional": 7205.496444689103
     },
     {
       "role": "taker",
@@ -11341,14 +11341,14 @@
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -15,
       "entries": 582,
-      "notional": 4013.906528187543
+      "notional": 4013.9065281875437
     },
     {
       "role": "taker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": -10,
       "entries": 312,
-      "notional": 2841.3024805600003
+      "notional": 2841.3024805600007
     },
     {
       "role": "taker",
@@ -11362,7 +11362,7 @@
       "seconds_left_bucket": 210,
       "distance_bps_bucket": 0,
       "entries": 1266,
-      "notional": 10335.339246241154
+      "notional": 10335.33924624116
     },
     {
       "role": "taker",
@@ -11383,49 +11383,49 @@
       "seconds_left_bucket": 210,
       "distance_bps_bucket": 15,
       "entries": 289,
-      "notional": 1740.4195288797864
+      "notional": 1740.4195288797869
     },
     {
       "role": "taker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": 20,
       "entries": 35,
-      "notional": 289.4051960799999
+      "notional": 289.40519607999994
     },
     {
       "role": "taker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": 25,
       "entries": 60,
-      "notional": 541.699969118425
+      "notional": 541.6999691184249
     },
     {
       "role": "taker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": 30,
       "entries": 339,
-      "notional": 4610.851790040001
+      "notional": 4610.85179004
     },
     {
       "role": "taker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": 35,
       "entries": 771,
-      "notional": 14934.670387480015
+      "notional": 14934.670387480008
     },
     {
       "role": "taker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": 40,
       "entries": 208,
-      "notional": 1694.1311588799983
+      "notional": 1694.131158879999
     },
     {
       "role": "taker",
       "seconds_left_bucket": 210,
       "distance_bps_bucket": 45,
       "entries": 141,
-      "notional": 3202.395114937828
+      "notional": 3202.395114937827
     },
     {
       "role": "taker",
@@ -11453,7 +11453,7 @@
       "seconds_left_bucket": 220,
       "distance_bps_bucket": -80,
       "entries": 51,
-      "notional": 755.6812999999999
+      "notional": 755.6813
     },
     {
       "role": "taker",
@@ -11467,7 +11467,7 @@
       "seconds_left_bucket": 220,
       "distance_bps_bucket": -70,
       "entries": 166,
-      "notional": 2770.736109950001
+      "notional": 2770.7361099500013
     },
     {
       "role": "taker",
@@ -11488,21 +11488,21 @@
       "seconds_left_bucket": 220,
       "distance_bps_bucket": -55,
       "entries": 64,
-      "notional": 458.6735619099999
+      "notional": 458.6735619100001
     },
     {
       "role": "taker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": -50,
       "entries": 152,
-      "notional": 2028.8572274604142
+      "notional": 2028.857227460415
     },
     {
       "role": "taker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": -45,
       "entries": 50,
-      "notional": 750.61069108
+      "notional": 750.6106910799999
     },
     {
       "role": "taker",
@@ -11516,14 +11516,14 @@
       "seconds_left_bucket": 220,
       "distance_bps_bucket": -35,
       "entries": 210,
-      "notional": 4069.77947514
+      "notional": 4069.7794751400006
     },
     {
       "role": "taker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": -30,
       "entries": 218,
-      "notional": 3175.469050007425
+      "notional": 3175.4690500074253
     },
     {
       "role": "taker",
@@ -11537,28 +11537,28 @@
       "seconds_left_bucket": 220,
       "distance_bps_bucket": -20,
       "entries": 581,
-      "notional": 5795.0511590453925
+      "notional": 5795.05115904539
     },
     {
       "role": "taker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": -15,
       "entries": 869,
-      "notional": 7286.9421902579
+      "notional": 7286.942190257899
     },
     {
       "role": "taker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": -10,
       "entries": 547,
-      "notional": 7041.06039470714
+      "notional": 7041.0603947071395
     },
     {
       "role": "taker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": -5,
       "entries": 679,
-      "notional": 4566.424155709799
+      "notional": 4566.424155709801
     },
     {
       "role": "taker",
@@ -11572,14 +11572,14 @@
       "seconds_left_bucket": 220,
       "distance_bps_bucket": 5,
       "entries": 706,
-      "notional": 5163.189062577886
+      "notional": 5163.189062577891
     },
     {
       "role": "taker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": 10,
       "entries": 994,
-      "notional": 6236.163721936471
+      "notional": 6236.163721936474
     },
     {
       "role": "taker",
@@ -11593,42 +11593,42 @@
       "seconds_left_bucket": 220,
       "distance_bps_bucket": 20,
       "entries": 202,
-      "notional": 1720.8374359499999
+      "notional": 1720.8374359500003
     },
     {
       "role": "taker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": 25,
       "entries": 287,
-      "notional": 2805.4256803510525
+      "notional": 2805.425680351054
     },
     {
       "role": "taker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": 30,
       "entries": 278,
-      "notional": 3358.3120419535235
+      "notional": 3358.3120419535244
     },
     {
       "role": "taker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": 35,
       "entries": 371,
-      "notional": 3454.8293586222244
+      "notional": 3454.829358622223
     },
     {
       "role": "taker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": 40,
       "entries": 175,
-      "notional": 3717.7714320299992
+      "notional": 3717.7714320299983
     },
     {
       "role": "taker",
       "seconds_left_bucket": 220,
       "distance_bps_bucket": 55,
       "entries": 272,
-      "notional": 1929.7272978099995
+      "notional": 1929.7272978099998
     },
     {
       "role": "taker",
@@ -11677,21 +11677,21 @@
       "seconds_left_bucket": 230,
       "distance_bps_bucket": -60,
       "entries": 127,
-      "notional": 2834.6337350300005
+      "notional": 2834.633735030003
     },
     {
       "role": "taker",
       "seconds_left_bucket": 230,
       "distance_bps_bucket": -50,
       "entries": 45,
-      "notional": 399.2263000000002
+      "notional": 399.22630000000004
     },
     {
       "role": "taker",
       "seconds_left_bucket": 230,
       "distance_bps_bucket": -45,
       "entries": 106,
-      "notional": 1536.5824607000006
+      "notional": 1536.5824607000004
     },
     {
       "role": "taker",
@@ -11712,14 +11712,14 @@
       "seconds_left_bucket": 230,
       "distance_bps_bucket": -25,
       "entries": 422,
-      "notional": 4514.97651970624
+      "notional": 4514.976519706238
     },
     {
       "role": "taker",
       "seconds_left_bucket": 230,
       "distance_bps_bucket": -20,
       "entries": 596,
-      "notional": 4131.813411781921
+      "notional": 4131.813411781919
     },
     {
       "role": "taker",
@@ -11733,56 +11733,56 @@
       "seconds_left_bucket": 230,
       "distance_bps_bucket": -10,
       "entries": 936,
-      "notional": 7525.224695041581
+      "notional": 7525.224695041578
     },
     {
       "role": "taker",
       "seconds_left_bucket": 230,
       "distance_bps_bucket": -5,
       "entries": 1482,
-      "notional": 10471.403505852104
+      "notional": 10471.40350585212
     },
     {
       "role": "taker",
       "seconds_left_bucket": 230,
       "distance_bps_bucket": 0,
       "entries": 861,
-      "notional": 6490.281375002685
+      "notional": 6490.2813750026835
     },
     {
       "role": "taker",
       "seconds_left_bucket": 230,
       "distance_bps_bucket": 5,
       "entries": 743,
-      "notional": 4889.770490992498
+      "notional": 4889.770490992496
     },
     {
       "role": "taker",
       "seconds_left_bucket": 230,
       "distance_bps_bucket": 10,
       "entries": 957,
-      "notional": 6470.16523564189
+      "notional": 6470.1652356418945
     },
     {
       "role": "taker",
       "seconds_left_bucket": 230,
       "distance_bps_bucket": 15,
       "entries": 1041,
-      "notional": 11855.794043308364
+      "notional": 11855.794043308368
     },
     {
       "role": "taker",
       "seconds_left_bucket": 230,
       "distance_bps_bucket": 20,
       "entries": 771,
-      "notional": 6840.935851793208
+      "notional": 6840.935851793204
     },
     {
       "role": "taker",
       "seconds_left_bucket": 230,
       "distance_bps_bucket": 25,
       "entries": 491,
-      "notional": 4941.38875315445
+      "notional": 4941.388753154451
     },
     {
       "role": "taker",
@@ -11796,7 +11796,7 @@
       "seconds_left_bucket": 230,
       "distance_bps_bucket": 40,
       "entries": 150,
-      "notional": 3183.41804693
+      "notional": 3183.4180469300004
     },
     {
       "role": "taker",
@@ -11810,14 +11810,14 @@
       "seconds_left_bucket": 230,
       "distance_bps_bucket": 60,
       "entries": 312,
-      "notional": 1608.9877318200013
+      "notional": 1608.9877318200004
     },
     {
       "role": "taker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": -95,
       "entries": 155,
-      "notional": 904.5324300799997
+      "notional": 904.5324300800004
     },
     {
       "role": "taker",
@@ -11831,7 +11831,7 @@
       "seconds_left_bucket": 240,
       "distance_bps_bucket": -80,
       "entries": 39,
-      "notional": 351.14446899999996
+      "notional": 351.1444690000001
     },
     {
       "role": "taker",
@@ -11845,14 +11845,14 @@
       "seconds_left_bucket": 240,
       "distance_bps_bucket": -55,
       "entries": 187,
-      "notional": 1001.556729598222
+      "notional": 1001.5567295982222
     },
     {
       "role": "taker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": -45,
       "entries": 246,
-      "notional": 2294.3396877100004
+      "notional": 2294.3396877100013
     },
     {
       "role": "taker",
@@ -11866,7 +11866,7 @@
       "seconds_left_bucket": 240,
       "distance_bps_bucket": -30,
       "entries": 79,
-      "notional": 954.2698630899998
+      "notional": 954.26986309
     },
     {
       "role": "taker",
@@ -11880,77 +11880,77 @@
       "seconds_left_bucket": 240,
       "distance_bps_bucket": -20,
       "entries": 584,
-      "notional": 4740.976516717248
+      "notional": 4740.976516717245
     },
     {
       "role": "taker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": -15,
       "entries": 699,
-      "notional": 4340.865160950018
+      "notional": 4340.865160950019
     },
     {
       "role": "taker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": -10,
       "entries": 1330,
-      "notional": 10622.939435808608
+      "notional": 10622.939435808603
     },
     {
       "role": "taker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": -5,
       "entries": 1171,
-      "notional": 9748.940975460835
+      "notional": 9748.94097546083
     },
     {
       "role": "taker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": 0,
       "entries": 697,
-      "notional": 4539.59900299792
+      "notional": 4539.5990029979175
     },
     {
       "role": "taker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": 5,
       "entries": 1022,
-      "notional": 8541.56940193235
+      "notional": 8541.569401932356
     },
     {
       "role": "taker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": 10,
       "entries": 428,
-      "notional": 4572.573935762863
+      "notional": 4572.573935762859
     },
     {
       "role": "taker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": 15,
       "entries": 1047,
-      "notional": 8464.406350318699
+      "notional": 8464.406350318708
     },
     {
       "role": "taker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": 20,
       "entries": 372,
-      "notional": 4323.883944729998
+      "notional": 4323.88394473
     },
     {
       "role": "taker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": 25,
       "entries": 234,
-      "notional": 1871.9669968099995
+      "notional": 1871.9669968100006
     },
     {
       "role": "taker",
       "seconds_left_bucket": 240,
       "distance_bps_bucket": 30,
       "entries": 149,
-      "notional": 1372.3227042214298
+      "notional": 1372.32270422143
     },
     {
       "role": "taker",
@@ -11999,14 +11999,14 @@
       "seconds_left_bucket": 250,
       "distance_bps_bucket": -65,
       "entries": 118,
-      "notional": 1619.648005341669
+      "notional": 1619.6480053416683
     },
     {
       "role": "taker",
       "seconds_left_bucket": 250,
       "distance_bps_bucket": -60,
       "entries": 163,
-      "notional": 1936.6442948299994
+      "notional": 1936.6442948300007
     },
     {
       "role": "taker",
@@ -12048,56 +12048,56 @@
       "seconds_left_bucket": 250,
       "distance_bps_bucket": -30,
       "entries": 104,
-      "notional": 1383.4268632295673
+      "notional": 1383.4268632295668
     },
     {
       "role": "taker",
       "seconds_left_bucket": 250,
       "distance_bps_bucket": -25,
       "entries": 243,
-      "notional": 1308.8101538870305
+      "notional": 1308.8101538870299
     },
     {
       "role": "taker",
       "seconds_left_bucket": 250,
       "distance_bps_bucket": -20,
       "entries": 854,
-      "notional": 6254.0211445495615
+      "notional": 6254.021144549561
     },
     {
       "role": "taker",
       "seconds_left_bucket": 250,
       "distance_bps_bucket": -15,
       "entries": 240,
-      "notional": 1755.823134518609
+      "notional": 1755.8231345186093
     },
     {
       "role": "taker",
       "seconds_left_bucket": 250,
       "distance_bps_bucket": -10,
       "entries": 864,
-      "notional": 6972.782163706282
+      "notional": 6972.7821637062825
     },
     {
       "role": "taker",
       "seconds_left_bucket": 250,
       "distance_bps_bucket": -5,
       "entries": 1162,
-      "notional": 8036.704623689589
+      "notional": 8036.704623689584
     },
     {
       "role": "taker",
       "seconds_left_bucket": 250,
       "distance_bps_bucket": 0,
       "entries": 1056,
-      "notional": 7291.166828217648
+      "notional": 7291.166828217649
     },
     {
       "role": "taker",
       "seconds_left_bucket": 250,
       "distance_bps_bucket": 5,
       "entries": 934,
-      "notional": 6394.66491104956
+      "notional": 6394.664911049562
     },
     {
       "role": "taker",
@@ -12111,35 +12111,35 @@
       "seconds_left_bucket": 250,
       "distance_bps_bucket": 15,
       "entries": 540,
-      "notional": 4539.352226161214
+      "notional": 4539.352226161209
     },
     {
       "role": "taker",
       "seconds_left_bucket": 250,
       "distance_bps_bucket": 20,
       "entries": 164,
-      "notional": 2394.252876290001
+      "notional": 2394.25287629
     },
     {
       "role": "taker",
       "seconds_left_bucket": 250,
       "distance_bps_bucket": 25,
       "entries": 396,
-      "notional": 4066.0058212366694
+      "notional": 4066.005821236667
     },
     {
       "role": "taker",
       "seconds_left_bucket": 250,
       "distance_bps_bucket": 30,
       "entries": 49,
-      "notional": 318.6419980299999
+      "notional": 318.64199803
     },
     {
       "role": "taker",
       "seconds_left_bucket": 250,
       "distance_bps_bucket": 35,
       "entries": 172,
-      "notional": 2042.8413484099997
+      "notional": 2042.8413484099992
     },
     {
       "role": "taker",
@@ -12174,7 +12174,7 @@
       "seconds_left_bucket": 260,
       "distance_bps_bucket": -70,
       "entries": 117,
-      "notional": 2933.1094881099975
+      "notional": 2933.109488109999
     },
     {
       "role": "taker",
@@ -12202,77 +12202,77 @@
       "seconds_left_bucket": 260,
       "distance_bps_bucket": -30,
       "entries": 370,
-      "notional": 4471.357260616813
+      "notional": 4471.357260616809
     },
     {
       "role": "taker",
       "seconds_left_bucket": 260,
       "distance_bps_bucket": -25,
       "entries": 301,
-      "notional": 2038.8494472923614
+      "notional": 2038.8494472923612
     },
     {
       "role": "taker",
       "seconds_left_bucket": 260,
       "distance_bps_bucket": -20,
       "entries": 643,
-      "notional": 5952.560346631741
+      "notional": 5952.560346631743
     },
     {
       "role": "taker",
       "seconds_left_bucket": 260,
       "distance_bps_bucket": -15,
       "entries": 733,
-      "notional": 4827.312835385296
+      "notional": 4827.312835385295
     },
     {
       "role": "taker",
       "seconds_left_bucket": 260,
       "distance_bps_bucket": -10,
       "entries": 800,
-      "notional": 6678.337096879948
+      "notional": 6678.337096879949
     },
     {
       "role": "taker",
       "seconds_left_bucket": 260,
       "distance_bps_bucket": -5,
       "entries": 2249,
-      "notional": 19359.519741872147
+      "notional": 19359.51974187213
     },
     {
       "role": "taker",
       "seconds_left_bucket": 260,
       "distance_bps_bucket": 0,
       "entries": 1494,
-      "notional": 10425.120925125073
+      "notional": 10425.120925125075
     },
     {
       "role": "taker",
       "seconds_left_bucket": 260,
       "distance_bps_bucket": 5,
       "entries": 1201,
-      "notional": 7856.0156113666335
+      "notional": 7856.015611366627
     },
     {
       "role": "taker",
       "seconds_left_bucket": 260,
       "distance_bps_bucket": 10,
       "entries": 584,
-      "notional": 6107.589940475586
+      "notional": 6107.589940475593
     },
     {
       "role": "taker",
       "seconds_left_bucket": 260,
       "distance_bps_bucket": 15,
       "entries": 499,
-      "notional": 4336.004401936349
+      "notional": 4336.004401936351
     },
     {
       "role": "taker",
       "seconds_left_bucket": 260,
       "distance_bps_bucket": 20,
       "entries": 233,
-      "notional": 2145.735422847919
+      "notional": 2145.7354228479185
     },
     {
       "role": "taker",
@@ -12293,7 +12293,7 @@
       "seconds_left_bucket": 260,
       "distance_bps_bucket": 40,
       "entries": 175,
-      "notional": 1815.399652343026
+      "notional": 1815.3996523430246
     },
     {
       "role": "taker",
@@ -12342,42 +12342,42 @@
       "seconds_left_bucket": 270,
       "distance_bps_bucket": -25,
       "entries": 58,
-      "notional": 780.38599632
+      "notional": 780.3859963200001
     },
     {
       "role": "taker",
       "seconds_left_bucket": 270,
       "distance_bps_bucket": -20,
       "entries": 439,
-      "notional": 3364.843626674083
+      "notional": 3364.843626674085
     },
     {
       "role": "taker",
       "seconds_left_bucket": 270,
       "distance_bps_bucket": -15,
       "entries": 871,
-      "notional": 5940.949402591881
+      "notional": 5940.949402591882
     },
     {
       "role": "taker",
       "seconds_left_bucket": 270,
       "distance_bps_bucket": -10,
       "entries": 1119,
-      "notional": 10393.42201188885
+      "notional": 10393.422011888859
     },
     {
       "role": "taker",
       "seconds_left_bucket": 270,
       "distance_bps_bucket": -5,
       "entries": 1312,
-      "notional": 8900.028568868715
+      "notional": 8900.028568868718
     },
     {
       "role": "taker",
       "seconds_left_bucket": 270,
       "distance_bps_bucket": 0,
       "entries": 2106,
-      "notional": 15336.755197593924
+      "notional": 15336.755197593926
     },
     {
       "role": "taker",
@@ -12391,21 +12391,21 @@
       "seconds_left_bucket": 270,
       "distance_bps_bucket": 10,
       "entries": 932,
-      "notional": 7305.404226280698
+      "notional": 7305.404226280702
     },
     {
       "role": "taker",
       "seconds_left_bucket": 270,
       "distance_bps_bucket": 15,
       "entries": 436,
-      "notional": 3879.2612868005963
+      "notional": 3879.2612868005967
     },
     {
       "role": "taker",
       "seconds_left_bucket": 270,
       "distance_bps_bucket": 20,
       "entries": 59,
-      "notional": 1107.3109841400005
+      "notional": 1107.3109841400003
     },
     {
       "role": "taker",
@@ -12419,14 +12419,14 @@
       "seconds_left_bucket": 270,
       "distance_bps_bucket": 60,
       "entries": 251,
-      "notional": 2271.5595451400004
+      "notional": 2271.5595451399995
     },
     {
       "role": "taker",
       "seconds_left_bucket": 270,
       "distance_bps_bucket": 65,
       "entries": 66,
-      "notional": 615.3304855400002
+      "notional": 615.33048554
     },
     {
       "role": "taker",
@@ -12440,7 +12440,7 @@
       "seconds_left_bucket": 270,
       "distance_bps_bucket": 75,
       "entries": 100,
-      "notional": 1087.5201815499997
+      "notional": 1087.5201815500002
     },
     {
       "role": "taker",
@@ -12454,7 +12454,7 @@
       "seconds_left_bucket": 280,
       "distance_bps_bucket": -15,
       "entries": 549,
-      "notional": 3953.150427145717
+      "notional": 3953.150427145715
     },
     {
       "role": "taker",
@@ -12468,21 +12468,21 @@
       "seconds_left_bucket": 280,
       "distance_bps_bucket": -5,
       "entries": 2051,
-      "notional": 16382.963585027901
+      "notional": 16382.96358502789
     },
     {
       "role": "taker",
       "seconds_left_bucket": 280,
       "distance_bps_bucket": 0,
       "entries": 3575,
-      "notional": 25430.14718318961
+      "notional": 25430.14718318958
     },
     {
       "role": "taker",
       "seconds_left_bucket": 280,
       "distance_bps_bucket": 5,
       "entries": 1096,
-      "notional": 8356.042684900975
+      "notional": 8356.042684900978
     },
     {
       "role": "taker",
@@ -12496,7 +12496,7 @@
       "seconds_left_bucket": 280,
       "distance_bps_bucket": 15,
       "entries": 203,
-      "notional": 2252.190685870001
+      "notional": 2252.19068587
     },
     {
       "role": "taker",
@@ -12545,35 +12545,35 @@
       "seconds_left_bucket": 290,
       "distance_bps_bucket": -5,
       "entries": 3190,
-      "notional": 27057.934475179158
+      "notional": 27057.934475179172
     },
     {
       "role": "taker",
       "seconds_left_bucket": 290,
       "distance_bps_bucket": 0,
       "entries": 2973,
-      "notional": 29835.804732551245
+      "notional": 29835.804732551267
     },
     {
       "role": "taker",
       "seconds_left_bucket": 290,
       "distance_bps_bucket": 5,
       "entries": 931,
-      "notional": 6753.280115049973
+      "notional": 6753.28011504997
     },
     {
       "role": "taker",
       "seconds_left_bucket": 290,
       "distance_bps_bucket": 10,
       "entries": 558,
-      "notional": 4451.545052800002
+      "notional": 4451.5450528
     },
     {
       "role": "taker",
       "seconds_left_bucket": 290,
       "distance_bps_bucket": 15,
       "entries": 70,
-      "notional": 832.6023829937213
+      "notional": 832.6023829937211
     },
     {
       "role": "taker",
@@ -12587,7 +12587,7 @@
       "seconds_left_bucket": 300,
       "distance_bps_bucket": 0,
       "entries": 202,
-      "notional": 3448.5493894400015
+      "notional": 3448.5493894399997
     }
   ]
 }
