@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BTC 5m Polymarket Research</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Telonex-only research dashboard</p>
+        <h1>BTC 5m Polymarket Entries</h1>
+      </div>
+      <div class="status">
+        <span id="generatedAt">Loading</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="notice" id="availabilityNote"></section>
+
+      <section class="metric-grid" aria-label="Summary metrics">
+        <article class="metric">
+          <span>Markets</span>
+          <strong id="totalMarkets">--</strong>
+          <small id="marketRange">--</small>
+        </article>
+        <article class="metric">
+          <span>Price Ticks</span>
+          <strong id="priceRows">--</strong>
+          <small id="priceRange">--</small>
+        </article>
+        <article class="metric">
+          <span>Priced Windows</span>
+          <strong id="pricedMarkets">--</strong>
+          <small id="moveStats">--</small>
+        </article>
+        <article class="metric">
+          <span>Fill Entries</span>
+          <strong id="entryRows">--</strong>
+          <small id="fillStats">--</small>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Large-Wallet Entry Heat Map</h2>
+            <p>Notional by seconds-left bucket and BTC distance from the 5-minute start price.</p>
+          </div>
+          <select id="roleSelect" aria-label="Role filter">
+            <option value="both">Maker + taker</option>
+            <option value="maker">Maker</option>
+            <option value="taker">Taker</option>
+          </select>
+        </div>
+        <div id="heatmap" class="heatmap"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Top Wallets</h2>
+            <p>Wallets are ranked by BTC 5-minute entry notional in downloaded fills.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Wallet</th>
+                <th>Notional</th>
+                <th>Entries</th>
+                <th>Maker</th>
+                <th>Taker</th>
+              </tr>
+            </thead>
+            <tbody id="walletRows">
+              <tr><td colspan="5">Loading</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
