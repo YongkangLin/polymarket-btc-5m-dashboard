@@ -9,8 +9,8 @@
   <body>
     <header class="topbar">
       <div>
-        <p class="eyebrow">No-gap full-day dataset</p>
-        <h1>BTC 5m Full-Day Data</h1>
+        <p class="eyebrow">Clean complete 5-minute windows</p>
+        <h1>BTC 5m Market Data</h1>
       </div>
       <div class="status">
         <span id="generatedAt">Loading</span>
@@ -22,27 +22,27 @@
 
       <section class="metric-grid" aria-label="Summary metrics">
         <article class="metric">
-          <span>Full-Day Markets</span>
+          <span>Clean Markets</span>
           <strong id="completeMarkets">--</strong>
           <small id="marketRange">--</small>
         </article>
         <article class="metric">
-          <span>Full-Day Price Ticks</span>
+          <span>Price Ticks</span>
           <strong id="priceRows">--</strong>
           <small id="priceRange">--</small>
         </article>
         <article class="metric">
-          <span>Full-Day Book Events</span>
+          <span>Book Events</span>
           <strong id="bookRows">--</strong>
           <small id="bookStats">--</small>
         </article>
         <article class="metric">
-          <span>Full-Day Trades</span>
+          <span>Trades</span>
           <strong id="tradeRows">--</strong>
           <small id="tradeStats">--</small>
         </article>
         <article class="metric">
-          <span>Full-Day Fill Entries</span>
+          <span>Fill Entries</span>
           <strong id="entryRows">--</strong>
           <small id="fillStats">--</small>
         </article>
@@ -52,11 +52,11 @@
         <div class="panel-head">
           <div>
             <h2>Large-Wallet Entry Map</h2>
-            <p>No-gap full days only.</p>
+            <p>Only complete clean 5-minute markets.</p>
           </div>
           <div class="map-controls">
             <select id="marketSelect" aria-label="Market filter">
-              <option value="all">All full-day markets</option>
+              <option value="all">All clean markets</option>
             </select>
             <select id="roleSelect" aria-label="Role filter">
               <option value="both">Maker + taker</option>
@@ -77,8 +77,8 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <h2>Full-Day Wallets</h2>
-            <p>Wallets are ranked only by no-gap full-day entry notional.</p>
+            <h2>Wallets</h2>
+            <p>Wallets are ranked by clean-market entry notional.</p>
           </div>
         </div>
         <div class="table-wrap">
@@ -100,6 +100,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=20260610-8"></script>
+    <script src="app.js?v=20260610-9"></script>
   </body>
 </html>
