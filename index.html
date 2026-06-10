@@ -51,8 +51,8 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <h2>Complete-Market Entry Heat Map</h2>
-            <p>Only entries from markets that pass the complete 1-second price and Up/Down book gate.</p>
+            <h2>Large-Wallet Entry Map</h2>
+            <p>Complete markets only.</p>
           </div>
           <select id="roleSelect" aria-label="Role filter">
             <option value="both">Maker + taker</option>
@@ -60,7 +60,13 @@
             <option value="taker">Taker</option>
           </select>
         </div>
-        <div id="heatmap" class="heatmap"></div>
+        <div class="entry-layout">
+          <div id="entryMap" class="entry-map"></div>
+          <aside class="entry-zones">
+            <h3>Top Zones</h3>
+            <div id="entryZoneRows" class="zone-list"></div>
+          </aside>
+        </div>
       </section>
 
       <section class="panel">
@@ -89,6 +95,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=20260610-5"></script>
+    <script src="app.js?v=20260610-6"></script>
   </body>
 </html>

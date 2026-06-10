@@ -12,6 +12,17 @@ function shortDate(value) {
   return new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+function formatClock(seconds) {
+  const min = Math.floor(seconds / 60);
+  const sec = seconds % 60;
+  return `${min}:${String(sec).padStart(2, "0")}`;
+}
+
+function signedBps(value) {
+  const number = Number(value || 0);
+  return `${number > 0 ? "+" : ""}${fmt.format(number)} bps`;
+}
+
 function renderMetrics(data) {
   const markets = data.markets || {};
   const prices = data.prices || {};
@@ -37,42 +48,91 @@ function renderMetrics(data) {
   byId("fillStats").textContent = `${money.format(fills.entry_notional || 0)} notional, ${fmt.format(fills.large_wallets || 0)} large wallets`;
 }
 
-function heatColor(value, max) {
-  if (!value || !max) return "#edf1ee";
-  const x = Math.min(1, Math.log1p(value) / Math.log1p(max));
-  const hue = 210 - x * 165;
-  const light = 92 - x * 46;
-  return `hsl(${hue} 60% ${light}%)`;
+function entryRows(data) {
+  return (data.entry_map || data.heatmap || []).filter((d) => state.role === "both" || d.role === state.role);
 }
 
-function renderHeatmap(data) {
-  const rows = (data.heatmap || []).filter((d) => state.role === "both" || d.role === state.role);
-  const el = byId("heatmap");
+function renderEntryMap(data) {
+  const rows = entryRows(data);
+  const el = byId("entryMap");
   if (!rows.length) {
-    el.innerHTML = `<div class="empty">No complete-market entry heat-map data yet.</div>`;
+    el.innerHTML = `<div class="empty">No complete-market entry data yet.</div>`;
+    byId("entryZoneRows").innerHTML = "";
     return;
   }
 
-  const byKey = new Map();
-  for (const row of rows) {
-    const key = `${row.distance_bps_bucket}:${row.seconds_left_bucket}`;
-    byKey.set(key, (byKey.get(key) || 0) + Number(row.notional || 0));
+  const maxDistance = Math.max(50, Math.ceil(Math.max(...rows.map((row) => Math.abs(Number(row.distance_bps_bucket || 0)))) / 25) * 25);
+  const maxNotional = Math.max(...rows.map((row) => Number(row.notional || 0)), 1);
+  const view = { width: 920, height: 430, left: 68, right: 26, top: 28, bottom: 56 };
+  const plotWidth = view.width - view.left - view.right;
+  const plotHeight = view.height - view.top - view.bottom;
+  const xFor = (secondsLeft) => view.left + ((300 - Number(secondsLeft || 0)) / 300) * plotWidth;
+  const yFor = (distance) => view.top + ((maxDistance - Number(distance || 0)) / (maxDistance * 2)) * plotHeight;
+  const radiusFor = (notional) => 4 + Math.sqrt(Number(notional || 0) / maxNotional) * 22;
+
+  const xTicks = [300, 240, 180, 120, 60, 0];
+  const yTicks = [-maxDistance, -maxDistance / 2, 0, maxDistance / 2, maxDistance];
+  const grid = [
+    ...xTicks.map((tick) => {
+      const x = xFor(tick);
+      return `<line class="axis-grid" x1="${x}" y1="${view.top}" x2="${x}" y2="${view.top + plotHeight}"></line><text class="axis-label" x="${x}" y="${view.top + plotHeight + 26}" text-anchor="middle">${formatClock(tick)}</text>`;
+    }),
+    ...yTicks.map((tick) => {
+      const y = yFor(tick);
+      return `<line class="${tick === 0 ? "axis-zero" : "axis-grid"}" x1="${view.left}" y1="${y}" x2="${view.left + plotWidth}" y2="${y}"></line><text class="axis-label" x="${view.left - 10}" y="${y + 4}" text-anchor="end">${signedBps(tick)}</text>`;
+    }),
+  ].join("");
+
+  const bubbles = rows
+    .slice()
+    .sort((a, b) => Number(a.notional || 0) - Number(b.notional || 0))
+    .map((row) => {
+      const role = row.role === "taker" ? "taker" : "maker";
+      const seconds = Number(row.seconds_left_bucket || 0);
+      const distance = Number(row.distance_bps_bucket || 0);
+      const notional = Number(row.notional || 0);
+      const entries = Number(row.entries || 0);
+      return `
+        <circle class="entry-bubble ${role}" cx="${xFor(seconds)}" cy="${yFor(distance)}" r="${radiusFor(notional)}">
+          <title>${role} • ${formatClock(seconds)} left • ${signedBps(distance)} • ${money.format(notional)} • ${fmt.format(entries)} entries</title>
+        </circle>`;
+    })
+    .join("");
+
+  el.innerHTML = `
+    <svg class="entry-svg" viewBox="0 0 ${view.width} ${view.height}" role="img" aria-label="Large wallet entries by time left and BTC distance">
+      <rect class="plot-bg" x="${view.left}" y="${view.top}" width="${plotWidth}" height="${plotHeight}"></rect>
+      ${grid}
+      ${bubbles}
+      <text class="axis-title" x="${view.left + plotWidth / 2}" y="${view.height - 14}" text-anchor="middle">Time left in 5m window</text>
+      <text class="axis-title" x="18" y="${view.top + plotHeight / 2}" text-anchor="middle" transform="rotate(-90 18 ${view.top + plotHeight / 2})">BTC move from open</text>
+    </svg>`;
+  renderEntryZones(rows);
+}
+
+function renderEntryZones(rows) {
+  const el = byId("entryZoneRows");
+  const topRows = rows
+    .slice()
+    .sort((a, b) => Number(b.notional || 0) - Number(a.notional || 0))
+    .slice(0, 8);
+
+  if (!topRows.length) {
+    el.innerHTML = `<div class="empty compact-empty">No zones yet.</div>`;
+    return;
   }
 
-  const seconds = Array.from({ length: 31 }, (_, i) => i * 10);
-  const distances = Array.from(new Set(rows.map((row) => Number(row.distance_bps_bucket)))).sort((a, b) => b - a);
-  const max = Math.max(...byKey.values());
-  const cells = [];
-  cells.push(`<div class="heat-label"></div>`);
-  for (const sec of seconds) cells.push(`<div class="heat-label">${sec}s</div>`);
-  for (const dist of distances) {
-    cells.push(`<div class="heat-label">${dist}</div>`);
-    for (const sec of seconds) {
-      const value = byKey.get(`${dist}:${sec}`) || 0;
-      cells.push(`<div class="heat-cell" title="${dist} bps, ${sec}s: ${money.format(value)}" style="background:${heatColor(value, max)}">${value}</div>`);
-    }
-  }
-  el.innerHTML = `<div class="heat-grid">${cells.join("")}</div>`;
+  el.innerHTML = topRows.map((row) => {
+    const role = row.role === "taker" ? "taker" : "maker";
+    return `
+      <div class="zone-row">
+        <span class="role-dot ${role}"></span>
+        <strong>${role}</strong>
+        <span>${formatClock(Number(row.seconds_left_bucket || 0))}</span>
+        <span>${signedBps(row.distance_bps_bucket)}</span>
+        <span>${money.format(row.notional || 0)}</span>
+      </div>`;
+  }).join("");
 }
 
 function renderWallets(data) {
@@ -97,12 +157,12 @@ async function main() {
   const response = await fetch("data/summary.json", { cache: "no-store" });
   state.data = await response.json();
   renderMetrics(state.data);
-  renderHeatmap(state.data);
+  renderEntryMap(state.data);
   renderWallets(state.data);
 
   byId("roleSelect").addEventListener("change", (event) => {
     state.role = event.target.value;
-    renderHeatmap(state.data);
+    renderEntryMap(state.data);
   });
 }
 
