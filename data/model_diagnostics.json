@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-10T13:50:06.031732-07:00",
+  "generated_at": "2026-06-10T13:54:48.541367-07:00",
   "features": {
     "rows": 153510,
     "markets": 510,
@@ -19,7 +19,9 @@
   "one_cent_maker": {
     "rules": 464,
     "positive_rules": 14.0,
-    "best_pnl_per_quote": 0.03474561403508778,
+    "day_stable_rules": 0.0,
+    "best_pnl_per_quote": 0.034745614035087816,
+    "best_day_stable_pnl_per_quote": null,
     "best_win_prob_when_filled": 0.04477611940298507
   },
   "taker_rule_holdout": {
@@ -44,8 +46,14 @@
       "fill_proxy_prob": 0.9991228070175439,
       "filled_quotes": 1139.0,
       "win_prob_when_filled": 0.04477611940298507,
-      "pnl_per_quote": 0.03474561403508778,
-      "total_pnl_per_1_share_quote": 39.61000000000007
+      "pnl_per_quote": 0.034745614035087816,
+      "total_pnl_per_1_share_quote": 39.61000000000011,
+      "days": 25,
+      "positive_days": 2,
+      "positive_day_share": 0.08,
+      "worst_day_pnl_per_quote": -0.010000000000000005,
+      "best_day_pnl_per_quote": 0.5575675675675676,
+      "passes_day_stability": false
     },
     {
       "min_abs_distance_bps": 25,
@@ -59,8 +67,14 @@
       "fill_proxy_prob": 0.9991228070175439,
       "filled_quotes": 1139.0,
       "win_prob_when_filled": 0.04477611940298507,
-      "pnl_per_quote": 0.03474561403508778,
-      "total_pnl_per_1_share_quote": 39.61000000000007
+      "pnl_per_quote": 0.034745614035087795,
+      "total_pnl_per_1_share_quote": 39.610000000000085,
+      "days": 25,
+      "positive_days": 2,
+      "positive_day_share": 0.08,
+      "worst_day_pnl_per_quote": -0.010000000000000002,
+      "best_day_pnl_per_quote": 0.5575675675675676,
+      "passes_day_stability": false
     },
     {
       "min_abs_distance_bps": 25,
@@ -74,8 +88,14 @@
       "fill_proxy_prob": 0.998422712933754,
       "filled_quotes": 633.0,
       "win_prob_when_filled": 0.023696682464454975,
-      "pnl_per_quote": 0.01367507886435332,
-      "total_pnl_per_1_share_quote": 8.670000000000005
+      "pnl_per_quote": 0.013675078864353356,
+      "total_pnl_per_1_share_quote": 8.670000000000028,
+      "days": 23,
+      "positive_days": 1,
+      "positive_day_share": 0.043478260869565216,
+      "worst_day_pnl_per_quote": -0.010000000000000002,
+      "best_day_pnl_per_quote": 0.99,
+      "passes_day_stability": false
     },
     {
       "min_abs_distance_bps": 25,
@@ -89,23 +109,14 @@
       "fill_proxy_prob": 0.998422712933754,
       "filled_quotes": 633.0,
       "win_prob_when_filled": 0.023696682464454975,
-      "pnl_per_quote": 0.01367507886435332,
-      "total_pnl_per_1_share_quote": 8.670000000000005
-    },
-    {
-      "min_abs_distance_bps": 0,
-      "max_seconds_left": 300,
-      "min_realized_vol_30s_bps": 0,
-      "require_trade_coverage": true,
-      "cheap_side": "Up",
-      "maker_1c_queue_state": "joins_1c_bid",
-      "quote_states": 3394,
-      "markets": 238,
-      "fill_proxy_prob": 0.9929286977018268,
-      "filled_quotes": 3370.0,
-      "win_prob_when_filled": 0.02314540059347181,
-      "pnl_per_quote": 0.013052445492044908,
-      "total_pnl_per_1_share_quote": 44.300000000000416
+      "pnl_per_quote": 0.013675078864353343,
+      "total_pnl_per_1_share_quote": 8.67000000000002,
+      "days": 23,
+      "positive_days": 1,
+      "positive_day_share": 0.043478260869565216,
+      "worst_day_pnl_per_quote": -0.010000000000000002,
+      "best_day_pnl_per_quote": 0.9900000000000001,
+      "passes_day_stability": false
     },
     {
       "min_abs_distance_bps": 0,
@@ -119,8 +130,56 @@
       "fill_proxy_prob": 0.9929286977018268,
       "filled_quotes": 3370.0,
       "win_prob_when_filled": 0.02314540059347181,
-      "pnl_per_quote": 0.013052445492044908,
-      "total_pnl_per_1_share_quote": 44.300000000000416
+      "pnl_per_quote": 0.013052445492044927,
+      "total_pnl_per_1_share_quote": 44.30000000000048,
+      "days": 27,
+      "positive_days": 2,
+      "positive_day_share": 0.07407407407407407,
+      "worst_day_pnl_per_quote": -0.010000000000000005,
+      "best_day_pnl_per_quote": 0.5633333333333335,
+      "passes_day_stability": false
+    },
+    {
+      "min_abs_distance_bps": 0,
+      "max_seconds_left": 300,
+      "min_realized_vol_30s_bps": 0,
+      "require_trade_coverage": true,
+      "cheap_side": "Up",
+      "maker_1c_queue_state": "joins_1c_bid",
+      "quote_states": 3394,
+      "markets": 238,
+      "fill_proxy_prob": 0.9929286977018268,
+      "filled_quotes": 3370.0,
+      "win_prob_when_filled": 0.02314540059347181,
+      "pnl_per_quote": 0.013052445492044897,
+      "total_pnl_per_1_share_quote": 44.30000000000038,
+      "days": 27,
+      "positive_days": 2,
+      "positive_day_share": 0.07407407407407407,
+      "worst_day_pnl_per_quote": -0.010000000000000002,
+      "best_day_pnl_per_quote": 0.5633333333333335,
+      "passes_day_stability": false
+    },
+    {
+      "min_abs_distance_bps": 25,
+      "max_seconds_left": 120,
+      "min_realized_vol_30s_bps": 0,
+      "require_trade_coverage": false,
+      "cheap_side": "Up",
+      "maker_1c_queue_state": "joins_1c_bid",
+      "quote_states": 393,
+      "markets": 33,
+      "fill_proxy_prob": 1.0,
+      "filled_quotes": 393.0,
+      "win_prob_when_filled": 0.022900763358778626,
+      "pnl_per_quote": 0.01290076335877864,
+      "total_pnl_per_1_share_quote": 5.070000000000006,
+      "days": 14,
+      "positive_days": 1,
+      "positive_day_share": 0.07142857142857142,
+      "worst_day_pnl_per_quote": -0.010000000000000002,
+      "best_day_pnl_per_quote": 0.07737864077669905,
+      "passes_day_stability": false
     },
     {
       "min_abs_distance_bps": 25,
@@ -135,22 +194,13 @@
       "filled_quotes": 393.0,
       "win_prob_when_filled": 0.022900763358778626,
       "pnl_per_quote": 0.01290076335877862,
-      "total_pnl_per_1_share_quote": 5.069999999999998
-    },
-    {
-      "min_abs_distance_bps": 25,
-      "max_seconds_left": 120,
-      "min_realized_vol_30s_bps": 0,
-      "require_trade_coverage": false,
-      "cheap_side": "Up",
-      "maker_1c_queue_state": "joins_1c_bid",
-      "quote_states": 393,
-      "markets": 33,
-      "fill_proxy_prob": 1.0,
-      "filled_quotes": 393.0,
-      "win_prob_when_filled": 0.022900763358778626,
-      "pnl_per_quote": 0.01290076335877862,
-      "total_pnl_per_1_share_quote": 5.069999999999998
+      "total_pnl_per_1_share_quote": 5.069999999999998,
+      "days": 14,
+      "positive_days": 1,
+      "positive_day_share": 0.07142857142857142,
+      "worst_day_pnl_per_quote": -0.010000000000000002,
+      "best_day_pnl_per_quote": 0.07737864077669904,
+      "passes_day_stability": false
     },
     {
       "min_abs_distance_bps": 0,
@@ -164,8 +214,14 @@
       "fill_proxy_prob": 0.9986504723346828,
       "filled_quotes": 740.0,
       "win_prob_when_filled": 0.021621621621621623,
-      "pnl_per_quote": 0.011605937921727406,
-      "total_pnl_per_1_share_quote": 8.600000000000009
+      "pnl_per_quote": 0.0116059379217274,
+      "total_pnl_per_1_share_quote": 8.600000000000003,
+      "days": 23,
+      "positive_days": 1,
+      "positive_day_share": 0.043478260869565216,
+      "worst_day_pnl_per_quote": -0.010000000000000002,
+      "best_day_pnl_per_quote": 0.99,
+      "passes_day_stability": false
     },
     {
       "min_abs_distance_bps": 0,
@@ -179,10 +235,17 @@
       "fill_proxy_prob": 0.9986504723346828,
       "filled_quotes": 740.0,
       "win_prob_when_filled": 0.021621621621621623,
-      "pnl_per_quote": 0.011605937921727406,
-      "total_pnl_per_1_share_quote": 8.600000000000009
+      "pnl_per_quote": 0.011605937921727398,
+      "total_pnl_per_1_share_quote": 8.600000000000001,
+      "days": 23,
+      "positive_days": 1,
+      "positive_day_share": 0.043478260869565216,
+      "worst_day_pnl_per_quote": -0.010000000000000002,
+      "best_day_pnl_per_quote": 0.99,
+      "passes_day_stability": false
     }
   ],
+  "best_maker_day_stable_rules": [],
   "best_taker_holdout_rules": [
     {
       "min_ask": 0.25,
@@ -1136,5 +1199,5 @@
       "avg_gross_ev": 0.047733333333333315
     }
   ],
-  "interpretation": "The maker 1c proxy now has 14 positive coarse rules, but these are fill-proxy diagnostics and still need out-of-sample execution validation. The coarse taker-rule search has 57 pooled holdout-positive rules and 21 day-stable rules; treat them as candidate buckets for deeper data collection and latency-cost modeling, not live edges."
+  "interpretation": "The maker 1c proxy has 14 positive coarse rules, but none pass the day-stability gate, so they remain fragile fill-proxy diagnostics. The coarse taker-rule search has 57 pooled holdout-positive rules and 21 day-stable rules; treat them as candidate buckets for deeper data collection and latency-cost modeling, not live edges."
 }
