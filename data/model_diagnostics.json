@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-10T15:50:31.882033-07:00",
+  "generated_at": "2026-06-10T15:56:04.137318-07:00",
   "features": {
     "rows": 255549,
     "markets": 849,
@@ -899,6 +899,43 @@
         "avg_test_fill_rate": 0.6499702125519122,
         "avg_test_price_ok_rate": 0.701725156953915,
         "avg_test_liquidity_ok_rate": 0.8764900011632037
+      }
+    ]
+  },
+  "taker_first_entry_walkforward": {
+    "summary": {
+      "rules": 36,
+      "rules_with_eligible_folds": 36,
+      "walkforward_rules": 1,
+      "max_eligible_folds": 2,
+      "best_pooled_test_pnl_per_share": 0.10356164383561649,
+      "best_walkforward_pooled_test_pnl_per_share": 0.054683544303797495,
+      "max_walkforward_test_entries": 158
+    },
+    "fold_survival": [
+      {
+        "test_date": "2026-05-30 00:00:00",
+        "test_day_markets": 244,
+        "eligible_rules": 0,
+        "passing_rules": 0,
+        "best_test_pnl_per_share": null,
+        "avg_test_pnl_per_share": null
+      },
+      {
+        "test_date": "2026-06-06 00:00:00",
+        "test_day_markets": 239,
+        "eligible_rules": 8,
+        "passing_rules": 1,
+        "best_test_pnl_per_share": 0.12041666666666674,
+        "avg_test_pnl_per_share": -0.006059027777777769
+      },
+      {
+        "test_date": "2026-06-07 00:00:00",
+        "test_day_markets": 259,
+        "eligible_rules": 36,
+        "passing_rules": 30,
+        "best_test_pnl_per_share": 0.10356164383561649,
+        "avg_test_pnl_per_share": 0.060317736412124
       }
     ]
   },
@@ -2677,6 +2714,31 @@
       "passes_execution_day_stability": true
     }
   ],
+  "best_taker_first_entry_walkforward_rules": [
+    {
+      "rule_id": 1403,
+      "min_ask": 0.5,
+      "max_ask": 0.75,
+      "max_abs_distance_bps": 5,
+      "min_seconds_left": 241,
+      "max_seconds_left": 300,
+      "side_filter": "Up",
+      "eligible_folds": 2,
+      "passing_folds": 1,
+      "positive_test_fold_share": 0.5,
+      "total_test_entries": 158,
+      "total_test_markets": 158,
+      "pooled_test_pnl_per_share": 0.054683544303797495,
+      "pooled_test_roi_on_cost": 0.10364683301343573,
+      "avg_test_win_prob": 0.588016795865633,
+      "avg_test_ask": 0.527982881136951,
+      "worst_fold_pnl_per_share": -0.0003488372093023336,
+      "best_fold_pnl_per_share": 0.12041666666666674,
+      "first_eligible_test_date": "2026-06-06 00:00:00",
+      "last_eligible_test_date": "2026-06-07 00:00:00",
+      "passes_walkforward": true
+    }
+  ],
   "best_taker_train_rules": [
     {
       "min_ask": 0.0100001,
@@ -2979,7 +3041,7 @@
       "rows": 192,
       "markets": 19,
       "win_prob": 0.13020833333333334,
-      "avg_ask": 0.02000000000000001,
+      "avg_ask": 0.020000000000000014,
       "avg_gross_ev": 0.11020833333333352
     },
     {
@@ -3057,7 +3119,7 @@
       "markets": 17,
       "win_prob": 0.0962962962962963,
       "avg_ask": 0.03688888888888889,
-      "avg_gross_ev": 0.05940740740740747
+      "avg_gross_ev": 0.059407407407407485
     },
     {
       "ask_bucket": "ask_>50c",
@@ -3101,7 +3163,7 @@
       "markets": 372,
       "win_prob": 0.42188159189987345,
       "avg_ask": 0.38119111236113085,
-      "avg_gross_ev": 0.04069047953874285
+      "avg_gross_ev": 0.040690479538742844
     },
     {
       "ask_bucket": "ask_25c_50c",
@@ -3126,7 +3188,7 @@
       "avg_gross_ev": 0.037846719803801436
     }
   ],
-  "interpretation": "The inclusion unit is a complete clean 5-minute market; model-ready coverage now has 849 such markets. Full-day continuity is preferred context, not a hard gate: 0 full 288-window days and 3 days with at least 50% of expected windows; the best day has 259/288 windows. 668 feature rows used source-tagged backup BTC prices. The maker 1c proxy has 30 positive coarse rules, but none pass the day-stability gate, so they remain fragile fill-proxy diagnostics. The coarse taker-rule search has 38 pooled holdout-positive rules and 7 day-stable rules. Treat them as candidates for deeper latency-cost modeling, not live edges. With at most one taker entry per market, 73 rule variants are holdout-positive and 36 pass the day-stability gate; the strongest variants still only span 3 test days, so they need more clean-market coverage before sizing. Latency stress keeps 7/7 day-stable taker rules alive at 2s latency with a 2c slippage cap, but 0/7 survive at 10s with the same cap. First-entry execution sizing stress shows 35/36 rules still passing for $5 orders at 2s latency and a 2c cap (average fill rate 69.6%); $25 orders have 21/36 passing (average fill rate 60.8%). This suggests top-of-book size is not the main blocker at these small sizes in the current clean sample.",
+  "interpretation": "The inclusion unit is a complete clean 5-minute market; model-ready coverage now has 849 such markets. Full-day continuity is preferred context, not a hard gate: 0 full 288-window days and 3 days with at least 50% of expected windows; the best day has 259/288 windows. 668 feature rows used source-tagged backup BTC prices. The maker 1c proxy has 30 positive coarse rules, but none pass the day-stability gate, so they remain fragile fill-proxy diagnostics. The coarse taker-rule search has 38 pooled holdout-positive rules and 7 day-stable rules. Treat them as candidates for deeper latency-cost modeling, not live edges. With at most one taker entry per market, 73 rule variants are holdout-positive and 36 pass the day-stability gate; the strongest variants still only span 3 test days, so they need more clean-market coverage before sizing. Latency stress keeps 7/7 day-stable taker rules alive at 2s latency with a 2c slippage cap, but 0/7 survive at 10s with the same cap. First-entry execution sizing stress shows 35/36 rules still passing for $5 orders at 2s latency and a 2c cap (average fill rate 69.6%); $25 orders have 21/36 passing (average fill rate 60.8%). This suggests top-of-book size is not the main blocker at these small sizes in the current clean sample. Dense-day walk-forward validation is stricter: 1/36 day-stable first-entry variants pass with up to 2 eligible forward folds. This makes the current edge evidence fragile until more clean dense days are collected.",
   "taker_latency_stress": {
     "summary": {
       "rows": 280,
