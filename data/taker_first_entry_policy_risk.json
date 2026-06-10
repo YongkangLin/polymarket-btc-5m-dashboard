@@ -1,0 +1,658 @@
+{
+  "features": "data/processed/btc_5m_features_1s_reconciled.parquet",
+  "policy": "reports/btc_5m_taker_first_entry_execution_policy.csv",
+  "replay_rows": 1657,
+  "policies": 11,
+  "bootstrap_iterations": 5000,
+  "stake_fraction_note": "research_stake_fraction_cap is a conservative per-signal bankroll fraction for paper trading; it is capped at 0.25% while there are fewer than 10 selected forward days.",
+  "best_policy": {
+    "policy_name": "order_25_2s_2c_risk_adjusted",
+    "selected_folds": 2,
+    "selected_rules": 1,
+    "signals": 158,
+    "fills": 117,
+    "fill_rate": 0.740506329113924,
+    "planned_cost": 3950.0,
+    "filled_cost": 2925.0,
+    "pnl_dollars": 460.17822573124255,
+    "roi_on_planned_cost": 0.1165008166408209,
+    "roi_on_filled_cost": 0.15732588913888634,
+    "win_prob_filled": 0.5982905982905983,
+    "avg_signal_ask": 0.5275949367088607,
+    "avg_fill_ask": 0.5151282051282051,
+    "max_drawdown_dollars": 256.33753501400565,
+    "max_drawdown_planned_roi": 0.06489557848455839,
+    "max_consecutive_losing_signals": 8,
+    "max_consecutive_unfilled_signals": 2,
+    "mean_signal_return_on_planned_cost": 0.11650081664082088,
+    "std_signal_return_on_planned_cost": 0.8281239077595969,
+    "full_kelly_fraction_estimate": 0.16987846340990653,
+    "research_stake_fraction_cap": 0.0025,
+    "market_bootstrap_roi": {
+      "p05": 0.009408748352733193,
+      "p50": 0.11638923726214895,
+      "p95": 0.22356297455024332
+    },
+    "day_bootstrap_roi": {
+      "p05": 0.05061465475564022,
+      "p50": 0.11650081664082089,
+      "p95": 0.19519817667034223
+    },
+    "days": [
+      {
+        "test_date": "2026-06-06 00:00:00",
+        "signals": 72,
+        "fills": 57,
+        "planned_cost": 1800.0,
+        "filled_cost": 1425.0,
+        "pnl_dollars": 351.356718006616,
+        "roi_on_planned_cost": 0.19519817667034223
+      },
+      {
+        "test_date": "2026-06-07 00:00:00",
+        "signals": 86,
+        "fills": 60,
+        "planned_cost": 2150.0,
+        "filled_cost": 1500.0,
+        "pnl_dollars": 108.82150772462647,
+        "roi_on_planned_cost": 0.05061465475564022
+      }
+    ]
+  },
+  "policies_detail": [
+    {
+      "policy_name": "order_25_2s_2c_risk_adjusted",
+      "selected_folds": 2,
+      "selected_rules": 1,
+      "signals": 158,
+      "fills": 117,
+      "fill_rate": 0.740506329113924,
+      "planned_cost": 3950.0,
+      "filled_cost": 2925.0,
+      "pnl_dollars": 460.17822573124255,
+      "roi_on_planned_cost": 0.1165008166408209,
+      "roi_on_filled_cost": 0.15732588913888634,
+      "win_prob_filled": 0.5982905982905983,
+      "avg_signal_ask": 0.5275949367088607,
+      "avg_fill_ask": 0.5151282051282051,
+      "max_drawdown_dollars": 256.33753501400565,
+      "max_drawdown_planned_roi": 0.06489557848455839,
+      "max_consecutive_losing_signals": 8,
+      "max_consecutive_unfilled_signals": 2,
+      "mean_signal_return_on_planned_cost": 0.11650081664082088,
+      "std_signal_return_on_planned_cost": 0.8281239077595969,
+      "full_kelly_fraction_estimate": 0.16987846340990653,
+      "research_stake_fraction_cap": 0.0025,
+      "market_bootstrap_roi": {
+        "p05": 0.009408748352733193,
+        "p50": 0.11638923726214895,
+        "p95": 0.22356297455024332
+      },
+      "day_bootstrap_roi": {
+        "p05": 0.05061465475564022,
+        "p50": 0.11650081664082089,
+        "p95": 0.19519817667034223
+      },
+      "days": [
+        {
+          "test_date": "2026-06-06 00:00:00",
+          "signals": 72,
+          "fills": 57,
+          "planned_cost": 1800.0,
+          "filled_cost": 1425.0,
+          "pnl_dollars": 351.356718006616,
+          "roi_on_planned_cost": 0.19519817667034223
+        },
+        {
+          "test_date": "2026-06-07 00:00:00",
+          "signals": 86,
+          "fills": 60,
+          "planned_cost": 2150.0,
+          "filled_cost": 1500.0,
+          "pnl_dollars": 108.82150772462647,
+          "roi_on_planned_cost": 0.05061465475564022
+        }
+      ]
+    },
+    {
+      "policy_name": "order_25_any_execution_risk_adjusted",
+      "selected_folds": 2,
+      "selected_rules": 1,
+      "signals": 158,
+      "fills": 139,
+      "fill_rate": 0.879746835443038,
+      "planned_cost": 3950.0,
+      "filled_cost": 3475.0,
+      "pnl_dollars": 451.28975429591765,
+      "roi_on_planned_cost": 0.11425057070782725,
+      "roi_on_filled_cost": 0.12986755519306983,
+      "win_prob_filled": 0.5971223021582733,
+      "avg_signal_ask": 0.5275949367088607,
+      "avg_fill_ask": 0.526906474820144,
+      "max_drawdown_dollars": 297.8916256270919,
+      "max_drawdown_planned_roi": 0.07541560142458023,
+      "max_consecutive_losing_signals": 5,
+      "max_consecutive_unfilled_signals": 2,
+      "mean_signal_return_on_planned_cost": 0.11425057070782724,
+      "std_signal_return_on_planned_cost": 0.8766846205870086,
+      "full_kelly_fraction_estimate": 0.14865228944085923,
+      "research_stake_fraction_cap": 0.0025,
+      "market_bootstrap_roi": {
+        "p05": -0.0019410375057199848,
+        "p50": 0.11497751959197774,
+        "p95": 0.23095167714754336
+      },
+      "day_bootstrap_roi": {
+        "p05": 0.03664463084889733,
+        "p50": 0.11425057070782725,
+        "p95": 0.20694655442821577
+      },
+      "days": [
+        {
+          "test_date": "2026-06-06 00:00:00",
+          "signals": 72,
+          "fills": 66,
+          "planned_cost": 1800.0,
+          "filled_cost": 1650.0,
+          "pnl_dollars": 372.5037979707884,
+          "roi_on_planned_cost": 0.20694655442821577
+        },
+        {
+          "test_date": "2026-06-07 00:00:00",
+          "signals": 86,
+          "fills": 73,
+          "planned_cost": 2150.0,
+          "filled_cost": 1825.0,
+          "pnl_dollars": 78.78595632512926,
+          "roi_on_planned_cost": 0.03664463084889733
+        }
+      ]
+    },
+    {
+      "policy_name": "order_25_2s_2c_train_roi",
+      "selected_folds": 2,
+      "selected_rules": 2,
+      "signals": 149,
+      "fills": 100,
+      "fill_rate": 0.6711409395973155,
+      "planned_cost": 3725.0,
+      "filled_cost": 2500.0,
+      "pnl_dollars": 270.2113145846928,
+      "roi_on_planned_cost": 0.0725399502240786,
+      "roi_on_filled_cost": 0.10808452583387712,
+      "win_prob_filled": 0.57,
+      "avg_signal_ask": 0.5342953020134228,
+      "avg_fill_ask": 0.5139,
+      "max_drawdown_dollars": 288.04207045143,
+      "max_drawdown_planned_roi": 0.07732673032253154,
+      "max_consecutive_losing_signals": 8,
+      "max_consecutive_unfilled_signals": 6,
+      "mean_signal_return_on_planned_cost": 0.07253995022407861,
+      "std_signal_return_on_planned_cost": 0.8032422933362592,
+      "full_kelly_fraction_estimate": 0.1124304938697185,
+      "research_stake_fraction_cap": 0.0025,
+      "market_bootstrap_roi": {
+        "p05": -0.03693198528152632,
+        "p50": 0.0731270959512665,
+        "p95": 0.17938172670201463
+      },
+      "day_bootstrap_roi": {
+        "p05": 0.05061465475564022,
+        "p50": 0.07253995022407861,
+        "p95": 0.10246971864131198
+      },
+      "days": [
+        {
+          "test_date": "2026-06-06 00:00:00",
+          "signals": 63,
+          "fills": 40,
+          "planned_cost": 1575.0,
+          "filled_cost": 1000.0,
+          "pnl_dollars": 161.38980686006636,
+          "roi_on_planned_cost": 0.10246971864131198
+        },
+        {
+          "test_date": "2026-06-07 00:00:00",
+          "signals": 86,
+          "fills": 60,
+          "planned_cost": 2150.0,
+          "filled_cost": 1500.0,
+          "pnl_dollars": 108.82150772462647,
+          "roi_on_planned_cost": 0.05061465475564022
+        }
+      ]
+    },
+    {
+      "policy_name": "order_10_2s_2c_risk_adjusted",
+      "selected_folds": 2,
+      "selected_rules": 2,
+      "signals": 149,
+      "fills": 112,
+      "fill_rate": 0.7516778523489933,
+      "planned_cost": 1490.0,
+      "filled_cost": 1120.0,
+      "pnl_dollars": 83.28880359335733,
+      "roi_on_planned_cost": 0.0558985259015821,
+      "roi_on_filled_cost": 0.07436500320835476,
+      "win_prob_filled": 0.5535714285714286,
+      "avg_signal_ask": 0.5342953020134228,
+      "avg_fill_ask": 0.51625,
+      "max_drawdown_dollars": 127.48097912396821,
+      "max_drawdown_planned_roi": 0.08555770411004578,
+      "max_consecutive_losing_signals": 8,
+      "max_consecutive_unfilled_signals": 6,
+      "mean_signal_return_on_planned_cost": 0.05589852590158213,
+      "std_signal_return_on_planned_cost": 0.8515088113690522,
+      "full_kelly_fraction_estimate": 0.07709426325822637,
+      "research_stake_fraction_cap": 0.0025,
+      "market_bootstrap_roi": {
+        "p05": -0.057059713887981305,
+        "p50": 0.058026128909764205,
+        "p95": 0.17170498351953076
+      },
+      "day_bootstrap_roi": {
+        "p05": 0.032806517080031704,
+        "p50": 0.05589852590158211,
+        "p95": 0.08742095064211124
+      },
+      "days": [
+        {
+          "test_date": "2026-06-06 00:00:00",
+          "signals": 63,
+          "fills": 45,
+          "planned_cost": 630.0,
+          "filled_cost": 450.0,
+          "pnl_dollars": 55.07519890453008,
+          "roi_on_planned_cost": 0.08742095064211124
+        },
+        {
+          "test_date": "2026-06-07 00:00:00",
+          "signals": 86,
+          "fills": 67,
+          "planned_cost": 860.0,
+          "filled_cost": 670.0,
+          "pnl_dollars": 28.213604688827264,
+          "roi_on_planned_cost": 0.032806517080031704
+        }
+      ]
+    },
+    {
+      "policy_name": "order_10_2s_2c_train_roi",
+      "selected_folds": 2,
+      "selected_rules": 2,
+      "signals": 149,
+      "fills": 112,
+      "fill_rate": 0.7516778523489933,
+      "planned_cost": 1490.0,
+      "filled_cost": 1120.0,
+      "pnl_dollars": 83.28880359335733,
+      "roi_on_planned_cost": 0.0558985259015821,
+      "roi_on_filled_cost": 0.07436500320835476,
+      "win_prob_filled": 0.5535714285714286,
+      "avg_signal_ask": 0.5342953020134228,
+      "avg_fill_ask": 0.51625,
+      "max_drawdown_dollars": 127.48097912396821,
+      "max_drawdown_planned_roi": 0.08555770411004578,
+      "max_consecutive_losing_signals": 8,
+      "max_consecutive_unfilled_signals": 6,
+      "mean_signal_return_on_planned_cost": 0.05589852590158213,
+      "std_signal_return_on_planned_cost": 0.8515088113690522,
+      "full_kelly_fraction_estimate": 0.07709426325822637,
+      "research_stake_fraction_cap": 0.0025,
+      "market_bootstrap_roi": {
+        "p05": -0.05827455442790474,
+        "p50": 0.05613919117379525,
+        "p95": 0.17093030143646634
+      },
+      "day_bootstrap_roi": {
+        "p05": 0.032806517080031704,
+        "p50": 0.05589852590158211,
+        "p95": 0.08742095064211124
+      },
+      "days": [
+        {
+          "test_date": "2026-06-06 00:00:00",
+          "signals": 63,
+          "fills": 45,
+          "planned_cost": 630.0,
+          "filled_cost": 450.0,
+          "pnl_dollars": 55.07519890453008,
+          "roi_on_planned_cost": 0.08742095064211124
+        },
+        {
+          "test_date": "2026-06-07 00:00:00",
+          "signals": 86,
+          "fills": 67,
+          "planned_cost": 860.0,
+          "filled_cost": 670.0,
+          "pnl_dollars": 28.213604688827264,
+          "roi_on_planned_cost": 0.032806517080031704
+        }
+      ]
+    },
+    {
+      "policy_name": "order_5_2s_2c_risk_adjusted",
+      "selected_folds": 2,
+      "selected_rules": 2,
+      "signals": 149,
+      "fills": 116,
+      "fill_rate": 0.7785234899328859,
+      "planned_cost": 745.0,
+      "filled_cost": 580.0,
+      "pnl_dollars": 40.337623320088866,
+      "roi_on_planned_cost": 0.05414446083233405,
+      "roi_on_filled_cost": 0.06954762641394632,
+      "win_prob_filled": 0.5517241379310345,
+      "avg_signal_ask": 0.5342953020134228,
+      "avg_fill_ask": 0.5162931034482758,
+      "max_drawdown_dollars": 61.267507002801125,
+      "max_drawdown_planned_roi": 0.0822382644332901,
+      "max_consecutive_losing_signals": 8,
+      "max_consecutive_unfilled_signals": 3,
+      "mean_signal_return_on_planned_cost": 0.05414446083233408,
+      "std_signal_return_on_planned_cost": 0.8654430464242502,
+      "full_kelly_fraction_estimate": 0.07228980407462206,
+      "research_stake_fraction_cap": 0.0025,
+      "market_bootstrap_roi": {
+        "p05": -0.062350067866075345,
+        "p50": 0.05533751152671697,
+        "p95": 0.16971805423864872
+      },
+      "day_bootstrap_roi": {
+        "p05": 0.04139540434377635,
+        "p50": 0.05414446083233406,
+        "p95": 0.07154793476909536
+      },
+      "days": [
+        {
+          "test_date": "2026-06-06 00:00:00",
+          "signals": 63,
+          "fills": 46,
+          "planned_cost": 315.0,
+          "filled_cost": 230.0,
+          "pnl_dollars": 22.53759945226504,
+          "roi_on_planned_cost": 0.07154793476909536
+        },
+        {
+          "test_date": "2026-06-07 00:00:00",
+          "signals": 86,
+          "fills": 70,
+          "planned_cost": 430.0,
+          "filled_cost": 350.0,
+          "pnl_dollars": 17.800023867823832,
+          "roi_on_planned_cost": 0.04139540434377635
+        }
+      ]
+    },
+    {
+      "policy_name": "order_5_2s_2c_train_roi",
+      "selected_folds": 2,
+      "selected_rules": 2,
+      "signals": 149,
+      "fills": 116,
+      "fill_rate": 0.7785234899328859,
+      "planned_cost": 745.0,
+      "filled_cost": 580.0,
+      "pnl_dollars": 40.337623320088866,
+      "roi_on_planned_cost": 0.05414446083233405,
+      "roi_on_filled_cost": 0.06954762641394632,
+      "win_prob_filled": 0.5517241379310345,
+      "avg_signal_ask": 0.5342953020134228,
+      "avg_fill_ask": 0.5162931034482758,
+      "max_drawdown_dollars": 61.267507002801125,
+      "max_drawdown_planned_roi": 0.0822382644332901,
+      "max_consecutive_losing_signals": 8,
+      "max_consecutive_unfilled_signals": 3,
+      "mean_signal_return_on_planned_cost": 0.05414446083233408,
+      "std_signal_return_on_planned_cost": 0.8654430464242502,
+      "full_kelly_fraction_estimate": 0.07228980407462206,
+      "research_stake_fraction_cap": 0.0025,
+      "market_bootstrap_roi": {
+        "p05": -0.06427606969876883,
+        "p50": 0.05273403082957746,
+        "p95": 0.17019656142527143
+      },
+      "day_bootstrap_roi": {
+        "p05": 0.04139540434377635,
+        "p50": 0.05414446083233406,
+        "p95": 0.07154793476909536
+      },
+      "days": [
+        {
+          "test_date": "2026-06-06 00:00:00",
+          "signals": 63,
+          "fills": 46,
+          "planned_cost": 315.0,
+          "filled_cost": 230.0,
+          "pnl_dollars": 22.53759945226504,
+          "roi_on_planned_cost": 0.07154793476909536
+        },
+        {
+          "test_date": "2026-06-07 00:00:00",
+          "signals": 86,
+          "fills": 70,
+          "planned_cost": 430.0,
+          "filled_cost": 350.0,
+          "pnl_dollars": 17.800023867823832,
+          "roi_on_planned_cost": 0.04139540434377635
+        }
+      ]
+    },
+    {
+      "policy_name": "global_train_roi",
+      "selected_folds": 2,
+      "selected_rules": 2,
+      "signals": 149,
+      "fills": 130,
+      "fill_rate": 0.87248322147651,
+      "planned_cost": 2465.0,
+      "filled_cost": 2110.0,
+      "pnl_dollars": 88.91858342665637,
+      "roi_on_planned_cost": 0.03607244763758879,
+      "roi_on_filled_cost": 0.0421415087330125,
+      "win_prob_filled": 0.5461538461538461,
+      "avg_signal_ask": 0.5342953020134228,
+      "avg_fill_ask": 0.5264615384615384,
+      "max_drawdown_dollars": 270.34236454334814,
+      "max_drawdown_planned_roi": 0.10967235884111487,
+      "max_consecutive_losing_signals": 5,
+      "max_consecutive_unfilled_signals": 2,
+      "mean_signal_return_on_planned_cost": 0.034751434049064396,
+      "std_signal_return_on_planned_cost": 0.8955661988184801,
+      "full_kelly_fraction_estimate": 0.04332886804928065,
+      "research_stake_fraction_cap": 0.0025,
+      "market_bootstrap_roi": {
+        "p05": -0.10180023517236388,
+        "p50": 0.0356787455694091,
+        "p95": 0.16829934149471265
+      },
+      "day_bootstrap_roi": {
+        "p05": 0.03216707016357817,
+        "p50": 0.036072447637588795,
+        "p95": 0.03664463084889733
+      },
+      "days": [
+        {
+          "test_date": "2026-06-06 00:00:00",
+          "signals": 63,
+          "fills": 57,
+          "planned_cost": 315.0,
+          "filled_cost": 285.0,
+          "pnl_dollars": 10.132627101527124,
+          "roi_on_planned_cost": 0.03216707016357817
+        },
+        {
+          "test_date": "2026-06-07 00:00:00",
+          "signals": 86,
+          "fills": 73,
+          "planned_cost": 2150.0,
+          "filled_cost": 1825.0,
+          "pnl_dollars": 78.78595632512926,
+          "roi_on_planned_cost": 0.03664463084889733
+        }
+      ]
+    },
+    {
+      "policy_name": "global_risk_adjusted",
+      "selected_folds": 2,
+      "selected_rules": 2,
+      "signals": 149,
+      "fills": 140,
+      "fill_rate": 0.9395973154362416,
+      "planned_cost": 745.0,
+      "filled_cost": 700.0,
+      "pnl_dollars": 26.688930330771456,
+      "roi_on_planned_cost": 0.03582406755808249,
+      "roi_on_filled_cost": 0.03812704332967351,
+      "win_prob_filled": 0.5428571428571428,
+      "avg_signal_ask": 0.5342953020134228,
+      "avg_fill_ask": 0.5243571428571429,
+      "max_drawdown_dollars": 65.90743332602406,
+      "max_drawdown_planned_roi": 0.08846635345775042,
+      "max_consecutive_losing_signals": 8,
+      "max_consecutive_unfilled_signals": 2,
+      "mean_signal_return_on_planned_cost": 0.0358240675580825,
+      "std_signal_return_on_planned_cost": 0.93552910800104,
+      "full_kelly_fraction_estimate": 0.040931747456126814,
+      "research_stake_fraction_cap": 0.0025,
+      "market_bootstrap_roi": {
+        "p05": -0.08746626195094892,
+        "p50": 0.03921016949959204,
+        "p95": 0.16258012468796137
+      },
+      "day_bootstrap_roi": {
+        "p05": 0.03216707016357817,
+        "p50": 0.0358240675580825,
+        "p95": 0.0385030307656845
+      },
+      "days": [
+        {
+          "test_date": "2026-06-06 00:00:00",
+          "signals": 63,
+          "fills": 57,
+          "planned_cost": 315.0,
+          "filled_cost": 285.0,
+          "pnl_dollars": 10.132627101527124,
+          "roi_on_planned_cost": 0.03216707016357817
+        },
+        {
+          "test_date": "2026-06-07 00:00:00",
+          "signals": 86,
+          "fills": 83,
+          "planned_cost": 430.0,
+          "filled_cost": 415.0,
+          "pnl_dollars": 16.556303229244335,
+          "roi_on_planned_cost": 0.0385030307656845
+        }
+      ]
+    },
+    {
+      "policy_name": "order_5_any_execution_risk_adjusted",
+      "selected_folds": 2,
+      "selected_rules": 2,
+      "signals": 149,
+      "fills": 140,
+      "fill_rate": 0.9395973154362416,
+      "planned_cost": 745.0,
+      "filled_cost": 700.0,
+      "pnl_dollars": 26.688930330771456,
+      "roi_on_planned_cost": 0.03582406755808249,
+      "roi_on_filled_cost": 0.03812704332967351,
+      "win_prob_filled": 0.5428571428571428,
+      "avg_signal_ask": 0.5342953020134228,
+      "avg_fill_ask": 0.5243571428571429,
+      "max_drawdown_dollars": 65.90743332602406,
+      "max_drawdown_planned_roi": 0.08846635345775042,
+      "max_consecutive_losing_signals": 8,
+      "max_consecutive_unfilled_signals": 2,
+      "mean_signal_return_on_planned_cost": 0.0358240675580825,
+      "std_signal_return_on_planned_cost": 0.93552910800104,
+      "full_kelly_fraction_estimate": 0.040931747456126814,
+      "research_stake_fraction_cap": 0.0025,
+      "market_bootstrap_roi": {
+        "p05": -0.08766106070047479,
+        "p50": 0.03502031277677892,
+        "p95": 0.16261952438350114
+      },
+      "day_bootstrap_roi": {
+        "p05": 0.03216707016357817,
+        "p50": 0.0358240675580825,
+        "p95": 0.0385030307656845
+      },
+      "days": [
+        {
+          "test_date": "2026-06-06 00:00:00",
+          "signals": 63,
+          "fills": 57,
+          "planned_cost": 315.0,
+          "filled_cost": 285.0,
+          "pnl_dollars": 10.132627101527124,
+          "roi_on_planned_cost": 0.03216707016357817
+        },
+        {
+          "test_date": "2026-06-07 00:00:00",
+          "signals": 86,
+          "fills": 83,
+          "planned_cost": 430.0,
+          "filled_cost": 415.0,
+          "pnl_dollars": 16.556303229244335,
+          "roi_on_planned_cost": 0.0385030307656845
+        }
+      ]
+    },
+    {
+      "policy_name": "order_10_any_execution_risk_adjusted",
+      "selected_folds": 2,
+      "selected_rules": 2,
+      "signals": 149,
+      "fills": 142,
+      "fill_rate": 0.9530201342281879,
+      "planned_cost": 1490.0,
+      "filled_cost": 1420.0,
+      "pnl_dollars": 24.372870594455804,
+      "roi_on_planned_cost": 0.01635763127144685,
+      "roi_on_filled_cost": 0.017163993376377328,
+      "win_prob_filled": 0.5422535211267606,
+      "avg_signal_ask": 0.5338255033557047,
+      "avg_fill_ask": 0.532112676056338,
+      "max_drawdown_dollars": 131.15349099067248,
+      "max_drawdown_planned_roi": 0.08802247717494797,
+      "max_consecutive_losing_signals": 8,
+      "max_consecutive_unfilled_signals": 1,
+      "mean_signal_return_on_planned_cost": 0.016357631271446873,
+      "std_signal_return_on_planned_cost": 0.9203731351222146,
+      "full_kelly_fraction_estimate": 0.019310456792402873,
+      "research_stake_fraction_cap": 0.0025,
+      "market_bootstrap_roi": {
+        "p05": -0.10945110357505981,
+        "p50": 0.017796338483023297,
+        "p95": 0.1365239126873362
+      },
+      "day_bootstrap_roi": {
+        "p05": -0.045618628355607704,
+        "p50": 0.01635763127144686,
+        "p95": 0.061758844719172874
+      },
+      "days": [
+        {
+          "test_date": "2026-06-06 00:00:00",
+          "signals": 63,
+          "fills": 61,
+          "planned_cost": 630.0,
+          "filled_cost": 610.0,
+          "pnl_dollars": -28.739735864032852,
+          "roi_on_planned_cost": -0.045618628355607704
+        },
+        {
+          "test_date": "2026-06-07 00:00:00",
+          "signals": 86,
+          "fills": 81,
+          "planned_cost": 860.0,
+          "filled_cost": 810.0,
+          "pnl_dollars": 53.11260645848867,
+          "roi_on_planned_cost": 0.061758844719172874
+        }
+      ]
+    }
+  ]
+}

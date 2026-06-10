@@ -41,14 +41,14 @@ function renderMetrics(data) {
   const fills = data.fills || {};
   const expectedWindows = Number(fullGate.expected_windows_per_day || 288);
   const bestDayText = bestDays.length
-    ? `Best day ${fmt.format(fullGate.best_day_windows || 0)}/${fmt.format(expectedWindows)}; full days ${fmt.format(fullGate.full_days || 0)}`
+    ? `Best day ${fmt.format(fullGate.best_day_windows || 0)}/${fmt.format(expectedWindows)} clean windows`
     : "No clean windows yet";
 
   byId("generatedAt").textContent = `Generated ${shortDate(data.generated_at)}`;
   byId("availabilityNote").textContent = data.availability_note || "";
   byId("completeMarkets").textContent = fmt.format(markets.total || 0);
   byId("marketRange").textContent = markets.total
-    ? bestDayText
+    ? `Window-level complete data; ${bestDayText}`
     : fullGate.days_seen
       ? `No clean markets yet; best day ${fmt.format(fullGate.best_day_windows || 0)}/${fmt.format(expectedWindows)}`
       : "No clean markets yet";
