@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-10T14:16:08.888712-07:00",
+  "generated_at": "2026-06-10T14:26:39.666951-07:00",
   "features": {
     "rows": 210098,
     "markets": 698,
@@ -7,6 +7,121 @@
     "maker_1c_eligible_win_prob": 0.002281227618769729,
     "max_abs_distance_bps": 288.80584230423835,
     "max_realized_vol_30s_bps": 11.476587950470542
+  },
+  "feature_day_coverage": {
+    "expected_markets_per_full_day": 288,
+    "summary": {
+      "days": 39,
+      "model_ready_markets": 698,
+      "feature_rows": 210098,
+      "best_day_markets": 208,
+      "full_days": 0,
+      "days_ge_75pct": 0,
+      "days_ge_50pct": 3,
+      "days_ge_25pct": 3
+    },
+    "best_days": [
+      {
+        "market_date": "2026-06-07 00:00:00",
+        "model_ready_markets": 208,
+        "model_ready_day_ratio": 0.7222222222222222,
+        "full_second_markets": 208,
+        "taker_decision_rows": 62608,
+        "maker_1c_rows": 9704,
+        "first_window": "2026-06-07 00:00:00-07:00",
+        "last_window": "2026-06-08 00:00:00-07:00"
+      },
+      {
+        "market_date": "2026-06-06 00:00:00",
+        "model_ready_markets": 195,
+        "model_ready_day_ratio": 0.6770833333333334,
+        "full_second_markets": 195,
+        "taker_decision_rows": 58695,
+        "maker_1c_rows": 9046,
+        "first_window": "2026-06-06 00:00:00-07:00",
+        "last_window": "2026-06-06 23:55:00-07:00"
+      },
+      {
+        "market_date": "2026-05-30 00:00:00",
+        "model_ready_markets": 188,
+        "model_ready_day_ratio": 0.6527777777777778,
+        "full_second_markets": 188,
+        "taker_decision_rows": 56588,
+        "maker_1c_rows": 5010,
+        "first_window": "2026-05-30 00:00:00-07:00",
+        "last_window": "2026-05-31 00:00:00-07:00"
+      },
+      {
+        "market_date": "2026-06-05 00:00:00",
+        "model_ready_markets": 18,
+        "model_ready_day_ratio": 0.0625,
+        "full_second_markets": 18,
+        "taker_decision_rows": 5418,
+        "maker_1c_rows": 2061,
+        "first_window": "2026-06-05 00:25:00-07:00",
+        "last_window": "2026-06-05 16:00:00-07:00"
+      },
+      {
+        "market_date": "2026-06-09 00:00:00",
+        "model_ready_markets": 13,
+        "model_ready_day_ratio": 0.04513888888888889,
+        "full_second_markets": 13,
+        "taker_decision_rows": 3913,
+        "maker_1c_rows": 1229,
+        "first_window": "2026-06-09 01:05:00-07:00",
+        "last_window": "2026-06-09 14:20:00-07:00"
+      },
+      {
+        "market_date": "2026-06-04 00:00:00",
+        "model_ready_markets": 8,
+        "model_ready_day_ratio": 0.027777777777777776,
+        "full_second_markets": 8,
+        "taker_decision_rows": 2408,
+        "maker_1c_rows": 1190,
+        "first_window": "2026-06-04 01:05:00-07:00",
+        "last_window": "2026-06-04 10:55:00-07:00"
+      },
+      {
+        "market_date": "2026-05-04 00:00:00",
+        "model_ready_markets": 5,
+        "model_ready_day_ratio": 0.017361111111111112,
+        "full_second_markets": 5,
+        "taker_decision_rows": 1505,
+        "maker_1c_rows": 587,
+        "first_window": "2026-05-04 03:30:00-07:00",
+        "last_window": "2026-05-04 09:20:00-07:00"
+      },
+      {
+        "market_date": "2026-04-17 00:00:00",
+        "model_ready_markets": 5,
+        "model_ready_day_ratio": 0.017361111111111112,
+        "full_second_markets": 5,
+        "taker_decision_rows": 1505,
+        "maker_1c_rows": 545,
+        "first_window": "2026-04-17 02:25:00-07:00",
+        "last_window": "2026-04-17 06:35:00-07:00"
+      },
+      {
+        "market_date": "2026-06-03 00:00:00",
+        "model_ready_markets": 4,
+        "model_ready_day_ratio": 0.013888888888888888,
+        "full_second_markets": 4,
+        "taker_decision_rows": 1204,
+        "maker_1c_rows": 564,
+        "first_window": "2026-06-03 09:20:00-07:00",
+        "last_window": "2026-06-03 16:05:00-07:00"
+      },
+      {
+        "market_date": "2026-04-09 00:00:00",
+        "model_ready_markets": 4,
+        "model_ready_day_ratio": 0.013888888888888888,
+        "full_second_markets": 4,
+        "taker_decision_rows": 1204,
+        "maker_1c_rows": 583,
+        "first_window": "2026-04-09 08:10:00-07:00",
+        "last_window": "2026-04-09 15:20:00-07:00"
+      }
+    ]
   },
   "one_cent_taker": {
     "rows": 29316,
@@ -1199,5 +1314,5 @@
       "avg_gross_ev": 0.04206768962890397
     }
   ],
-  "interpretation": "The maker 1c proxy has 14 positive coarse rules, but none pass the day-stability gate, so they remain fragile fill-proxy diagnostics. The coarse taker-rule search has 51 pooled holdout-positive rules and 14 day-stable rules; treat them as candidate buckets for deeper data collection and latency-cost modeling, not live edges."
+  "interpretation": "Model-ready coverage currently has 0 full 288-window days and 3 days with at least 50% of expected windows; the best day has 208/288 windows. Sparse days should be treated as data-collection context, not proof of a stable intraday edge. The maker 1c proxy has 14 positive coarse rules, but none pass the day-stability gate, so they remain fragile fill-proxy diagnostics. The coarse taker-rule search has 51 pooled holdout-positive rules and 14 day-stable rules; treat them as candidate buckets for deeper data collection and latency-cost modeling, not live edges."
 }
