@@ -54,11 +54,16 @@
             <h2>Large-Wallet Entry Map</h2>
             <p>Complete markets only.</p>
           </div>
-          <select id="roleSelect" aria-label="Role filter">
-            <option value="both">Maker + taker</option>
-            <option value="maker">Maker</option>
-            <option value="taker">Taker</option>
-          </select>
+          <div class="map-controls">
+            <select id="marketSelect" aria-label="Market filter">
+              <option value="all">All complete markets</option>
+            </select>
+            <select id="roleSelect" aria-label="Role filter">
+              <option value="both">Maker + taker</option>
+              <option value="maker">Maker</option>
+              <option value="taker">Taker</option>
+            </select>
+          </div>
         </div>
         <div class="entry-layout">
           <div id="entryMap" class="entry-map"></div>
@@ -95,6 +100,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=20260610-6"></script>
+    <script src="app.js?v=20260610-7"></script>
   </body>
 </html>

@@ -1,7 +1,7 @@
 const fmt = new Intl.NumberFormat("en-US");
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
-const state = { data: null, role: "both" };
+const state = { data: null, role: "both", market: "all" };
 
 function byId(id) {
   return document.getElementById(id);
@@ -21,6 +21,14 @@ function formatClock(seconds) {
 function signedBps(value) {
   const number = Number(value || 0);
   return `${number > 0 ? "+" : ""}${fmt.format(number)} bps`;
+}
+
+function marketLabel(row) {
+  const when = row.window_start
+    ? new Date(row.window_start).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+    : "Unknown";
+  const suffix = String(row.slug || row.condition_id || "").replace("btc-updown-5m-", "");
+  return `${when} • ${suffix}`;
 }
 
 function renderMetrics(data) {
@@ -48,15 +56,47 @@ function renderMetrics(data) {
   byId("fillStats").textContent = `${money.format(fills.entry_notional || 0)} notional, ${fmt.format(fills.large_wallets || 0)} large wallets`;
 }
 
+function renderMarketSelect(data) {
+  const select = byId("marketSelect");
+  const markets = data.entry_markets || [];
+  select.innerHTML = [
+    `<option value="all">All complete markets</option>`,
+    ...markets.map((row) => {
+      const label = marketLabel(row);
+      const entries = Number(row.entries || 0);
+      const detail = entries ? ` (${money.format(row.notional || 0)})` : " (no large-wallet entries)";
+      return `<option value="${row.condition_id}">${label}${detail}</option>`;
+    }),
+  ].join("");
+  select.value = state.market;
+}
+
 function entryRows(data) {
-  return (data.entry_map || data.heatmap || []).filter((d) => state.role === "both" || d.role === state.role);
+  const grouped = new Map();
+  for (const row of data.entry_map || []) {
+    if (state.role !== "both" && row.role !== state.role) continue;
+    if (state.market !== "all" && row.condition_id !== state.market) continue;
+    const key = `${row.role}:${row.seconds_left_bucket}:${row.distance_bps_bucket}`;
+    const current = grouped.get(key) || {
+      role: row.role,
+      seconds_left_bucket: Number(row.seconds_left_bucket || 0),
+      distance_bps_bucket: Number(row.distance_bps_bucket || 0),
+      entries: 0,
+      notional: 0,
+    };
+    current.entries += Number(row.entries || 0);
+    current.notional += Number(row.notional || 0);
+    grouped.set(key, current);
+  }
+  return Array.from(grouped.values());
 }
 
 function renderEntryMap(data) {
   const rows = entryRows(data);
   const el = byId("entryMap");
   if (!rows.length) {
-    el.innerHTML = `<div class="empty">No complete-market entry data yet.</div>`;
+    const label = state.market === "all" ? "the selected filters" : "this market";
+    el.innerHTML = `<div class="empty">No complete-market entry data for ${label}.</div>`;
     byId("entryZoneRows").innerHTML = "";
     return;
   }
@@ -157,8 +197,14 @@ async function main() {
   const response = await fetch("data/summary.json", { cache: "no-store" });
   state.data = await response.json();
   renderMetrics(state.data);
+  renderMarketSelect(state.data);
   renderEntryMap(state.data);
   renderWallets(state.data);
+
+  byId("marketSelect").addEventListener("change", (event) => {
+    state.market = event.target.value;
+    renderEntryMap(state.data);
+  });
 
   byId("roleSelect").addEventListener("change", (event) => {
     state.role = event.target.value;

@@ -134,6 +134,12 @@ main {
   border-bottom: 1px solid var(--line);
 }
 
+.map-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 select {
   min-width: 148px;
   border: 1px solid #bfc8c4;
@@ -142,6 +148,10 @@ select {
   color: var(--ink);
   padding: 8px 10px;
   font: inherit;
+}
+
+#marketSelect {
+  min-width: min(360px, 42vw);
 }
 
 .entry-layout {
@@ -338,5 +348,10 @@ td code {
 
   select {
     width: 100%;
+  }
+
+  .map-controls {
+    width: 100%;
+    flex-direction: column;
   }
 }
