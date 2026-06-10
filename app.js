@@ -34,12 +34,14 @@ function marketLabel(row) {
 function renderMetrics(data) {
   const markets = data.markets || {};
   const bestDays = data.best_days || [];
+  const fullGate = data.full_day_gate || {};
   const prices = data.prices || {};
   const book = data.book || {};
   const trades = data.trades || {};
   const fills = data.fills || {};
+  const expectedWindows = Number(fullGate.expected_windows_per_day || 288);
   const bestDayText = bestDays.length
-    ? `Best days: ${bestDays.slice(0, 3).map((day) => `${shortDate(day.market_date)} ${fmt.format(day.complete_windows || 0)}/288`).join(", ")}`
+    ? `Full days: ${fmt.format(fullGate.full_days || 0)}; best ${fmt.format(fullGate.best_day_windows || 0)}/${fmt.format(expectedWindows)}`
     : "Strict windows only";
 
   byId("generatedAt").textContent = `Generated ${shortDate(data.generated_at)}`;
@@ -47,11 +49,13 @@ function renderMetrics(data) {
   byId("completeMarkets").textContent = fmt.format(markets.total || 0);
   byId("marketRange").textContent = markets.total
     ? bestDayText
-    : "No complete markets yet";
+    : fullGate.days_seen
+      ? `No full days yet; best ${fmt.format(fullGate.best_day_windows || 0)}/${fmt.format(expectedWindows)}`
+      : "No full days yet";
   byId("priceRows").textContent = fmt.format(prices.rows || 0);
   byId("priceRange").textContent = prices.rows
     ? `${shortDate(prices.first_tick)} to ${shortDate(prices.last_tick)}`
-    : "0 ticks inside complete markets";
+    : "0 ticks inside full days";
   byId("bookRows").textContent = fmt.format(book.rows || 0);
   byId("bookStats").textContent = `${fmt.format(book.markets || 0)} markets, ${fmt.format(book.outcomes || 0)} outcomes`;
   byId("tradeRows").textContent = fmt.format(trades.rows || 0);
@@ -64,7 +68,7 @@ function renderMarketSelect(data) {
   const select = byId("marketSelect");
   const markets = data.entry_markets || [];
   select.innerHTML = [
-    `<option value="all">All complete markets</option>`,
+    `<option value="all">All full-day markets</option>`,
     ...markets.map((row) => {
       const label = marketLabel(row);
       const entries = Number(row.entries || 0);
@@ -100,7 +104,7 @@ function renderEntryMap(data) {
   const el = byId("entryMap");
   if (!rows.length) {
     const label = state.market === "all" ? "the selected filters" : "this market";
-    el.innerHTML = `<div class="empty">No complete-market entry data for ${label}.</div>`;
+    el.innerHTML = `<div class="empty">No full-day entry data for ${label}.</div>`;
     byId("entryZoneRows").innerHTML = "";
     return;
   }
@@ -183,7 +187,7 @@ function renderWallets(data) {
   const rows = data.top_wallets || [];
   const body = byId("walletRows");
   if (!rows.length) {
-    body.innerHTML = `<tr><td colspan="5">No complete-market wallet entries yet.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="5">No full-day wallet entries yet.</td></tr>`;
     return;
   }
   body.innerHTML = rows.map((row) => `

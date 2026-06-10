@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-10T14:14:10.556227-07:00",
+  "generated_at": "2026-06-10T14:36:11.111680-07:00",
   "model": {
     "type": "l2_logistic_regression_numpy",
     "decision_step_seconds": 5,
@@ -11,6 +11,12 @@
       "min_test_days": 2,
       "min_positive_day_share": 0.5,
       "min_worst_day_pnl_per_share": -0.05
+    },
+    "full_day_gate": {
+      "required_model_ready_windows": 288,
+      "min_full_test_days": 2,
+      "available_full_days": 0,
+      "best_day_model_ready_windows": 208
     },
     "features": [
       "seconds_left",
@@ -49,6 +55,164 @@
       "cheap_has_ask"
     ]
   },
+  "feature_day_coverage": [
+    {
+      "trade_date": "2026-04-02",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-04-05",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-04-07",
+      "model_ready_markets": 4
+    },
+    {
+      "trade_date": "2026-04-08",
+      "model_ready_markets": 2
+    },
+    {
+      "trade_date": "2026-04-09",
+      "model_ready_markets": 4
+    },
+    {
+      "trade_date": "2026-04-10",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-04-12",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-04-13",
+      "model_ready_markets": 2
+    },
+    {
+      "trade_date": "2026-04-14",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-04-15",
+      "model_ready_markets": 2
+    },
+    {
+      "trade_date": "2026-04-16",
+      "model_ready_markets": 2
+    },
+    {
+      "trade_date": "2026-04-17",
+      "model_ready_markets": 5
+    },
+    {
+      "trade_date": "2026-04-21",
+      "model_ready_markets": 3
+    },
+    {
+      "trade_date": "2026-04-23",
+      "model_ready_markets": 2
+    },
+    {
+      "trade_date": "2026-04-26",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-04-27",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-04-29",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-05-04",
+      "model_ready_markets": 5
+    },
+    {
+      "trade_date": "2026-05-08",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-05-10",
+      "model_ready_markets": 2
+    },
+    {
+      "trade_date": "2026-05-14",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-05-17",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-05-20",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-05-22",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-05-23",
+      "model_ready_markets": 2
+    },
+    {
+      "trade_date": "2026-05-24",
+      "model_ready_markets": 2
+    },
+    {
+      "trade_date": "2026-05-26",
+      "model_ready_markets": 3
+    },
+    {
+      "trade_date": "2026-05-27",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-05-28",
+      "model_ready_markets": 2
+    },
+    {
+      "trade_date": "2026-05-29",
+      "model_ready_markets": 2
+    },
+    {
+      "trade_date": "2026-05-30",
+      "model_ready_markets": 188
+    },
+    {
+      "trade_date": "2026-06-02",
+      "model_ready_markets": 3
+    },
+    {
+      "trade_date": "2026-06-03",
+      "model_ready_markets": 4
+    },
+    {
+      "trade_date": "2026-06-04",
+      "model_ready_markets": 8
+    },
+    {
+      "trade_date": "2026-06-05",
+      "model_ready_markets": 18
+    },
+    {
+      "trade_date": "2026-06-06",
+      "model_ready_markets": 195
+    },
+    {
+      "trade_date": "2026-06-07",
+      "model_ready_markets": 208
+    },
+    {
+      "trade_date": "2026-06-08",
+      "model_ready_markets": 3
+    },
+    {
+      "trade_date": "2026-06-09",
+      "model_ready_markets": 13
+    }
+  ],
   "train": {
     "rows": 29768,
     "markets": 488,
@@ -634,6 +798,144 @@
       "roi_on_cost": -1.0
     }
   ],
+  "threshold_full_day_stability": [
+    {
+      "min_pred_ev": -0.1,
+      "split": "test",
+      "days": 0,
+      "positive_days": 0,
+      "negative_days": 0,
+      "positive_day_share": null,
+      "rows": 0,
+      "markets": 0,
+      "pnl_per_share": null,
+      "total_pnl_per_share": null,
+      "roi_on_cost": null,
+      "worst_day_pnl_per_share": null,
+      "best_day_pnl_per_share": null
+    },
+    {
+      "min_pred_ev": -0.05,
+      "split": "test",
+      "days": 0,
+      "positive_days": 0,
+      "negative_days": 0,
+      "positive_day_share": null,
+      "rows": 0,
+      "markets": 0,
+      "pnl_per_share": null,
+      "total_pnl_per_share": null,
+      "roi_on_cost": null,
+      "worst_day_pnl_per_share": null,
+      "best_day_pnl_per_share": null
+    },
+    {
+      "min_pred_ev": 0.0,
+      "split": "test",
+      "days": 0,
+      "positive_days": 0,
+      "negative_days": 0,
+      "positive_day_share": null,
+      "rows": 0,
+      "markets": 0,
+      "pnl_per_share": null,
+      "total_pnl_per_share": null,
+      "roi_on_cost": null,
+      "worst_day_pnl_per_share": null,
+      "best_day_pnl_per_share": null
+    },
+    {
+      "min_pred_ev": 0.025,
+      "split": "test",
+      "days": 0,
+      "positive_days": 0,
+      "negative_days": 0,
+      "positive_day_share": null,
+      "rows": 0,
+      "markets": 0,
+      "pnl_per_share": null,
+      "total_pnl_per_share": null,
+      "roi_on_cost": null,
+      "worst_day_pnl_per_share": null,
+      "best_day_pnl_per_share": null
+    },
+    {
+      "min_pred_ev": 0.05,
+      "split": "test",
+      "days": 0,
+      "positive_days": 0,
+      "negative_days": 0,
+      "positive_day_share": null,
+      "rows": 0,
+      "markets": 0,
+      "pnl_per_share": null,
+      "total_pnl_per_share": null,
+      "roi_on_cost": null,
+      "worst_day_pnl_per_share": null,
+      "best_day_pnl_per_share": null
+    },
+    {
+      "min_pred_ev": 0.075,
+      "split": "test",
+      "days": 0,
+      "positive_days": 0,
+      "negative_days": 0,
+      "positive_day_share": null,
+      "rows": 0,
+      "markets": 0,
+      "pnl_per_share": null,
+      "total_pnl_per_share": null,
+      "roi_on_cost": null,
+      "worst_day_pnl_per_share": null,
+      "best_day_pnl_per_share": null
+    },
+    {
+      "min_pred_ev": 0.1,
+      "split": "test",
+      "days": 0,
+      "positive_days": 0,
+      "negative_days": 0,
+      "positive_day_share": null,
+      "rows": 0,
+      "markets": 0,
+      "pnl_per_share": null,
+      "total_pnl_per_share": null,
+      "roi_on_cost": null,
+      "worst_day_pnl_per_share": null,
+      "best_day_pnl_per_share": null
+    },
+    {
+      "min_pred_ev": 0.15,
+      "split": "test",
+      "days": 0,
+      "positive_days": 0,
+      "negative_days": 0,
+      "positive_day_share": null,
+      "rows": 0,
+      "markets": 0,
+      "pnl_per_share": null,
+      "total_pnl_per_share": null,
+      "roi_on_cost": null,
+      "worst_day_pnl_per_share": null,
+      "best_day_pnl_per_share": null
+    },
+    {
+      "min_pred_ev": 0.2,
+      "split": "test",
+      "days": 0,
+      "positive_days": 0,
+      "negative_days": 0,
+      "positive_day_share": null,
+      "rows": 0,
+      "markets": 0,
+      "pnl_per_share": null,
+      "total_pnl_per_share": null,
+      "roi_on_cost": null,
+      "worst_day_pnl_per_share": null,
+      "best_day_pnl_per_share": null
+    }
+  ],
+  "threshold_full_day_details": [],
   "passing_thresholds": [
     {
       "min_pred_ev": 0.025,
@@ -697,6 +999,7 @@
     }
   ],
   "day_robust_thresholds": [],
+  "full_day_robust_thresholds": [],
   "top_coefficients": [
     {
       "feature": "cheap_ask",
@@ -817,5 +1120,5 @@
       "pnl_per_share": 0.00935081148564295
     }
   ],
-  "interpretation": "This is a first EV model, not a deployment signal. In the current holdout, 3 positive predicted-EV threshold(s) passed the pooled holdout gate, but none passed the stricter day-stability gate. The best test bucket used min_pred_ev=0.05 with 638 rows across 152 markets and 2/3 positive test days. Treat it as a fragile candidate for more data, not a tradable edge."
+  "interpretation": "This is a first EV model, not a deployment signal. The full-day gate requires 288/288 model-ready windows; current data has 0 full day(s), with the best day at 208/288. 3 positive predicted-EV threshold(s) passed the pooled holdout gate, but none passed the full 288/288 day gate. The best test bucket used min_pred_ev=0.05 with 638 rows across 152 markets and 2/3 positive test days. Treat it as a fragile candidate for more data, not a tradable edge."
 }
