@@ -1,0 +1,1228 @@
+{
+  "generated_at": "2026-06-10T16:23:28.953545-07:00",
+  "model": {
+    "type": "l2_logistic_regression_numpy",
+    "decision_step_seconds": 5,
+    "train_fraction_by_market_time": 0.7,
+    "iterations": 3000,
+    "learning_rate": 0.08,
+    "l2": 0.02,
+    "day_stability_gate": {
+      "min_test_days": 2,
+      "min_positive_day_share": 0.5,
+      "min_worst_day_pnl_per_share": -0.05
+    },
+    "full_day_coverage_context": {
+      "required_model_ready_windows": 288,
+      "min_full_test_days": 2,
+      "available_full_days": 0,
+      "best_day_model_ready_windows": 259,
+      "is_hard_gate": false
+    },
+    "features": [
+      "seconds_left",
+      "elapsed_seconds",
+      "distance_bps",
+      "abs_distance_bps",
+      "btc_return_1s_bps",
+      "btc_return_5s_bps",
+      "btc_return_15s_bps",
+      "max_abs_distance_so_far_bps",
+      "max_up_distance_so_far_bps",
+      "max_down_distance_so_far_bps",
+      "realized_vol_15s_bps",
+      "realized_vol_30s_bps",
+      "cheap_bid",
+      "cheap_ask",
+      "cheap_bid_size",
+      "cheap_ask_size",
+      "cheap_bid_depth_5",
+      "cheap_ask_depth_5",
+      "cheap_spread",
+      "complement_ask_sum",
+      "complement_bid_sum",
+      "up_depth_imbalance",
+      "down_depth_imbalance",
+      "up_trade_notional_5s",
+      "down_trade_notional_5s",
+      "up_signed_trade_notional_5s",
+      "down_signed_trade_notional_5s",
+      "up_trade_notional_15s",
+      "down_trade_notional_15s",
+      "up_signed_trade_notional_15s",
+      "down_signed_trade_notional_15s",
+      "cheap_side_is_up",
+      "cheap_has_bid",
+      "cheap_has_ask",
+      "large_wallet_taker_cheap_notional_5s",
+      "large_wallet_taker_expensive_notional_5s",
+      "large_wallet_taker_cheap_net_notional_5s",
+      "large_wallet_taker_cheap_notional_15s",
+      "large_wallet_taker_expensive_notional_15s",
+      "large_wallet_taker_cheap_net_notional_15s",
+      "large_wallet_taker_cheap_notional_60s",
+      "large_wallet_taker_expensive_notional_60s",
+      "large_wallet_taker_cheap_net_notional_60s",
+      "large_wallet_maker_cheap_notional_15s",
+      "large_wallet_maker_expensive_notional_15s",
+      "large_wallet_maker_cheap_net_notional_15s",
+      "large_wallet_maker_cheap_notional_60s",
+      "large_wallet_maker_expensive_notional_60s",
+      "large_wallet_maker_cheap_net_notional_60s",
+      "large_wallet_cheap_notional_15s",
+      "large_wallet_expensive_notional_15s",
+      "large_wallet_cheap_net_notional_15s",
+      "large_wallet_cheap_notional_60s",
+      "large_wallet_expensive_notional_60s",
+      "large_wallet_cheap_net_notional_60s"
+    ],
+    "base_features": [
+      "seconds_left",
+      "elapsed_seconds",
+      "distance_bps",
+      "abs_distance_bps",
+      "btc_return_1s_bps",
+      "btc_return_5s_bps",
+      "btc_return_15s_bps",
+      "max_abs_distance_so_far_bps",
+      "max_up_distance_so_far_bps",
+      "max_down_distance_so_far_bps",
+      "realized_vol_15s_bps",
+      "realized_vol_30s_bps",
+      "cheap_bid",
+      "cheap_ask",
+      "cheap_bid_size",
+      "cheap_ask_size",
+      "cheap_bid_depth_5",
+      "cheap_ask_depth_5",
+      "cheap_spread",
+      "complement_ask_sum",
+      "complement_bid_sum",
+      "up_depth_imbalance",
+      "down_depth_imbalance",
+      "up_trade_notional_5s",
+      "down_trade_notional_5s",
+      "up_signed_trade_notional_5s",
+      "down_signed_trade_notional_5s",
+      "up_trade_notional_15s",
+      "down_trade_notional_15s",
+      "up_signed_trade_notional_15s",
+      "down_signed_trade_notional_15s",
+      "cheap_side_is_up",
+      "cheap_has_bid",
+      "cheap_has_ask"
+    ],
+    "optional_features_included": [
+      "large_wallet_taker_cheap_notional_5s",
+      "large_wallet_taker_expensive_notional_5s",
+      "large_wallet_taker_cheap_net_notional_5s",
+      "large_wallet_taker_cheap_notional_15s",
+      "large_wallet_taker_expensive_notional_15s",
+      "large_wallet_taker_cheap_net_notional_15s",
+      "large_wallet_taker_cheap_notional_60s",
+      "large_wallet_taker_expensive_notional_60s",
+      "large_wallet_taker_cheap_net_notional_60s",
+      "large_wallet_maker_cheap_notional_15s",
+      "large_wallet_maker_expensive_notional_15s",
+      "large_wallet_maker_cheap_net_notional_15s",
+      "large_wallet_maker_cheap_notional_60s",
+      "large_wallet_maker_expensive_notional_60s",
+      "large_wallet_maker_cheap_net_notional_60s",
+      "large_wallet_cheap_notional_15s",
+      "large_wallet_expensive_notional_15s",
+      "large_wallet_cheap_net_notional_15s",
+      "large_wallet_cheap_notional_60s",
+      "large_wallet_expensive_notional_60s",
+      "large_wallet_cheap_net_notional_60s"
+    ]
+  },
+  "feature_day_coverage": [
+    {
+      "trade_date": "2026-04-02",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-04-05",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-04-07",
+      "model_ready_markets": 4
+    },
+    {
+      "trade_date": "2026-04-08",
+      "model_ready_markets": 2
+    },
+    {
+      "trade_date": "2026-04-09",
+      "model_ready_markets": 4
+    },
+    {
+      "trade_date": "2026-04-10",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-04-12",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-04-13",
+      "model_ready_markets": 2
+    },
+    {
+      "trade_date": "2026-04-14",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-04-15",
+      "model_ready_markets": 2
+    },
+    {
+      "trade_date": "2026-04-16",
+      "model_ready_markets": 2
+    },
+    {
+      "trade_date": "2026-04-17",
+      "model_ready_markets": 5
+    },
+    {
+      "trade_date": "2026-04-21",
+      "model_ready_markets": 3
+    },
+    {
+      "trade_date": "2026-04-23",
+      "model_ready_markets": 2
+    },
+    {
+      "trade_date": "2026-04-26",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-04-27",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-04-29",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-05-04",
+      "model_ready_markets": 5
+    },
+    {
+      "trade_date": "2026-05-08",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-05-10",
+      "model_ready_markets": 2
+    },
+    {
+      "trade_date": "2026-05-14",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-05-17",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-05-20",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-05-22",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-05-23",
+      "model_ready_markets": 2
+    },
+    {
+      "trade_date": "2026-05-24",
+      "model_ready_markets": 2
+    },
+    {
+      "trade_date": "2026-05-26",
+      "model_ready_markets": 3
+    },
+    {
+      "trade_date": "2026-05-27",
+      "model_ready_markets": 1
+    },
+    {
+      "trade_date": "2026-05-28",
+      "model_ready_markets": 2
+    },
+    {
+      "trade_date": "2026-05-29",
+      "model_ready_markets": 2
+    },
+    {
+      "trade_date": "2026-05-30",
+      "model_ready_markets": 244
+    },
+    {
+      "trade_date": "2026-06-02",
+      "model_ready_markets": 3
+    },
+    {
+      "trade_date": "2026-06-03",
+      "model_ready_markets": 4
+    },
+    {
+      "trade_date": "2026-06-04",
+      "model_ready_markets": 8
+    },
+    {
+      "trade_date": "2026-06-05",
+      "model_ready_markets": 18
+    },
+    {
+      "trade_date": "2026-06-06",
+      "model_ready_markets": 239
+    },
+    {
+      "trade_date": "2026-06-07",
+      "model_ready_markets": 259
+    },
+    {
+      "trade_date": "2026-06-08",
+      "model_ready_markets": 3
+    },
+    {
+      "trade_date": "2026-06-09",
+      "model_ready_markets": 13
+    }
+  ],
+  "train": {
+    "rows": 36233,
+    "markets": 594,
+    "win_prob": 0.2509314713106836,
+    "avg_ask": 0.2618058399801286,
+    "avg_pred_win_prob": 0.25123135837835897,
+    "avg_pred_ev": -0.010574481601769659,
+    "avg_realized_pnl": -0.010874368669444984,
+    "log_loss": 0.4344946825284769,
+    "brier": 0.14602223776552534,
+    "auc": 0.8118588408939948
+  },
+  "test": {
+    "rows": 15555,
+    "markets": 255,
+    "win_prob": 0.22012214721954357,
+    "avg_ask": 0.24609450337512054,
+    "avg_pred_win_prob": 0.24413998787116514,
+    "avg_pred_ev": -0.00195451550395542,
+    "avg_realized_pnl": -0.025972356155576984,
+    "log_loss": 0.4352819293485444,
+    "brier": 0.14520009118094043,
+    "auc": 0.7827784853742286
+  },
+  "thresholds": [
+    {
+      "min_pred_ev": -0.1,
+      "train_rows": 34630,
+      "train_markets": 594,
+      "train_avg_pred_ev": -0.0047018896057876725,
+      "train_win_prob": 0.25010106843777075,
+      "train_avg_ask": 0.25629774761767254,
+      "train_pnl_per_share": -0.006196679179901818,
+      "train_total_pnl_per_share": -214.59099999999998,
+      "train_roi_on_cost": -0.02417765757795734,
+      "test_rows": 15197,
+      "test_markets": 255,
+      "test_avg_pred_ev": 0.0007363487348669019,
+      "test_win_prob": 0.21780614594985853,
+      "test_avg_ask": 0.24422188589853258,
+      "test_pnl_per_share": -0.02641573994867408,
+      "test_total_pnl_per_share": -401.44,
+      "test_roi_on_cost": -0.10816286939840063,
+      "passes_holdout": false
+    },
+    {
+      "min_pred_ev": -0.05,
+      "train_rows": 28640,
+      "train_markets": 594,
+      "train_avg_pred_ev": 0.009209502290227548,
+      "train_win_prob": 0.24745111731843575,
+      "train_avg_ask": 0.24387852653631287,
+      "train_pnl_per_share": 0.003572590782122908,
+      "train_total_pnl_per_share": 102.31900000000009,
+      "train_roi_on_cost": 0.01464905841798646,
+      "test_rows": 12736,
+      "test_markets": 255,
+      "test_avg_pred_ev": 0.014538200113141816,
+      "test_win_prob": 0.20720791457286433,
+      "test_avg_ask": 0.23477229899497487,
+      "test_pnl_per_share": -0.027564384422110552,
+      "test_total_pnl_per_share": -351.06,
+      "test_roi_on_cost": -0.11740901520370829,
+      "passes_holdout": false
+    },
+    {
+      "min_pred_ev": 0.0,
+      "train_rows": 16015,
+      "train_markets": 589,
+      "train_avg_pred_ev": 0.032585325952040174,
+      "train_win_prob": 0.2726818607555417,
+      "train_avg_ask": 0.2550500156103653,
+      "train_pnl_per_share": 0.0176318451451764,
+      "train_total_pnl_per_share": 282.374,
+      "train_roi_on_cost": 0.06913093144880339,
+      "test_rows": 7363,
+      "test_markets": 255,
+      "test_avg_pred_ev": 0.04004881236747558,
+      "test_win_prob": 0.22504413961700395,
+      "test_avg_ask": 0.24539997283715878,
+      "test_pnl_per_share": -0.020355833220154825,
+      "test_total_pnl_per_share": -149.87999999999997,
+      "test_roi_on_cost": -0.08294961480563179,
+      "passes_holdout": false
+    },
+    {
+      "min_pred_ev": 0.025,
+      "train_rows": 7519,
+      "train_markets": 528,
+      "train_avg_pred_ev": 0.05611993957456758,
+      "train_win_prob": 0.40271312674557785,
+      "train_avg_ask": 0.35799042425854494,
+      "train_pnl_per_share": 0.044722702487032855,
+      "train_total_pnl_per_share": 336.27000000000004,
+      "train_roi_on_cost": 0.12492709149877591,
+      "test_rows": 3393,
+      "test_markets": 232,
+      "test_avg_pred_ev": 0.07344631105793148,
+      "test_win_prob": 0.3471853816681403,
+      "test_avg_ask": 0.3695667550839965,
+      "test_pnl_per_share": -0.022381373415856165,
+      "test_total_pnl_per_share": -75.93999999999997,
+      "test_roi_on_cost": -0.060561111376939855,
+      "passes_holdout": false
+    },
+    {
+      "min_pred_ev": 0.05,
+      "train_rows": 3693,
+      "train_markets": 436,
+      "train_avg_pred_ev": 0.07777373566165689,
+      "train_win_prob": 0.5272136474411048,
+      "train_avg_ask": 0.46922014622258323,
+      "train_pnl_per_share": 0.05799350121852153,
+      "train_total_pnl_per_share": 214.17000000000002,
+      "train_roi_on_cost": 0.12359550561797754,
+      "test_rows": 2071,
+      "test_markets": 215,
+      "test_avg_pred_ev": 0.09819689297346211,
+      "test_win_prob": 0.4094640270400773,
+      "test_avg_ask": 0.43823756639304684,
+      "test_pnl_per_share": -0.028773539352969564,
+      "test_total_pnl_per_share": -59.58999999999997,
+      "test_roi_on_cost": -0.06565740036800755,
+      "passes_holdout": false
+    },
+    {
+      "min_pred_ev": 0.075,
+      "train_rows": 1735,
+      "train_markets": 326,
+      "train_avg_pred_ev": 0.09560181670593823,
+      "train_win_prob": 0.5210374639769453,
+      "train_avg_ask": 0.4947723342939482,
+      "train_pnl_per_share": 0.026265129682997122,
+      "train_total_pnl_per_share": 45.57000000000001,
+      "train_roi_on_cost": 0.053085283599128646,
+      "test_rows": 1299,
+      "test_markets": 185,
+      "test_avg_pred_ev": 0.11979430831000352,
+      "test_win_prob": 0.4080061585835258,
+      "test_avg_ask": 0.4514857582755966,
+      "test_pnl_per_share": -0.04347959969207082,
+      "test_total_pnl_per_share": -56.47999999999999,
+      "test_roi_on_cost": -0.09630336925385348,
+      "passes_holdout": false
+    },
+    {
+      "min_pred_ev": 0.1,
+      "train_rows": 415,
+      "train_markets": 127,
+      "train_avg_pred_ev": 0.12595163858102928,
+      "train_win_prob": 0.5542168674698795,
+      "train_avg_ask": 0.4941927710843373,
+      "train_pnl_per_share": 0.06002409638554217,
+      "train_total_pnl_per_share": 24.91,
+      "train_roi_on_cost": 0.1214588717148569,
+      "test_rows": 684,
+      "test_markets": 141,
+      "test_avg_pred_ev": 0.1495314729591743,
+      "test_win_prob": 0.4269005847953216,
+      "test_avg_ask": 0.45453216374269,
+      "test_pnl_per_share": -0.02763157894736841,
+      "test_total_pnl_per_share": -18.89999999999999,
+      "test_roi_on_cost": -0.060791251206175595,
+      "passes_holdout": false
+    },
+    {
+      "min_pred_ev": 0.15,
+      "train_rows": 57,
+      "train_markets": 15,
+      "train_avg_pred_ev": 0.21731493448179057,
+      "train_win_prob": 0.631578947368421,
+      "train_avg_ask": 0.43736842105263163,
+      "train_pnl_per_share": 0.1942105263157895,
+      "train_total_pnl_per_share": 11.070000000000002,
+      "train_roi_on_cost": 0.444043321299639,
+      "test_rows": 203,
+      "test_markets": 48,
+      "test_avg_pred_ev": 0.22374885068579936,
+      "test_win_prob": 0.4039408866995074,
+      "test_avg_ask": 0.42330049261083746,
+      "test_pnl_per_share": -0.019359605911330045,
+      "test_total_pnl_per_share": -3.929999999999999,
+      "test_roi_on_cost": -0.045734900500407294,
+      "passes_holdout": false
+    },
+    {
+      "min_pred_ev": 0.2,
+      "train_rows": 29,
+      "train_markets": 9,
+      "train_avg_pred_ev": 0.2556853663733689,
+      "train_win_prob": 0.896551724137931,
+      "train_avg_ask": 0.4337931034482758,
+      "train_pnl_per_share": 0.46275862068965523,
+      "train_total_pnl_per_share": 13.420000000000002,
+      "train_roi_on_cost": 1.0667726550079495,
+      "test_rows": 89,
+      "test_markets": 22,
+      "test_avg_pred_ev": 0.28942315907633726,
+      "test_win_prob": 0.1797752808988764,
+      "test_avg_ask": 0.40505617977528086,
+      "test_pnl_per_share": -0.22528089887640446,
+      "test_total_pnl_per_share": -20.049999999999997,
+      "test_roi_on_cost": -0.5561719833564494,
+      "passes_holdout": false
+    }
+  ],
+  "threshold_day_stability": [
+    {
+      "min_pred_ev": -0.1,
+      "split": "test",
+      "days": 3,
+      "positive_days": 0,
+      "negative_days": 3,
+      "positive_day_share": 0.0,
+      "rows": 15197,
+      "markets": 255,
+      "pnl_per_share": -0.02641573994867408,
+      "total_pnl_per_share": -401.44,
+      "roi_on_cost": -0.10816286939840063,
+      "worst_day_pnl_per_share": -0.057692307692307696,
+      "best_day_pnl_per_share": -0.02454794328232486
+    },
+    {
+      "min_pred_ev": -0.05,
+      "split": "test",
+      "days": 3,
+      "positive_days": 0,
+      "negative_days": 3,
+      "positive_day_share": 0.0,
+      "rows": 12736,
+      "markets": 255,
+      "pnl_per_share": -0.027564384422110552,
+      "total_pnl_per_share": -351.06,
+      "roi_on_cost": -0.11740901520370829,
+      "worst_day_pnl_per_share": -0.04777777777777778,
+      "best_day_pnl_per_share": -0.026537621766879408
+    },
+    {
+      "min_pred_ev": 0.0,
+      "split": "test",
+      "days": 3,
+      "positive_days": 0,
+      "negative_days": 3,
+      "positive_day_share": 0.0,
+      "rows": 7363,
+      "markets": 255,
+      "pnl_per_share": -0.020355833220154825,
+      "total_pnl_per_share": -149.87999999999997,
+      "roi_on_cost": -0.08294961480563179,
+      "worst_day_pnl_per_share": -0.11214285714285716,
+      "best_day_pnl_per_share": -0.018540940766550523
+    },
+    {
+      "min_pred_ev": 0.025,
+      "split": "test",
+      "days": 3,
+      "positive_days": 0,
+      "negative_days": 3,
+      "positive_day_share": 0.0,
+      "rows": 3393,
+      "markets": 232,
+      "pnl_per_share": -0.022381373415856165,
+      "total_pnl_per_share": -75.93999999999997,
+      "roi_on_cost": -0.060561111376939855,
+      "worst_day_pnl_per_share": -0.3080952380952381,
+      "best_day_pnl_per_share": -0.020003105590062107
+    },
+    {
+      "min_pred_ev": 0.05,
+      "split": "test",
+      "days": 3,
+      "positive_days": 1,
+      "negative_days": 2,
+      "positive_day_share": 0.3333333333333333,
+      "rows": 2071,
+      "markets": 215,
+      "pnl_per_share": -0.028773539352969564,
+      "total_pnl_per_share": -59.58999999999997,
+      "roi_on_cost": -0.06565740036800755,
+      "worst_day_pnl_per_share": -0.3268421052631579,
+      "best_day_pnl_per_share": 0.025913043478260876
+    },
+    {
+      "min_pred_ev": 0.075,
+      "split": "test",
+      "days": 3,
+      "positive_days": 1,
+      "negative_days": 2,
+      "positive_day_share": 0.3333333333333333,
+      "rows": 1299,
+      "markets": 185,
+      "pnl_per_share": -0.04347959969207082,
+      "total_pnl_per_share": -56.47999999999999,
+      "roi_on_cost": -0.09630336925385348,
+      "worst_day_pnl_per_share": -0.39705882352941174,
+      "best_day_pnl_per_share": 0.028260869565217398
+    },
+    {
+      "min_pred_ev": 0.1,
+      "split": "test",
+      "days": 3,
+      "positive_days": 1,
+      "negative_days": 2,
+      "positive_day_share": 0.3333333333333333,
+      "rows": 684,
+      "markets": 141,
+      "pnl_per_share": -0.02763157894736841,
+      "total_pnl_per_share": -18.89999999999999,
+      "roi_on_cost": -0.060791251206175595,
+      "worst_day_pnl_per_share": -0.399375,
+      "best_day_pnl_per_share": 0.05746031746031747
+    },
+    {
+      "min_pred_ev": 0.15,
+      "split": "test",
+      "days": 3,
+      "positive_days": 1,
+      "negative_days": 2,
+      "positive_day_share": 0.3333333333333333,
+      "rows": 203,
+      "markets": 48,
+      "pnl_per_share": -0.019359605911330045,
+      "total_pnl_per_share": -3.929999999999999,
+      "roi_on_cost": -0.045734900500407294,
+      "worst_day_pnl_per_share": -0.382,
+      "best_day_pnl_per_share": 0.08419354838709678
+    },
+    {
+      "min_pred_ev": 0.2,
+      "split": "test",
+      "days": 3,
+      "positive_days": 0,
+      "negative_days": 3,
+      "positive_day_share": 0.0,
+      "rows": 89,
+      "markets": 22,
+      "pnl_per_share": -0.22528089887640446,
+      "total_pnl_per_share": -20.049999999999997,
+      "roi_on_cost": -0.5561719833564494,
+      "worst_day_pnl_per_share": -0.37222222222222223,
+      "best_day_pnl_per_share": -0.03416666666666665
+    }
+  ],
+  "threshold_day_details": [
+    {
+      "min_pred_ev": -0.1,
+      "split": "test",
+      "trade_date": "2026-06-07",
+      "rows": 14246,
+      "markets": 239,
+      "win_prob": 0.22441387056015724,
+      "avg_ask": 0.24896181384248212,
+      "pnl_per_share": -0.02454794328232486,
+      "total_pnl_per_share": -349.71,
+      "roi_on_cost": -0.09860123889463755
+    },
+    {
+      "min_pred_ev": -0.1,
+      "split": "test",
+      "trade_date": "2026-06-08",
+      "rows": 182,
+      "markets": 3,
+      "win_prob": 0.07142857142857142,
+      "avg_ask": 0.12912087912087913,
+      "pnl_per_share": -0.057692307692307696,
+      "total_pnl_per_share": -10.5,
+      "roi_on_cost": -0.44680851063829785
+    },
+    {
+      "min_pred_ev": -0.1,
+      "split": "test",
+      "trade_date": "2026-06-09",
+      "rows": 769,
+      "markets": 13,
+      "win_prob": 0.13003901170351106,
+      "avg_ask": 0.18365409622886864,
+      "pnl_per_share": -0.053615084525357605,
+      "total_pnl_per_share": -41.23,
+      "roi_on_cost": -0.2919351412589393
+    },
+    {
+      "min_pred_ev": -0.05,
+      "split": "test",
+      "trade_date": "2026-06-07",
+      "rows": 11908,
+      "markets": 239,
+      "win_prob": 0.21330198186093383,
+      "avg_ask": 0.23983960362781326,
+      "pnl_per_share": -0.026537621766879408,
+      "total_pnl_per_share": -316.01,
+      "roi_on_cost": -0.11064737168287225
+    },
+    {
+      "min_pred_ev": -0.05,
+      "split": "test",
+      "trade_date": "2026-06-08",
+      "rows": 162,
+      "markets": 3,
+      "win_prob": 0.06172839506172839,
+      "avg_ask": 0.10950617283950616,
+      "pnl_per_share": -0.04777777777777778,
+      "total_pnl_per_share": -7.74,
+      "roi_on_cost": -0.43630214205186024
+    },
+    {
+      "min_pred_ev": -0.05,
+      "split": "test",
+      "trade_date": "2026-06-09",
+      "rows": 666,
+      "markets": 13,
+      "win_prob": 0.13363363363363365,
+      "avg_ask": 0.17463963963963963,
+      "pnl_per_share": -0.041006006006006006,
+      "total_pnl_per_share": -27.31,
+      "roi_on_cost": -0.23480354225775943
+    },
+    {
+      "min_pred_ev": 0.0,
+      "split": "test",
+      "trade_date": "2026-06-07",
+      "rows": 6888,
+      "markets": 239,
+      "win_prob": 0.2306910569105691,
+      "avg_ask": 0.24923199767711962,
+      "pnl_per_share": -0.018540940766550523,
+      "total_pnl_per_share": -127.71,
+      "roi_on_cost": -0.07439229689347647
+    },
+    {
+      "min_pred_ev": 0.0,
+      "split": "test",
+      "trade_date": "2026-06-08",
+      "rows": 70,
+      "markets": 3,
+      "win_prob": 0.05714285714285714,
+      "avg_ask": 0.1692857142857143,
+      "pnl_per_share": -0.11214285714285716,
+      "total_pnl_per_share": -7.8500000000000005,
+      "roi_on_cost": -0.6624472573839663
+    },
+    {
+      "min_pred_ev": 0.0,
+      "split": "test",
+      "trade_date": "2026-06-09",
+      "rows": 405,
+      "markets": 13,
+      "win_prob": 0.1580246913580247,
+      "avg_ask": 0.1933827160493827,
+      "pnl_per_share": -0.03535802469135802,
+      "total_pnl_per_share": -14.319999999999999,
+      "roi_on_cost": -0.18283963227783454
+    },
+    {
+      "min_pred_ev": 0.025,
+      "split": "test",
+      "trade_date": "2026-06-07",
+      "rows": 3220,
+      "markets": 221,
+      "win_prob": 0.3490683229813665,
+      "avg_ask": 0.3690714285714286,
+      "pnl_per_share": -0.020003105590062107,
+      "total_pnl_per_share": -64.40999999999998,
+      "roi_on_cost": -0.0541984668590806
+    },
+    {
+      "min_pred_ev": 0.025,
+      "split": "test",
+      "trade_date": "2026-06-08",
+      "rows": 21,
+      "markets": 2,
+      "win_prob": 0.047619047619047616,
+      "avg_ask": 0.3557142857142857,
+      "pnl_per_share": -0.3080952380952381,
+      "total_pnl_per_share": -6.47,
+      "roi_on_cost": -0.8661311914323963
+    },
+    {
+      "min_pred_ev": 0.025,
+      "split": "test",
+      "trade_date": "2026-06-09",
+      "rows": 152,
+      "markets": 9,
+      "win_prob": 0.34868421052631576,
+      "avg_ask": 0.38197368421052635,
+      "pnl_per_share": -0.03328947368421052,
+      "total_pnl_per_share": -5.06,
+      "roi_on_cost": -0.08715122287289011
+    },
+    {
+      "min_pred_ev": 0.05,
+      "split": "test",
+      "trade_date": "2026-06-07",
+      "rows": 1937,
+      "markets": 204,
+      "win_prob": 0.4109447599380485,
+      "avg_ask": 0.44004130098089833,
+      "pnl_per_share": -0.02909654104284976,
+      "total_pnl_per_share": -56.359999999999985,
+      "roi_on_cost": -0.0661222957435825
+    },
+    {
+      "min_pred_ev": 0.05,
+      "split": "test",
+      "trade_date": "2026-06-08",
+      "rows": 19,
+      "markets": 2,
+      "win_prob": 0.05263157894736842,
+      "avg_ask": 0.3794736842105263,
+      "pnl_per_share": -0.3268421052631579,
+      "total_pnl_per_share": -6.21,
+      "roi_on_cost": -0.8613037447988904
+    },
+    {
+      "min_pred_ev": 0.05,
+      "split": "test",
+      "trade_date": "2026-06-09",
+      "rows": 115,
+      "markets": 9,
+      "win_prob": 0.4434782608695652,
+      "avg_ask": 0.41756521739130437,
+      "pnl_per_share": 0.025913043478260876,
+      "total_pnl_per_share": 2.980000000000001,
+      "roi_on_cost": 0.06205747605164516
+    },
+    {
+      "min_pred_ev": 0.075,
+      "split": "test",
+      "trade_date": "2026-06-07",
+      "rows": 1190,
+      "markets": 174,
+      "win_prob": 0.41008403361344536,
+      "avg_ask": 0.4540588235294118,
+      "pnl_per_share": -0.04397478991596638,
+      "total_pnl_per_share": -52.32999999999999,
+      "roi_on_cost": -0.096848222382618
+    },
+    {
+      "min_pred_ev": 0.075,
+      "split": "test",
+      "trade_date": "2026-06-08",
+      "rows": 17,
+      "markets": 2,
+      "win_prob": 0.0,
+      "avg_ask": 0.39705882352941174,
+      "pnl_per_share": -0.39705882352941174,
+      "total_pnl_per_share": -6.75,
+      "roi_on_cost": -1.0
+    },
+    {
+      "min_pred_ev": 0.075,
+      "split": "test",
+      "trade_date": "2026-06-09",
+      "rows": 92,
+      "markets": 9,
+      "win_prob": 0.45652173913043476,
+      "avg_ask": 0.42826086956521736,
+      "pnl_per_share": 0.028260869565217398,
+      "total_pnl_per_share": 2.6000000000000005,
+      "roi_on_cost": 0.06598984771573606
+    },
+    {
+      "min_pred_ev": 0.1,
+      "split": "test",
+      "trade_date": "2026-06-07",
+      "rows": 605,
+      "markets": 130,
+      "win_prob": 0.43140495867768597,
+      "avg_ask": 0.45806611570247935,
+      "pnl_per_share": -0.02666115702479338,
+      "total_pnl_per_share": -16.129999999999995,
+      "roi_on_cost": -0.058203731100927344
+    },
+    {
+      "min_pred_ev": 0.1,
+      "split": "test",
+      "trade_date": "2026-06-08",
+      "rows": 16,
+      "markets": 2,
+      "win_prob": 0.0,
+      "avg_ask": 0.399375,
+      "pnl_per_share": -0.399375,
+      "total_pnl_per_share": -6.39,
+      "roi_on_cost": -1.0
+    },
+    {
+      "min_pred_ev": 0.1,
+      "split": "test",
+      "trade_date": "2026-06-09",
+      "rows": 63,
+      "markets": 9,
+      "win_prob": 0.49206349206349204,
+      "avg_ask": 0.4346031746031746,
+      "pnl_per_share": 0.05746031746031747,
+      "total_pnl_per_share": 3.6200000000000006,
+      "roi_on_cost": 0.13221329437545656
+    },
+    {
+      "min_pred_ev": 0.15,
+      "split": "test",
+      "trade_date": "2026-06-07",
+      "rows": 162,
+      "markets": 42,
+      "win_prob": 0.4074074074074074,
+      "avg_ask": 0.42419753086419754,
+      "pnl_per_share": -0.01679012345679012,
+      "total_pnl_per_share": -2.7199999999999993,
+      "roi_on_cost": -0.039580908032596035
+    },
+    {
+      "min_pred_ev": 0.15,
+      "split": "test",
+      "trade_date": "2026-06-08",
+      "rows": 10,
+      "markets": 1,
+      "win_prob": 0.0,
+      "avg_ask": 0.382,
+      "pnl_per_share": -0.382,
+      "total_pnl_per_share": -3.82,
+      "roi_on_cost": -1.0
+    },
+    {
+      "min_pred_ev": 0.15,
+      "split": "test",
+      "trade_date": "2026-06-09",
+      "rows": 31,
+      "markets": 5,
+      "win_prob": 0.5161290322580645,
+      "avg_ask": 0.43193548387096775,
+      "pnl_per_share": 0.08419354838709678,
+      "total_pnl_per_share": 2.6100000000000003,
+      "roi_on_cost": 0.19492158327109785
+    },
+    {
+      "min_pred_ev": 0.2,
+      "split": "test",
+      "trade_date": "2026-06-07",
+      "rows": 68,
+      "markets": 18,
+      "win_prob": 0.16176470588235295,
+      "avg_ask": 0.4013235294117647,
+      "pnl_per_share": -0.23955882352941174,
+      "total_pnl_per_share": -16.29,
+      "roi_on_cost": -0.5969219494320264
+    },
+    {
+      "min_pred_ev": 0.2,
+      "split": "test",
+      "trade_date": "2026-06-08",
+      "rows": 9,
+      "markets": 1,
+      "win_prob": 0.0,
+      "avg_ask": 0.37222222222222223,
+      "pnl_per_share": -0.37222222222222223,
+      "total_pnl_per_share": -3.35,
+      "roi_on_cost": -1.0
+    },
+    {
+      "min_pred_ev": 0.2,
+      "split": "test",
+      "trade_date": "2026-06-09",
+      "rows": 12,
+      "markets": 3,
+      "win_prob": 0.4166666666666667,
+      "avg_ask": 0.45083333333333336,
+      "pnl_per_share": -0.03416666666666665,
+      "total_pnl_per_share": -0.4099999999999998,
+      "roi_on_cost": -0.07578558225508314
+    }
+  ],
+  "threshold_full_day_stability": [
+    {
+      "min_pred_ev": -0.1,
+      "split": "test",
+      "days": 0,
+      "positive_days": 0,
+      "negative_days": 0,
+      "positive_day_share": null,
+      "rows": 0,
+      "markets": 0,
+      "pnl_per_share": null,
+      "total_pnl_per_share": null,
+      "roi_on_cost": null,
+      "worst_day_pnl_per_share": null,
+      "best_day_pnl_per_share": null
+    },
+    {
+      "min_pred_ev": -0.05,
+      "split": "test",
+      "days": 0,
+      "positive_days": 0,
+      "negative_days": 0,
+      "positive_day_share": null,
+      "rows": 0,
+      "markets": 0,
+      "pnl_per_share": null,
+      "total_pnl_per_share": null,
+      "roi_on_cost": null,
+      "worst_day_pnl_per_share": null,
+      "best_day_pnl_per_share": null
+    },
+    {
+      "min_pred_ev": 0.0,
+      "split": "test",
+      "days": 0,
+      "positive_days": 0,
+      "negative_days": 0,
+      "positive_day_share": null,
+      "rows": 0,
+      "markets": 0,
+      "pnl_per_share": null,
+      "total_pnl_per_share": null,
+      "roi_on_cost": null,
+      "worst_day_pnl_per_share": null,
+      "best_day_pnl_per_share": null
+    },
+    {
+      "min_pred_ev": 0.025,
+      "split": "test",
+      "days": 0,
+      "positive_days": 0,
+      "negative_days": 0,
+      "positive_day_share": null,
+      "rows": 0,
+      "markets": 0,
+      "pnl_per_share": null,
+      "total_pnl_per_share": null,
+      "roi_on_cost": null,
+      "worst_day_pnl_per_share": null,
+      "best_day_pnl_per_share": null
+    },
+    {
+      "min_pred_ev": 0.05,
+      "split": "test",
+      "days": 0,
+      "positive_days": 0,
+      "negative_days": 0,
+      "positive_day_share": null,
+      "rows": 0,
+      "markets": 0,
+      "pnl_per_share": null,
+      "total_pnl_per_share": null,
+      "roi_on_cost": null,
+      "worst_day_pnl_per_share": null,
+      "best_day_pnl_per_share": null
+    },
+    {
+      "min_pred_ev": 0.075,
+      "split": "test",
+      "days": 0,
+      "positive_days": 0,
+      "negative_days": 0,
+      "positive_day_share": null,
+      "rows": 0,
+      "markets": 0,
+      "pnl_per_share": null,
+      "total_pnl_per_share": null,
+      "roi_on_cost": null,
+      "worst_day_pnl_per_share": null,
+      "best_day_pnl_per_share": null
+    },
+    {
+      "min_pred_ev": 0.1,
+      "split": "test",
+      "days": 0,
+      "positive_days": 0,
+      "negative_days": 0,
+      "positive_day_share": null,
+      "rows": 0,
+      "markets": 0,
+      "pnl_per_share": null,
+      "total_pnl_per_share": null,
+      "roi_on_cost": null,
+      "worst_day_pnl_per_share": null,
+      "best_day_pnl_per_share": null
+    },
+    {
+      "min_pred_ev": 0.15,
+      "split": "test",
+      "days": 0,
+      "positive_days": 0,
+      "negative_days": 0,
+      "positive_day_share": null,
+      "rows": 0,
+      "markets": 0,
+      "pnl_per_share": null,
+      "total_pnl_per_share": null,
+      "roi_on_cost": null,
+      "worst_day_pnl_per_share": null,
+      "best_day_pnl_per_share": null
+    },
+    {
+      "min_pred_ev": 0.2,
+      "split": "test",
+      "days": 0,
+      "positive_days": 0,
+      "negative_days": 0,
+      "positive_day_share": null,
+      "rows": 0,
+      "markets": 0,
+      "pnl_per_share": null,
+      "total_pnl_per_share": null,
+      "roi_on_cost": null,
+      "worst_day_pnl_per_share": null,
+      "best_day_pnl_per_share": null
+    }
+  ],
+  "threshold_full_day_details": [],
+  "passing_thresholds": [],
+  "day_robust_thresholds": [],
+  "full_day_robust_thresholds": [],
+  "top_coefficients": [
+    {
+      "feature": "cheap_ask",
+      "coefficient": 0.4989067990694092
+    },
+    {
+      "feature": "cheap_bid",
+      "coefficient": 0.36464421924968426
+    },
+    {
+      "feature": "cheap_has_bid",
+      "coefficient": 0.34117770232868627
+    },
+    {
+      "feature": "abs_distance_bps",
+      "coefficient": -0.24540388849617448
+    },
+    {
+      "feature": "cheap_side_is_up",
+      "coefficient": 0.2029849209200525
+    },
+    {
+      "feature": "cheap_ask_depth_5",
+      "coefficient": -0.14927854670958585
+    },
+    {
+      "feature": "max_abs_distance_so_far_bps",
+      "coefficient": -0.12442252899185308
+    },
+    {
+      "feature": "cheap_ask_size",
+      "coefficient": -0.11830817725737906
+    },
+    {
+      "feature": "max_down_distance_so_far_bps",
+      "coefficient": 0.08736622245566725
+    },
+    {
+      "feature": "down_trade_notional_15s",
+      "coefficient": -0.08525238262019334
+    },
+    {
+      "feature": "cheap_bid_depth_5",
+      "coefficient": -0.08485316110065338
+    },
+    {
+      "feature": "large_wallet_taker_cheap_notional_60s",
+      "coefficient": 0.0711584977751596
+    },
+    {
+      "feature": "up_trade_notional_15s",
+      "coefficient": -0.056047094467280255
+    },
+    {
+      "feature": "max_up_distance_so_far_bps",
+      "coefficient": -0.054886639909353815
+    },
+    {
+      "feature": "seconds_left",
+      "coefficient": 0.04856956570481797
+    }
+  ],
+  "test_calibration": [
+    {
+      "rows": 1945,
+      "avg_pred_win_prob": 0.01687313702647392,
+      "win_prob": 0.004113110539845758,
+      "avg_ask": 0.013907455012853471,
+      "pnl_per_share": -0.009794344473007713
+    },
+    {
+      "rows": 1944,
+      "avg_pred_win_prob": 0.04129352140460273,
+      "win_prob": 0.022119341563786008,
+      "avg_ask": 0.034567901234567905,
+      "pnl_per_share": -0.012448559670781895
+    },
+    {
+      "rows": 1944,
+      "avg_pred_win_prob": 0.09032348467691494,
+      "win_prob": 0.07767489711934156,
+      "avg_ask": 0.1149485596707819,
+      "pnl_per_share": -0.03727366255144033
+    },
+    {
+      "rows": 1945,
+      "avg_pred_win_prob": 0.1660651484155467,
+      "win_prob": 0.16503856041131104,
+      "avg_ask": 0.21088431876606684,
+      "pnl_per_share": -0.04584575835475579
+    },
+    {
+      "rows": 1944,
+      "avg_pred_win_prob": 0.25564214019738374,
+      "win_prob": 0.257201646090535,
+      "avg_ask": 0.2967592592592592,
+      "pnl_per_share": -0.03955761316872429
+    },
+    {
+      "rows": 1944,
+      "avg_pred_win_prob": 0.3545317065097528,
+      "win_prob": 0.3533950617283951,
+      "avg_ask": 0.3704012345679012,
+      "pnl_per_share": -0.01700617283950617
+    },
+    {
+      "rows": 1944,
+      "avg_pred_win_prob": 0.45359790967159974,
+      "win_prob": 0.4104938271604938,
+      "avg_ask": 0.4349794238683128,
+      "pnl_per_share": -0.02448559670781892
+    },
+    {
+      "rows": 1945,
+      "avg_pred_win_prob": 0.5747798416084884,
+      "win_prob": 0.47095115681233934,
+      "avg_ask": 0.49231876606683805,
+      "pnl_per_share": -0.021367609254498713
+    }
+  ],
+  "interpretation": "This is a first EV model, not a deployment signal. Clean 5-minute markets are eligible individually; full-day continuity is coverage context. Current data has 0 full 288-window day(s), with the best day at 259/288. 21 prior-qualified large-wallet flow feature(s) were included. positive predicted-EV thresholds do not yet produce robust positive test PnL."
+}

@@ -1,0 +1,399 @@
+{
+  "min_prior_wallet_notional": 100000.0,
+  "features": "data/processed/btc_5m_features_1s_reconciled.parquet",
+  "markets": "data/processed/btc_5m_complete_layer_universe_reconciled.parquet",
+  "fills": "data/raw/telonex/onchain_fills/*.parquet",
+  "include_mirrored_counterparts": true,
+  "out": "data/processed/btc_5m_features_1s_wallet_flow.parquet",
+  "feature_rows": 255549,
+  "feature_markets": 849,
+  "raw_entry_rows": 8446216,
+  "prior_large_wallet_entries": {
+    "entries": 1668920,
+    "wallets": 100,
+    "markets": 826,
+    "notional": 14739832.484321095
+  },
+  "flow_by_role_outcome": [
+    {
+      "role": "maker",
+      "outcome": "Down",
+      "entries": 585113,
+      "wallets": 91,
+      "markets": 819,
+      "notional": 4980487.271869778,
+      "avg_seconds_left": 159.30800717126436
+    },
+    {
+      "role": "maker",
+      "outcome": "Up",
+      "entries": 572075,
+      "wallets": 89,
+      "markets": 814,
+      "notional": 4577857.232771952,
+      "avg_seconds_left": 158.9587956124634
+    },
+    {
+      "role": "taker",
+      "outcome": "Down",
+      "entries": 258368,
+      "wallets": 61,
+      "markets": 820,
+      "notional": 2654668.810690882,
+      "avg_seconds_left": 164.5029570225415
+    },
+    {
+      "role": "taker",
+      "outcome": "Up",
+      "entries": 253364,
+      "wallets": 64,
+      "markets": 825,
+      "notional": 2526819.168988617,
+      "avg_seconds_left": 164.6454350262863
+    }
+  ],
+  "feature_signal_coverage": {
+    "rows_with_large_wallet_flow_15s": 228262,
+    "share_rows_with_large_wallet_flow_15s": 0.893222043521986,
+    "markets_with_large_wallet_flow_15s": 826
+  },
+  "signal_columns": [
+    "large_wallet_cheap_notional_15s",
+    "large_wallet_expensive_notional_15s",
+    "large_wallet_cheap_net_notional_15s",
+    "large_wallet_taker_cheap_notional_15s",
+    "large_wallet_taker_cheap_net_notional_15s"
+  ],
+  "outcome_by_wallet_flow_signal": [
+    {
+      "wallet_flow": "all",
+      "window_seconds": 15,
+      "signal": "cheap_flow",
+      "rows": 42240,
+      "markets": 821,
+      "avg_cheap_ask": 0.27354379734848483,
+      "cheap_side_win_prob": 0.25752840909090907,
+      "pnl_per_share": -0.016015388257575754,
+      "roi_on_cost": -0.05854780262910781
+    },
+    {
+      "wallet_flow": "all",
+      "window_seconds": 15,
+      "signal": "expensive_flow",
+      "rows": 44825,
+      "markets": 826,
+      "avg_cheap_ask": 0.2619658895705521,
+      "cheap_side_win_prob": 0.24658114891243726,
+      "pnl_per_share": -0.015384740658114893,
+      "roi_on_cost": -0.05872803013909758
+    },
+    {
+      "wallet_flow": "all",
+      "window_seconds": 15,
+      "signal": "cheap_net_positive",
+      "rows": 7776,
+      "markets": 795,
+      "avg_cheap_ask": 0.39873585390946503,
+      "cheap_side_win_prob": 0.37718621399176955,
+      "pnl_per_share": -0.021549639917695464,
+      "roi_on_cost": -0.054044901421351536
+    },
+    {
+      "wallet_flow": "all",
+      "window_seconds": 15,
+      "signal": "cheap_net_negative",
+      "rows": 38164,
+      "markets": 826,
+      "avg_cheap_ask": 0.23477284875799181,
+      "cheap_side_win_prob": 0.2215700660308144,
+      "pnl_per_share": -0.013202782727177446,
+      "roi_on_cost": -0.05623641233227578
+    },
+    {
+      "wallet_flow": "all",
+      "window_seconds": 15,
+      "signal": "no_net_flow",
+      "rows": 5848,
+      "markets": 692,
+      "avg_cheap_ask": 0.21435875512995894,
+      "cheap_side_win_prob": 0.1927154582763338,
+      "pnl_per_share": -0.02164329685362517,
+      "roi_on_cost": -0.1009676364303549
+    },
+    {
+      "wallet_flow": "all",
+      "window_seconds": 60,
+      "signal": "cheap_flow",
+      "rows": 46415,
+      "markets": 823,
+      "avg_cheap_ask": 0.25863593665840784,
+      "cheap_side_win_prob": 0.2442529354734461,
+      "pnl_per_share": -0.014383001184961757,
+      "roi_on_cost": -0.05561099269804118
+    },
+    {
+      "wallet_flow": "all",
+      "window_seconds": 60,
+      "signal": "expensive_flow",
+      "rows": 47929,
+      "markets": 826,
+      "avg_cheap_ask": 0.25595464124016776,
+      "cheap_side_win_prob": 0.24252540215735777,
+      "pnl_per_share": -0.013429239082809992,
+      "roi_on_cost": -0.052467261455943076
+    },
+    {
+      "wallet_flow": "all",
+      "window_seconds": 60,
+      "signal": "cheap_net_positive",
+      "rows": 7232,
+      "markets": 742,
+      "avg_cheap_ask": 0.40570381637168146,
+      "cheap_side_win_prob": 0.39435840707964603,
+      "pnl_per_share": -0.011345409292035393,
+      "roi_on_cost": -0.02796475861011229
+    },
+    {
+      "wallet_flow": "all",
+      "window_seconds": 60,
+      "signal": "cheap_net_negative",
+      "rows": 41349,
+      "markets": 826,
+      "avg_cheap_ask": 0.23162954364071686,
+      "cheap_side_win_prob": 0.2183124138431401,
+      "pnl_per_share": -0.013317129797576727,
+      "roi_on_cost": -0.05749322641775383
+    },
+    {
+      "wallet_flow": "all",
+      "window_seconds": 60,
+      "signal": "no_net_flow",
+      "rows": 3207,
+      "markets": 604,
+      "avg_cheap_ask": 0.25017492984097284,
+      "cheap_side_win_prob": 0.1986280012472716,
+      "pnl_per_share": -0.051546928593701274,
+      "roi_on_cost": -0.20604354171885964
+    },
+    {
+      "wallet_flow": "maker",
+      "window_seconds": 15,
+      "signal": "cheap_flow",
+      "rows": 40559,
+      "markets": 811,
+      "avg_cheap_ask": 0.27724007002145024,
+      "cheap_side_win_prob": 0.2617174979659262,
+      "pnl_per_share": -0.015522572055524052,
+      "roi_on_cost": -0.0559896412315978
+    },
+    {
+      "wallet_flow": "maker",
+      "window_seconds": 15,
+      "signal": "expensive_flow",
+      "rows": 43649,
+      "markets": 823,
+      "avg_cheap_ask": 0.26088114275241125,
+      "cheap_side_win_prob": 0.24518316570826365,
+      "pnl_per_share": -0.015697977044147632,
+      "roi_on_cost": -0.0601729081624185
+    },
+    {
+      "wallet_flow": "maker",
+      "window_seconds": 15,
+      "signal": "cheap_net_positive",
+      "rows": 8655,
+      "markets": 794,
+      "avg_cheap_ask": 0.3914569612940497,
+      "cheap_side_win_prob": 0.37770075101097633,
+      "pnl_per_share": -0.013756210283073361,
+      "roi_on_cost": -0.035141054172594326
+    },
+    {
+      "wallet_flow": "maker",
+      "window_seconds": 15,
+      "signal": "cheap_net_negative",
+      "rows": 36053,
+      "markets": 823,
+      "avg_cheap_ask": 0.23096860178071174,
+      "cheap_side_win_prob": 0.2153496241644246,
+      "pnl_per_share": -0.015618977616287135,
+      "roi_on_cost": -0.0676238133489514
+    },
+    {
+      "wallet_flow": "maker",
+      "window_seconds": 15,
+      "signal": "no_net_flow",
+      "rows": 7080,
+      "markets": 726,
+      "avg_cheap_ask": 0.2258248587570621,
+      "cheap_side_win_prob": 0.2094632768361582,
+      "pnl_per_share": -0.016361581920903947,
+      "roi_on_cost": -0.07245252808286005
+    },
+    {
+      "wallet_flow": "maker",
+      "window_seconds": 60,
+      "signal": "cheap_flow",
+      "rows": 44901,
+      "markets": 813,
+      "avg_cheap_ask": 0.2598859713592125,
+      "cheap_side_win_prob": 0.24522839134985858,
+      "pnl_per_share": -0.01465758000935391,
+      "roi_on_cost": -0.05640004319084353
+    },
+    {
+      "wallet_flow": "maker",
+      "window_seconds": 60,
+      "signal": "expensive_flow",
+      "rows": 46889,
+      "markets": 823,
+      "avg_cheap_ask": 0.25297873701721085,
+      "cheap_side_win_prob": 0.23762502932457505,
+      "pnl_per_share": -0.0153537076926358,
+      "roi_on_cost": -0.060691692407300005
+    },
+    {
+      "wallet_flow": "maker",
+      "window_seconds": 60,
+      "signal": "cheap_net_positive",
+      "rows": 8126,
+      "markets": 757,
+      "avg_cheap_ask": 0.39734432685207977,
+      "cheap_side_win_prob": 0.38924440068914595,
+      "pnl_per_share": -0.008099926162933788,
+      "roi_on_cost": -0.020385156187090008
+    },
+    {
+      "wallet_flow": "maker",
+      "window_seconds": 60,
+      "signal": "cheap_net_negative",
+      "rows": 39483,
+      "markets": 823,
+      "avg_cheap_ask": 0.22623432869842716,
+      "cheap_side_win_prob": 0.21069827520705114,
+      "pnl_per_share": -0.015536053491376038,
+      "roi_on_cost": -0.06867239636335548
+    },
+    {
+      "wallet_flow": "maker",
+      "window_seconds": 60,
+      "signal": "no_net_flow",
+      "rows": 4179,
+      "markets": 650,
+      "avg_cheap_ask": 0.2758509212730318,
+      "cheap_side_win_prob": 0.2474276142617851,
+      "pnl_per_share": -0.028423307011246707,
+      "roi_on_cost": -0.10303865174738307
+    },
+    {
+      "wallet_flow": "taker",
+      "window_seconds": 15,
+      "signal": "cheap_flow",
+      "rows": 35803,
+      "markets": 819,
+      "avg_cheap_ask": 0.27587380945730805,
+      "cheap_side_win_prob": 0.262659553668687,
+      "pnl_per_share": -0.013214255788621065,
+      "roi_on_cost": -0.047899638659486425
+    },
+    {
+      "wallet_flow": "taker",
+      "window_seconds": 15,
+      "signal": "expensive_flow",
+      "rows": 36657,
+      "markets": 825,
+      "avg_cheap_ask": 0.27870911422102196,
+      "cheap_side_win_prob": 0.26516081512398726,
+      "pnl_per_share": -0.013548299097034672,
+      "roi_on_cost": -0.048610893601027334
+    },
+    {
+      "wallet_flow": "taker",
+      "window_seconds": 15,
+      "signal": "cheap_net_positive",
+      "rows": 12139,
+      "markets": 816,
+      "avg_cheap_ask": 0.31726089463712004,
+      "cheap_side_win_prob": 0.3016722959057583,
+      "pnl_per_share": -0.015588598731361723,
+      "roi_on_cost": -0.04913495169075853
+    },
+    {
+      "wallet_flow": "taker",
+      "window_seconds": 15,
+      "signal": "cheap_net_negative",
+      "rows": 28918,
+      "markets": 825,
+      "avg_cheap_ask": 0.2544214675980358,
+      "cheap_side_win_prob": 0.24154505844110935,
+      "pnl_per_share": -0.01287640915692648,
+      "roi_on_cost": -0.05061054508682462
+    },
+    {
+      "wallet_flow": "taker",
+      "window_seconds": 15,
+      "signal": "no_net_flow",
+      "rows": 10731,
+      "markets": 820,
+      "avg_cheap_ask": 0.1961998881744479,
+      "cheap_side_win_prob": 0.17416829745596868,
+      "pnl_per_share": -0.022031590718479176,
+      "roi_on_cost": -0.11229155594059335
+    },
+    {
+      "wallet_flow": "taker",
+      "window_seconds": 60,
+      "signal": "cheap_flow",
+      "rows": 44237,
+      "markets": 822,
+      "avg_cheap_ask": 0.2570429052603025,
+      "cheap_side_win_prob": 0.24413952121527227,
+      "pnl_per_share": -0.012903384045030178,
+      "roi_on_cost": -0.05019933941364056
+    },
+    {
+      "wallet_flow": "taker",
+      "window_seconds": 60,
+      "signal": "expensive_flow",
+      "rows": 45223,
+      "markets": 825,
+      "avg_cheap_ask": 0.26113625809875507,
+      "cheap_side_win_prob": 0.24759525020454193,
+      "pnl_per_share": -0.013541007894213123,
+      "roi_on_cost": -0.0518541852165633
+    },
+    {
+      "wallet_flow": "taker",
+      "window_seconds": 60,
+      "signal": "cheap_net_positive",
+      "rows": 9926,
+      "markets": 779,
+      "avg_cheap_ask": 0.34866884948619786,
+      "cheap_side_win_prob": 0.3281281482974008,
+      "pnl_per_share": -0.020540701188797097,
+      "roi_on_cost": -0.05891177608514812
+    },
+    {
+      "wallet_flow": "taker",
+      "window_seconds": 60,
+      "signal": "cheap_net_negative",
+      "rows": 37182,
+      "markets": 825,
+      "avg_cheap_ask": 0.23544228390081223,
+      "cheap_side_win_prob": 0.22500134473670055,
+      "pnl_per_share": -0.010440939164111668,
+      "roi_on_cost": -0.044346066437710295
+    },
+    {
+      "wallet_flow": "taker",
+      "window_seconds": 60,
+      "signal": "no_net_flow",
+      "rows": 4680,
+      "markets": 777,
+      "avg_cheap_ask": 0.2348096153846154,
+      "cheap_side_win_prob": 0.1908119658119658,
+      "pnl_per_share": -0.04399764957264957,
+      "roi_on_cost": -0.18737584276769048
+    }
+  ]
+}
