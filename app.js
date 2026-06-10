@@ -33,16 +33,20 @@ function marketLabel(row) {
 
 function renderMetrics(data) {
   const markets = data.markets || {};
+  const bestDays = data.best_days || [];
   const prices = data.prices || {};
   const book = data.book || {};
   const trades = data.trades || {};
   const fills = data.fills || {};
+  const bestDayText = bestDays.length
+    ? `Best days: ${bestDays.slice(0, 3).map((day) => `${shortDate(day.market_date)} ${fmt.format(day.complete_windows || 0)}/288`).join(", ")}`
+    : "Strict windows only";
 
   byId("generatedAt").textContent = `Generated ${shortDate(data.generated_at)}`;
   byId("availabilityNote").textContent = data.availability_note || "";
   byId("completeMarkets").textContent = fmt.format(markets.total || 0);
   byId("marketRange").textContent = markets.total
-    ? `${shortDate(markets.first_window)} to ${shortDate(markets.last_window)}`
+    ? bestDayText
     : "No complete markets yet";
   byId("priceRows").textContent = fmt.format(prices.rows || 0);
   byId("priceRange").textContent = prices.rows
