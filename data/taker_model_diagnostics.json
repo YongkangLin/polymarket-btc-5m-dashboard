@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-10T13:36:40.524406-07:00",
+  "generated_at": "2026-06-10T13:45:43.505004-07:00",
   "model": {
     "type": "l2_logistic_regression_numpy",
     "decision_step_seconds": 5,
@@ -7,6 +7,11 @@
     "iterations": 3000,
     "learning_rate": 0.08,
     "l2": 0.02,
+    "day_stability_gate": {
+      "min_test_days": 2,
+      "min_positive_day_share": 0.5,
+      "min_worst_day_pnl_per_share": -0.05
+    },
     "features": [
       "seconds_left",
       "elapsed_seconds",
@@ -250,6 +255,397 @@
       "passes_holdout": false
     }
   ],
+  "threshold_day_stability": [
+    {
+      "min_pred_ev": -0.1,
+      "split": "test",
+      "days": 3,
+      "positive_days": 0,
+      "negative_days": 3,
+      "positive_day_share": 0.0,
+      "rows": 8663,
+      "markets": 153,
+      "pnl_per_share": -0.02004617338104583,
+      "total_pnl_per_share": -173.66000000000003,
+      "roi_on_cost": -0.0839075017152576,
+      "worst_day_pnl_per_share": -0.060750000000000005,
+      "best_day_pnl_per_share": -0.01593781855249745
+    },
+    {
+      "min_pred_ev": -0.05,
+      "split": "test",
+      "days": 3,
+      "positive_days": 0,
+      "negative_days": 3,
+      "positive_day_share": 0.0,
+      "rows": 6655,
+      "markets": 153,
+      "pnl_per_share": -0.01332081141998497,
+      "total_pnl_per_share": -88.64999999999998,
+      "roi_on_cost": -0.06048510899600858,
+      "worst_day_pnl_per_share": -0.04734265734265734,
+      "best_day_pnl_per_share": -0.012496250624895849
+    },
+    {
+      "min_pred_ev": 0.0,
+      "split": "test",
+      "days": 3,
+      "positive_days": 1,
+      "negative_days": 2,
+      "positive_day_share": 0.3333333333333333,
+      "rows": 3858,
+      "markets": 153,
+      "pnl_per_share": -0.016407465007776047,
+      "total_pnl_per_share": -63.29999999999998,
+      "roi_on_cost": -0.07400911960715537,
+      "worst_day_pnl_per_share": -0.09575,
+      "best_day_pnl_per_share": 0.0031935483870967757
+    },
+    {
+      "min_pred_ev": 0.025,
+      "split": "test",
+      "days": 3,
+      "positive_days": 0,
+      "negative_days": 3,
+      "positive_day_share": 0.0,
+      "rows": 1834,
+      "markets": 132,
+      "pnl_per_share": -0.008287895310796071,
+      "total_pnl_per_share": -15.199999999999996,
+      "roi_on_cost": -0.02752625860195581,
+      "worst_day_pnl_per_share": -0.357,
+      "best_day_pnl_per_share": -0.0005882352941176445
+    },
+    {
+      "min_pred_ev": 0.05,
+      "split": "test",
+      "days": 3,
+      "positive_days": 1,
+      "negative_days": 2,
+      "positive_day_share": 0.3333333333333333,
+      "rows": 843,
+      "markets": 113,
+      "pnl_per_share": 0.021553973902728344,
+      "total_pnl_per_share": 18.169999999999995,
+      "roi_on_cost": 0.05007854918281287,
+      "worst_day_pnl_per_share": -0.4442857142857143,
+      "best_day_pnl_per_share": 0.030646766169154238
+    },
+    {
+      "min_pred_ev": 0.075,
+      "split": "test",
+      "days": 3,
+      "positive_days": 1,
+      "negative_days": 2,
+      "positive_day_share": 0.3333333333333333,
+      "rows": 417,
+      "markets": 92,
+      "pnl_per_share": 0.025539568345323758,
+      "total_pnl_per_share": 10.650000000000007,
+      "roi_on_cost": 0.05289297243605666,
+      "worst_day_pnl_per_share": -0.45,
+      "best_day_pnl_per_share": 0.03394607843137256
+    },
+    {
+      "min_pred_ev": 0.1,
+      "split": "test",
+      "days": 3,
+      "positive_days": 0,
+      "negative_days": 3,
+      "positive_day_share": 0.0,
+      "rows": 147,
+      "markets": 52,
+      "pnl_per_share": -0.05700680272108843,
+      "total_pnl_per_share": -8.379999999999999,
+      "roi_on_cost": -0.11266469481043291,
+      "worst_day_pnl_per_share": -0.505,
+      "best_day_pnl_per_share": -0.04805555555555555
+    },
+    {
+      "min_pred_ev": 0.15,
+      "split": "test",
+      "days": 0,
+      "positive_days": 0,
+      "negative_days": 0,
+      "positive_day_share": null,
+      "rows": 0,
+      "markets": 0,
+      "pnl_per_share": null,
+      "total_pnl_per_share": null,
+      "roi_on_cost": null,
+      "worst_day_pnl_per_share": null,
+      "best_day_pnl_per_share": null
+    },
+    {
+      "min_pred_ev": 0.2,
+      "split": "test",
+      "days": 0,
+      "positive_days": 0,
+      "negative_days": 0,
+      "positive_day_share": null,
+      "rows": 0,
+      "markets": 0,
+      "pnl_per_share": null,
+      "total_pnl_per_share": null,
+      "roi_on_cost": null,
+      "worst_day_pnl_per_share": null,
+      "best_day_pnl_per_share": null
+    }
+  ],
+  "threshold_day_details": [
+    {
+      "min_pred_ev": -0.1,
+      "split": "test",
+      "trade_date": "2026-06-07",
+      "rows": 7848,
+      "markets": 137,
+      "win_prob": 0.23254332313965342,
+      "avg_ask": 0.24848114169215085,
+      "pnl_per_share": -0.01593781855249745,
+      "total_pnl_per_share": -125.08,
+      "roi_on_cost": -0.06414095831965869
+    },
+    {
+      "min_pred_ev": -0.1,
+      "split": "test",
+      "trade_date": "2026-06-08",
+      "rows": 175,
+      "markets": 3,
+      "win_prob": 0.06285714285714286,
+      "avg_ask": 0.11828571428571429,
+      "pnl_per_share": -0.05542857142857143,
+      "total_pnl_per_share": -9.700000000000001,
+      "roi_on_cost": -0.4685990338164252
+    },
+    {
+      "min_pred_ev": -0.1,
+      "split": "test",
+      "trade_date": "2026-06-09",
+      "rows": 640,
+      "markets": 13,
+      "win_prob": 0.09375,
+      "avg_ask": 0.1545,
+      "pnl_per_share": -0.060750000000000005,
+      "total_pnl_per_share": -38.88,
+      "roi_on_cost": -0.3932038834951457
+    },
+    {
+      "min_pred_ev": -0.05,
+      "split": "test",
+      "trade_date": "2026-06-07",
+      "rows": 6001,
+      "markets": 137,
+      "win_prob": 0.21913014497583735,
+      "avg_ask": 0.23162639560073323,
+      "pnl_per_share": -0.012496250624895849,
+      "total_pnl_per_share": -74.99,
+      "roi_on_cost": -0.053950028417470625
+    },
+    {
+      "min_pred_ev": -0.05,
+      "split": "test",
+      "trade_date": "2026-06-08",
+      "rows": 143,
+      "markets": 3,
+      "win_prob": 0.04195804195804196,
+      "avg_ask": 0.0893006993006993,
+      "pnl_per_share": -0.04734265734265734,
+      "total_pnl_per_share": -6.7700000000000005,
+      "roi_on_cost": -0.5301487862176978
+    },
+    {
+      "min_pred_ev": -0.05,
+      "split": "test",
+      "trade_date": "2026-06-09",
+      "rows": 511,
+      "markets": 13,
+      "win_prob": 0.1095890410958904,
+      "avg_ask": 0.12307240704500978,
+      "pnl_per_share": -0.013483365949119374,
+      "total_pnl_per_share": -6.89,
+      "roi_on_cost": -0.10955636826204483
+    },
+    {
+      "min_pred_ev": 0.0,
+      "split": "test",
+      "trade_date": "2026-06-07",
+      "rows": 3508,
+      "markets": 137,
+      "win_prob": 0.21322690992018245,
+      "avg_ask": 0.2304618015963512,
+      "pnl_per_share": -0.017234891676168755,
+      "total_pnl_per_share": -60.459999999999994,
+      "roi_on_cost": -0.07478415753407712
+    },
+    {
+      "min_pred_ev": 0.0,
+      "split": "test",
+      "trade_date": "2026-06-08",
+      "rows": 40,
+      "markets": 3,
+      "win_prob": 0.075,
+      "avg_ask": 0.17075,
+      "pnl_per_share": -0.09575,
+      "total_pnl_per_share": -3.83,
+      "roi_on_cost": -0.5607613469985359
+    },
+    {
+      "min_pred_ev": 0.0,
+      "split": "test",
+      "trade_date": "2026-06-09",
+      "rows": 310,
+      "markets": 13,
+      "win_prob": 0.13225806451612904,
+      "avg_ask": 0.12906451612903225,
+      "pnl_per_share": 0.0031935483870967757,
+      "total_pnl_per_share": 0.9900000000000004,
+      "roi_on_cost": 0.02474381404648839
+    },
+    {
+      "min_pred_ev": 0.025,
+      "split": "test",
+      "trade_date": "2026-06-07",
+      "rows": 1739,
+      "markets": 124,
+      "win_prob": 0.2949971247843588,
+      "avg_ask": 0.3016561242093157,
+      "pnl_per_share": -0.006658999424956868,
+      "total_pnl_per_share": -11.579999999999993,
+      "roi_on_cost": -0.022074802699302284
+    },
+    {
+      "min_pred_ev": 0.025,
+      "split": "test",
+      "trade_date": "2026-06-08",
+      "rows": 10,
+      "markets": 2,
+      "win_prob": 0.1,
+      "avg_ask": 0.457,
+      "pnl_per_share": -0.357,
+      "total_pnl_per_share": -3.57,
+      "roi_on_cost": -0.7811816192560174
+    },
+    {
+      "min_pred_ev": 0.025,
+      "split": "test",
+      "trade_date": "2026-06-09",
+      "rows": 85,
+      "markets": 6,
+      "win_prob": 0.27058823529411763,
+      "avg_ask": 0.2711764705882353,
+      "pnl_per_share": -0.0005882352941176445,
+      "total_pnl_per_share": -0.04999999999999978,
+      "roi_on_cost": -0.002169197396963114
+    },
+    {
+      "min_pred_ev": 0.05,
+      "split": "test",
+      "trade_date": "2026-06-07",
+      "rows": 804,
+      "markets": 106,
+      "win_prob": 0.4614427860696517,
+      "avg_ask": 0.43079601990049754,
+      "pnl_per_share": 0.030646766169154238,
+      "total_pnl_per_share": 24.640000000000008,
+      "roi_on_cost": 0.0711398544866613
+    },
+    {
+      "min_pred_ev": 0.05,
+      "split": "test",
+      "trade_date": "2026-06-08",
+      "rows": 7,
+      "markets": 2,
+      "win_prob": 0.0,
+      "avg_ask": 0.4442857142857143,
+      "pnl_per_share": -0.4442857142857143,
+      "total_pnl_per_share": -3.11,
+      "roi_on_cost": -1.0
+    },
+    {
+      "min_pred_ev": 0.05,
+      "split": "test",
+      "trade_date": "2026-06-09",
+      "rows": 32,
+      "markets": 5,
+      "win_prob": 0.3125,
+      "avg_ask": 0.4175,
+      "pnl_per_share": -0.105,
+      "total_pnl_per_share": -3.36,
+      "roi_on_cost": -0.25149700598802394
+    },
+    {
+      "min_pred_ev": 0.075,
+      "split": "test",
+      "trade_date": "2026-06-07",
+      "rows": 408,
+      "markets": 86,
+      "win_prob": 0.5171568627450981,
+      "avg_ask": 0.4832107843137255,
+      "pnl_per_share": 0.03394607843137256,
+      "total_pnl_per_share": 13.850000000000003,
+      "roi_on_cost": 0.07025107785949786
+    },
+    {
+      "min_pred_ev": 0.075,
+      "split": "test",
+      "trade_date": "2026-06-08",
+      "rows": 3,
+      "markets": 2,
+      "win_prob": 0.0,
+      "avg_ask": 0.45,
+      "pnl_per_share": -0.45,
+      "total_pnl_per_share": -1.35,
+      "roi_on_cost": -1.0
+    },
+    {
+      "min_pred_ev": 0.075,
+      "split": "test",
+      "trade_date": "2026-06-09",
+      "rows": 6,
+      "markets": 4,
+      "win_prob": 0.16666666666666666,
+      "avg_ask": 0.47500000000000003,
+      "pnl_per_share": -0.30833333333333335,
+      "total_pnl_per_share": -1.85,
+      "roi_on_cost": -0.6491228070175439
+    },
+    {
+      "min_pred_ev": 0.1,
+      "split": "test",
+      "trade_date": "2026-06-07",
+      "rows": 144,
+      "markets": 49,
+      "win_prob": 0.4583333333333333,
+      "avg_ask": 0.5063888888888889,
+      "pnl_per_share": -0.04805555555555555,
+      "total_pnl_per_share": -6.92,
+      "roi_on_cost": -0.09489851892484914
+    },
+    {
+      "min_pred_ev": 0.1,
+      "split": "test",
+      "trade_date": "2026-06-08",
+      "rows": 1,
+      "markets": 1,
+      "win_prob": 0.0,
+      "avg_ask": 0.45,
+      "pnl_per_share": -0.45,
+      "total_pnl_per_share": -0.45,
+      "roi_on_cost": -1.0
+    },
+    {
+      "min_pred_ev": 0.1,
+      "split": "test",
+      "trade_date": "2026-06-09",
+      "rows": 2,
+      "markets": 2,
+      "win_prob": 0.0,
+      "avg_ask": 0.505,
+      "pnl_per_share": -0.505,
+      "total_pnl_per_share": -1.01,
+      "roi_on_cost": -1.0
+    }
+  ],
   "passing_thresholds": [
     {
       "min_pred_ev": 0.05,
@@ -292,6 +688,7 @@
       "passes_holdout": true
     }
   ],
+  "day_robust_thresholds": [],
   "top_coefficients": [
     {
       "feature": "cheap_ask",
@@ -412,5 +809,5 @@
       "pnl_per_share": 0.023487574978577553
     }
   ],
-  "interpretation": "This is a first EV model, not a deployment signal. In the current holdout, 2 positive predicted-EV threshold passed the coarse robustness gate; the best test bucket used min_pred_ev=0.075 with 417 rows across 92 markets. Treat it as a candidate for more data and stricter execution-cost modeling."
+  "interpretation": "This is a first EV model, not a deployment signal. In the current holdout, 2 positive predicted-EV threshold(s) passed the pooled holdout gate, but none passed the stricter day-stability gate. The best test bucket used min_pred_ev=0.075 with 417 rows across 92 markets and 1/3 positive test days. Treat it as a fragile candidate for more data, not a tradable edge."
 }
