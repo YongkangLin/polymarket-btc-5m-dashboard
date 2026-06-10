@@ -9,8 +9,8 @@
   <body>
     <header class="topbar">
       <div>
-        <p class="eyebrow">Telonex-only research dashboard</p>
-        <h1>BTC 5m Research Quality</h1>
+        <p class="eyebrow">Telonex-only complete dataset</p>
+        <h1>BTC 5m Complete Data</h1>
       </div>
       <div class="status">
         <span id="generatedAt">Loading</span>
@@ -22,86 +22,42 @@
 
       <section class="metric-grid" aria-label="Summary metrics">
         <article class="metric">
-          <span>Markets</span>
-          <strong id="totalMarkets">--</strong>
+          <span>Complete Markets</span>
+          <strong id="completeMarkets">--</strong>
           <small id="marketRange">--</small>
         </article>
         <article class="metric">
-          <span>Price Ticks</span>
+          <span>Complete Price Ticks</span>
           <strong id="priceRows">--</strong>
           <small id="priceRange">--</small>
         </article>
         <article class="metric">
-          <span>Priced Windows</span>
-          <strong id="pricedMarkets">--</strong>
-          <small id="moveStats">--</small>
-        </article>
-        <article class="metric">
-          <span>Complete Universe</span>
-          <strong id="completeMarkets">--</strong>
-          <small id="qualityStats">--</small>
-        </article>
-        <article class="metric">
-          <span>Book Events</span>
+          <span>Complete Book Events</span>
           <strong id="bookRows">--</strong>
           <small id="bookStats">--</small>
         </article>
         <article class="metric">
-          <span>Trades</span>
+          <span>Complete Trades</span>
           <strong id="tradeRows">--</strong>
           <small id="tradeStats">--</small>
         </article>
         <article class="metric">
-          <span>Fill Entries</span>
+          <span>Complete Fill Entries</span>
           <strong id="entryRows">--</strong>
           <small id="fillStats">--</small>
+        </article>
+        <article class="metric">
+          <span>Complete Feature Rows</span>
+          <strong id="featureRows">--</strong>
+          <small id="featureStats">--</small>
         </article>
       </section>
 
       <section class="panel">
         <div class="panel-head">
           <div>
-            <h2>Strict Data Gate</h2>
-            <p>Markets are kept only when every 5-minute second has usable BTC price and Up/Down book state.</p>
-          </div>
-        </div>
-        <div class="quality-body">
-          <div class="reason-list" id="qualityReasons"></div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Sampled Market</th>
-                  <th>Status</th>
-                  <th>Price Age</th>
-                  <th>Book Age</th>
-                  <th>Null BBO Secs</th>
-                  <th>Invalid BBO Secs</th>
-                </tr>
-              </thead>
-              <tbody id="sampledRows">
-                <tr><td colspan="6">Loading</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <h2>Modeling Layers</h2>
-            <p>Downloaded Telonex layers available to the 1-second feature pipeline.</p>
-          </div>
-        </div>
-        <div class="layer-grid" id="layerGrid"></div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <h2>Large-Wallet Entry Heat Map</h2>
-            <p>Notional by seconds-left bucket and BTC distance from the 5-minute start price.</p>
+            <h2>Complete-Market Entry Heat Map</h2>
+            <p>Only entries from markets that pass the complete 1-second price and Up/Down book gate.</p>
           </div>
           <select id="roleSelect" aria-label="Role filter">
             <option value="both">Maker + taker</option>
@@ -115,8 +71,8 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <h2>Top Wallets</h2>
-            <p>Wallets are ranked by BTC 5-minute entry notional in downloaded fills.</p>
+            <h2>Complete-Market Wallets</h2>
+            <p>Wallets are ranked only by complete-market entry notional.</p>
           </div>
         </div>
         <div class="table-wrap">
@@ -138,6 +94,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=20260610-3"></script>
+    <script src="app.js?v=20260610-4"></script>
   </body>
 </html>
