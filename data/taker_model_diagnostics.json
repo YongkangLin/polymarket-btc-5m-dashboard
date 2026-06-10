@@ -1,0 +1,375 @@
+{
+  "generated_at": "2026-06-10T12:35:28.046368-07:00",
+  "model": {
+    "type": "l2_logistic_regression_numpy",
+    "decision_step_seconds": 5,
+    "train_fraction_by_market_time": 0.7,
+    "iterations": 3000,
+    "learning_rate": 0.08,
+    "l2": 0.02,
+    "features": [
+      "seconds_left",
+      "elapsed_seconds",
+      "distance_bps",
+      "abs_distance_bps",
+      "btc_return_1s_bps",
+      "btc_return_5s_bps",
+      "btc_return_15s_bps",
+      "max_abs_distance_so_far_bps",
+      "max_up_distance_so_far_bps",
+      "max_down_distance_so_far_bps",
+      "realized_vol_15s_bps",
+      "realized_vol_30s_bps",
+      "cheap_bid",
+      "cheap_ask",
+      "cheap_bid_size",
+      "cheap_ask_size",
+      "cheap_bid_depth_5",
+      "cheap_ask_depth_5",
+      "cheap_spread",
+      "complement_ask_sum",
+      "complement_bid_sum",
+      "up_depth_imbalance",
+      "down_depth_imbalance",
+      "up_trade_notional_5s",
+      "down_trade_notional_5s",
+      "up_signed_trade_notional_5s",
+      "down_signed_trade_notional_5s",
+      "up_trade_notional_15s",
+      "down_trade_notional_15s",
+      "up_signed_trade_notional_15s",
+      "down_signed_trade_notional_15s",
+      "cheap_side_is_up",
+      "cheap_has_bid",
+      "cheap_has_ask"
+    ]
+  },
+  "train": {
+    "rows": 2745,
+    "markets": 45,
+    "win_prob": 0.061930783242258654,
+    "avg_ask": 0.14495664845173042,
+    "avg_pred_win_prob": 0.06871613258683452,
+    "avg_pred_ev": -0.07624051586489589,
+    "avg_realized_pnl": -0.08302586520947176,
+    "log_loss": 0.1286322586285945,
+    "brier": 0.03937126864421823,
+    "auc": 0.9603952027412906
+  },
+  "test": {
+    "rows": 1220,
+    "markets": 20,
+    "win_prob": 0.12540983606557377,
+    "avg_ask": 0.16917213114754098,
+    "avg_pred_win_prob": 0.08715210498272753,
+    "avg_pred_ev": -0.08202002616481345,
+    "avg_realized_pnl": -0.04376229508196721,
+    "log_loss": 0.29289307915442464,
+    "brier": 0.09019625414046151,
+    "auc": 0.8494281811443728
+  },
+  "thresholds": [
+    {
+      "min_pred_ev": -0.1,
+      "train_rows": 1931,
+      "train_markets": 44,
+      "train_avg_pred_ev": -0.018167758143853636,
+      "train_win_prob": 0.03780424650440187,
+      "train_avg_ask": 0.05504194717762817,
+      "train_pnl_per_share": -0.017237700673226317,
+      "train_total_pnl_per_share": -33.286000000000016,
+      "train_roi_on_cost": -0.31317388931750195,
+      "test_rows": 771,
+      "test_markets": 20,
+      "test_avg_pred_ev": -0.02033555407118999,
+      "test_win_prob": 0.05188067444876784,
+      "test_avg_ask": 0.0775875486381323,
+      "test_pnl_per_share": -0.02570687418936447,
+      "test_total_pnl_per_share": -19.820000000000007,
+      "test_roi_on_cost": -0.3313273152791709,
+      "passes_holdout": false
+    },
+    {
+      "min_pred_ev": -0.05,
+      "train_rows": 1649,
+      "train_markets": 44,
+      "train_avg_pred_ev": -0.008570671645885118,
+      "train_win_prob": 0.021831412977562158,
+      "train_avg_ask": 0.03412734990903578,
+      "train_pnl_per_share": -0.012295936931473623,
+      "train_total_pnl_per_share": -20.276000000000003,
+      "train_roi_on_cost": -0.36029568554979036,
+      "test_rows": 610,
+      "test_markets": 20,
+      "test_avg_pred_ev": -0.005751770841072805,
+      "test_win_prob": 0.03278688524590164,
+      "test_avg_ask": 0.0470655737704918,
+      "test_pnl_per_share": -0.014278688524590168,
+      "test_total_pnl_per_share": -8.710000000000003,
+      "test_roi_on_cost": -0.3033786137234414,
+      "passes_holdout": false
+    },
+    {
+      "min_pred_ev": 0.0,
+      "train_rows": 287,
+      "train_markets": 36,
+      "train_avg_pred_ev": 0.004660051545307893,
+      "train_win_prob": 0.0313588850174216,
+      "train_avg_ask": 0.032181184668989546,
+      "train_pnl_per_share": -0.0008222996515679446,
+      "train_total_pnl_per_share": -0.2360000000000001,
+      "train_roi_on_cost": -0.02555218709398009,
+      "test_rows": 263,
+      "test_markets": 17,
+      "test_avg_pred_ev": 0.007250983253814853,
+      "test_win_prob": 0.030418250950570342,
+      "test_avg_ask": 0.0361977186311787,
+      "test_pnl_per_share": -0.00577946768060837,
+      "test_total_pnl_per_share": -1.5200000000000014,
+      "test_roi_on_cost": -0.15966386554621864,
+      "passes_holdout": false
+    },
+    {
+      "min_pred_ev": 0.025,
+      "train_rows": 5,
+      "train_markets": 5,
+      "train_avg_pred_ev": 0.04641002451205978,
+      "train_win_prob": 0.6,
+      "train_avg_ask": 0.528,
+      "train_pnl_per_share": 0.07199999999999998,
+      "train_total_pnl_per_share": 0.3599999999999999,
+      "train_roi_on_cost": 0.1363636363636363,
+      "test_rows": 10,
+      "test_markets": 8,
+      "test_avg_pred_ev": 0.052691470357417045,
+      "test_win_prob": 0.4,
+      "test_avg_ask": 0.40800000000000003,
+      "test_pnl_per_share": -0.008000000000000005,
+      "test_total_pnl_per_share": -0.08000000000000006,
+      "test_roi_on_cost": -0.019607843137254916,
+      "passes_holdout": false
+    },
+    {
+      "min_pred_ev": 0.05,
+      "train_rows": 2,
+      "train_markets": 2,
+      "train_avg_pred_ev": 0.06460035362211547,
+      "train_win_prob": 0.5,
+      "train_avg_ask": 0.545,
+      "train_pnl_per_share": -0.04500000000000004,
+      "train_total_pnl_per_share": -0.09000000000000008,
+      "train_roi_on_cost": -0.08256880733944962,
+      "test_rows": 4,
+      "test_markets": 4,
+      "test_avg_pred_ev": 0.0738202144462862,
+      "test_win_prob": 0.5,
+      "test_avg_ask": 0.385,
+      "test_pnl_per_share": 0.11499999999999999,
+      "test_total_pnl_per_share": 0.45999999999999996,
+      "test_roi_on_cost": 0.2987012987012987,
+      "passes_holdout": false
+    },
+    {
+      "min_pred_ev": 0.075,
+      "train_rows": 0,
+      "train_markets": 0,
+      "train_avg_pred_ev": null,
+      "train_win_prob": null,
+      "train_avg_ask": null,
+      "train_pnl_per_share": null,
+      "train_total_pnl_per_share": null,
+      "train_roi_on_cost": null,
+      "test_rows": 2,
+      "test_markets": 2,
+      "test_avg_pred_ev": 0.08789739472714024,
+      "test_win_prob": 0.0,
+      "test_avg_ask": 0.255,
+      "test_pnl_per_share": -0.255,
+      "test_total_pnl_per_share": -0.51,
+      "test_roi_on_cost": -1.0,
+      "passes_holdout": false
+    },
+    {
+      "min_pred_ev": 0.1,
+      "train_rows": 0,
+      "train_markets": 0,
+      "train_avg_pred_ev": null,
+      "train_win_prob": null,
+      "train_avg_ask": null,
+      "train_pnl_per_share": null,
+      "train_total_pnl_per_share": null,
+      "train_roi_on_cost": null,
+      "test_rows": 0,
+      "test_markets": 0,
+      "test_avg_pred_ev": null,
+      "test_win_prob": null,
+      "test_avg_ask": null,
+      "test_pnl_per_share": null,
+      "test_total_pnl_per_share": null,
+      "test_roi_on_cost": null,
+      "passes_holdout": false
+    },
+    {
+      "min_pred_ev": 0.15,
+      "train_rows": 0,
+      "train_markets": 0,
+      "train_avg_pred_ev": null,
+      "train_win_prob": null,
+      "train_avg_ask": null,
+      "train_pnl_per_share": null,
+      "train_total_pnl_per_share": null,
+      "train_roi_on_cost": null,
+      "test_rows": 0,
+      "test_markets": 0,
+      "test_avg_pred_ev": null,
+      "test_win_prob": null,
+      "test_avg_ask": null,
+      "test_pnl_per_share": null,
+      "test_total_pnl_per_share": null,
+      "test_roi_on_cost": null,
+      "passes_holdout": false
+    },
+    {
+      "min_pred_ev": 0.2,
+      "train_rows": 0,
+      "train_markets": 0,
+      "train_avg_pred_ev": null,
+      "train_win_prob": null,
+      "train_avg_ask": null,
+      "train_pnl_per_share": null,
+      "train_total_pnl_per_share": null,
+      "train_roi_on_cost": null,
+      "test_rows": 0,
+      "test_markets": 0,
+      "test_avg_pred_ev": null,
+      "test_win_prob": null,
+      "test_avg_ask": null,
+      "test_pnl_per_share": null,
+      "test_total_pnl_per_share": null,
+      "test_roi_on_cost": null,
+      "passes_holdout": false
+    }
+  ],
+  "passing_thresholds": [],
+  "top_coefficients": [
+    {
+      "feature": "cheap_bid",
+      "coefficient": 0.5576209080903589
+    },
+    {
+      "feature": "cheap_side_is_up",
+      "coefficient": 0.46248060638770405
+    },
+    {
+      "feature": "cheap_ask",
+      "coefficient": 0.44360687080443983
+    },
+    {
+      "feature": "abs_distance_bps",
+      "coefficient": -0.3385346874305696
+    },
+    {
+      "feature": "max_abs_distance_so_far_bps",
+      "coefficient": -0.2512662830985416
+    },
+    {
+      "feature": "max_down_distance_so_far_bps",
+      "coefficient": 0.2109264961802283
+    },
+    {
+      "feature": "seconds_left",
+      "coefficient": 0.11569369076687513
+    },
+    {
+      "feature": "elapsed_seconds",
+      "coefficient": -0.11569369076687513
+    },
+    {
+      "feature": "max_up_distance_so_far_bps",
+      "coefficient": -0.0813269739966695
+    },
+    {
+      "feature": "distance_bps",
+      "coefficient": 0.08007125550054267
+    },
+    {
+      "feature": "up_depth_imbalance",
+      "coefficient": 0.07670027734839137
+    },
+    {
+      "feature": "down_depth_imbalance",
+      "coefficient": -0.07670027734839137
+    },
+    {
+      "feature": "btc_return_1s_bps",
+      "coefficient": -0.06192398865928376
+    },
+    {
+      "feature": "cheap_bid_depth_5",
+      "coefficient": -0.04585006396200296
+    },
+    {
+      "feature": "btc_return_5s_bps",
+      "coefficient": 0.04526704302194165
+    }
+  ],
+  "test_calibration": [
+    {
+      "rows": 153,
+      "avg_pred_win_prob": 0.0037696817637982464,
+      "win_prob": 0.006535947712418301,
+      "avg_ask": 0.01803921568627451,
+      "pnl_per_share": -0.011503267973856209
+    },
+    {
+      "rows": 152,
+      "avg_pred_win_prob": 0.00867033247849115,
+      "win_prob": 0.02631578947368421,
+      "avg_ask": 0.030789473684210523,
+      "pnl_per_share": -0.004473684210526317
+    },
+    {
+      "rows": 153,
+      "avg_pred_win_prob": 0.01247810501100202,
+      "win_prob": 0.0,
+      "avg_ask": 0.023529411764705882,
+      "pnl_per_share": -0.023529411764705882
+    },
+    {
+      "rows": 152,
+      "avg_pred_win_prob": 0.017770983919815478,
+      "win_prob": 0.019736842105263157,
+      "avg_ask": 0.05184210526315789,
+      "pnl_per_share": -0.032105263157894734
+    },
+    {
+      "rows": 152,
+      "avg_pred_win_prob": 0.031137972645502988,
+      "win_prob": 0.06578947368421052,
+      "avg_ask": 0.12138157894736841,
+      "pnl_per_share": -0.05559210526315789
+    },
+    {
+      "rows": 153,
+      "avg_pred_win_prob": 0.07592966628891602,
+      "win_prob": 0.1503267973856209,
+      "avg_ask": 0.26130718954248366,
+      "pnl_per_share": -0.11098039215686274
+    },
+    {
+      "rows": 152,
+      "avg_pred_win_prob": 0.18451489607381452,
+      "win_prob": 0.2894736842105263,
+      "avg_ask": 0.38434210526315793,
+      "pnl_per_share": -0.09486842105263157
+    },
+    {
+      "rows": 153,
+      "avg_pred_win_prob": 0.362249030211112,
+      "win_prob": 0.4444444444444444,
+      "avg_ask": 0.46156862745098043,
+      "pnl_per_share": -0.01712418300653594
+    }
+  ],
+  "interpretation": "This is a first EV model, not a deployment signal. In the current holdout, positive predicted EV thresholds do not yet produce robust positive test PnL."
+}
