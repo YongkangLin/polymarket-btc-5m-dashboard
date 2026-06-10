@@ -33,7 +33,7 @@ function renderMetrics(data) {
   byId("pricedMarkets").textContent = fmt.format(returns.priced_markets || 0);
   byId("moveStats").textContent = `${num(returns.median_move_bps, 2)} bps median, ${pct.format(returns.pct_abs_move_over_1pct || 0)} >= 1%`;
   byId("entryRows").textContent = fmt.format(fills.entry_rows || 0);
-  byId("fillStats").textContent = `${money.format(fills.entry_notional || 0)} notional, ${fmt.format(fills.large_wallets || 0)} large wallets`;
+  byId("fillStats").textContent = `${fmt.format(fills.files || 0)} files, ${money.format(fills.entry_notional || 0)} notional, ${fmt.format(fills.large_wallets || 0)} large wallets`;
 }
 
 function heatColor(value, max) {
