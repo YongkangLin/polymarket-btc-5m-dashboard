@@ -10,7 +10,7 @@
     <header class="topbar">
       <div>
         <p class="eyebrow">Telonex-only research dashboard</p>
-        <h1>BTC 5m Polymarket Entries</h1>
+        <h1>BTC 5m Research Quality</h1>
       </div>
       <div class="status">
         <span id="generatedAt">Loading</span>
@@ -37,10 +37,64 @@
           <small id="moveStats">--</small>
         </article>
         <article class="metric">
+          <span>Complete Universe</span>
+          <strong id="completeMarkets">--</strong>
+          <small id="qualityStats">--</small>
+        </article>
+        <article class="metric">
+          <span>Book Events</span>
+          <strong id="bookRows">--</strong>
+          <small id="bookStats">--</small>
+        </article>
+        <article class="metric">
+          <span>Trades</span>
+          <strong id="tradeRows">--</strong>
+          <small id="tradeStats">--</small>
+        </article>
+        <article class="metric">
           <span>Fill Entries</span>
           <strong id="entryRows">--</strong>
           <small id="fillStats">--</small>
         </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Strict Data Gate</h2>
+            <p>Markets are kept only when every 5-minute second has usable BTC price and Up/Down book state.</p>
+          </div>
+        </div>
+        <div class="quality-body">
+          <div class="reason-list" id="qualityReasons"></div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Sampled Market</th>
+                  <th>Status</th>
+                  <th>Price Age</th>
+                  <th>Book Age</th>
+                  <th>Null BBO Secs</th>
+                  <th>Invalid BBO Secs</th>
+                </tr>
+              </thead>
+              <tbody id="sampledRows">
+                <tr><td colspan="6">Loading</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Modeling Layers</h2>
+            <p>Downloaded Telonex layers available to the 1-second feature pipeline.</p>
+          </div>
+        </div>
+        <div class="layer-grid" id="layerGrid"></div>
       </section>
 
       <section class="panel">
@@ -84,6 +138,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=20260610-2"></script>
+    <script src="app.js?v=20260610-3"></script>
   </body>
 </html>
