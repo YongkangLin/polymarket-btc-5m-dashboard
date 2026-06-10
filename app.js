@@ -18,7 +18,6 @@ function renderMetrics(data) {
   const book = data.book || {};
   const trades = data.trades || {};
   const fills = data.fills || {};
-  const features = data.features || {};
 
   byId("generatedAt").textContent = `Generated ${shortDate(data.generated_at)}`;
   byId("availabilityNote").textContent = data.availability_note || "";
@@ -36,8 +35,6 @@ function renderMetrics(data) {
   byId("tradeStats").textContent = `${fmt.format(trades.markets || 0)} markets, ${money.format(trades.notional || 0)} notional`;
   byId("entryRows").textContent = fmt.format(fills.entry_rows || 0);
   byId("fillStats").textContent = `${money.format(fills.entry_notional || 0)} notional, ${fmt.format(fills.large_wallets || 0)} large wallets`;
-  byId("featureRows").textContent = fmt.format(features.rows || 0);
-  byId("featureStats").textContent = `${fmt.format(features.markets || 0)} markets`;
 }
 
 function heatColor(value, max) {
