@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-10T12:35:28.046368-07:00",
+  "generated_at": "2026-06-10T13:15:57.806206-07:00",
   "model": {
     "type": "l2_logistic_regression_numpy",
     "decision_step_seconds": 5,
@@ -45,168 +45,168 @@
     ]
   },
   "train": {
-    "rows": 2745,
-    "markets": 45,
-    "win_prob": 0.061930783242258654,
-    "avg_ask": 0.14495664845173042,
-    "avg_pred_win_prob": 0.06871613258683452,
-    "avg_pred_ev": -0.07624051586489589,
-    "avg_realized_pnl": -0.08302586520947176,
-    "log_loss": 0.1286322586285945,
-    "brier": 0.03937126864421823,
-    "auc": 0.9603952027412906
+    "rows": 13420,
+    "markets": 220,
+    "win_prob": 0.18785394932935917,
+    "avg_ask": 0.21243524590163937,
+    "avg_pred_win_prob": 0.18915669601498628,
+    "avg_pred_ev": -0.023278549886653045,
+    "avg_realized_pnl": -0.02458129657228018,
+    "log_loss": 0.3554407455404201,
+    "brier": 0.1179757246265954,
+    "auc": 0.8406053068346452
   },
   "test": {
-    "rows": 1220,
-    "markets": 20,
-    "win_prob": 0.12540983606557377,
-    "avg_ask": 0.16917213114754098,
-    "avg_pred_win_prob": 0.08715210498272753,
-    "avg_pred_ev": -0.08202002616481345,
-    "avg_realized_pnl": -0.04376229508196721,
-    "log_loss": 0.29289307915442464,
-    "brier": 0.09019625414046151,
-    "auc": 0.8494281811443728
+    "rows": 5795,
+    "markets": 95,
+    "win_prob": 0.20241587575496117,
+    "avg_ask": 0.23245383951682483,
+    "avg_pred_win_prob": 0.21010077504880825,
+    "avg_pred_ev": -0.022353064468016586,
+    "avg_realized_pnl": -0.030037963761863674,
+    "log_loss": 0.41716467701088095,
+    "brier": 0.13410991995773178,
+    "auc": 0.787539891316337
   },
   "thresholds": [
     {
       "min_pred_ev": -0.1,
-      "train_rows": 1931,
-      "train_markets": 44,
-      "train_avg_pred_ev": -0.018167758143853636,
-      "train_win_prob": 0.03780424650440187,
-      "train_avg_ask": 0.05504194717762817,
-      "train_pnl_per_share": -0.017237700673226317,
-      "train_total_pnl_per_share": -33.286000000000016,
-      "train_roi_on_cost": -0.31317388931750195,
-      "test_rows": 771,
-      "test_markets": 20,
-      "test_avg_pred_ev": -0.02033555407118999,
-      "test_win_prob": 0.05188067444876784,
-      "test_avg_ask": 0.0775875486381323,
-      "test_pnl_per_share": -0.02570687418936447,
-      "test_total_pnl_per_share": -19.820000000000007,
-      "test_roi_on_cost": -0.3313273152791709,
+      "train_rows": 12158,
+      "train_markets": 220,
+      "train_avg_pred_ev": -0.008373541670025656,
+      "train_win_prob": 0.1858035861161375,
+      "train_avg_ask": 0.19664508965290345,
+      "train_pnl_per_share": -0.010841503536765914,
+      "train_total_pnl_per_share": -131.81099999999998,
+      "train_roi_on_cost": -0.05513233793888349,
+      "test_rows": 5159,
+      "test_markets": 95,
+      "test_avg_pred_ev": -0.007474506525751878,
+      "test_win_prob": 0.18763326226012794,
+      "test_avg_ask": 0.2175789881760031,
+      "test_pnl_per_share": -0.029945725915875167,
+      "test_total_pnl_per_share": -154.48999999999998,
+      "test_roi_on_cost": -0.1376315156482463,
       "passes_holdout": false
     },
     {
       "min_pred_ev": -0.05,
-      "train_rows": 1649,
-      "train_markets": 44,
-      "train_avg_pred_ev": -0.008570671645885118,
-      "train_win_prob": 0.021831412977562158,
-      "train_avg_ask": 0.03412734990903578,
-      "train_pnl_per_share": -0.012295936931473623,
-      "train_total_pnl_per_share": -20.276000000000003,
-      "train_roi_on_cost": -0.36029568554979036,
-      "test_rows": 610,
-      "test_markets": 20,
-      "test_avg_pred_ev": -0.005751770841072805,
-      "test_win_prob": 0.03278688524590164,
-      "test_avg_ask": 0.0470655737704918,
-      "test_pnl_per_share": -0.014278688524590168,
-      "test_total_pnl_per_share": -8.710000000000003,
-      "test_roi_on_cost": -0.3033786137234414,
+      "train_rows": 9986,
+      "train_markets": 220,
+      "train_avg_pred_ev": 0.00543710385909133,
+      "train_win_prob": 0.17564590426597237,
+      "train_avg_ask": 0.17180963348688164,
+      "train_pnl_per_share": 0.003836270779090723,
+      "train_total_pnl_per_share": 38.30899999999996,
+      "train_roi_on_cost": 0.022328612786335047,
+      "test_rows": 4035,
+      "test_markets": 95,
+      "test_avg_pred_ev": 0.011009684553694702,
+      "test_win_prob": 0.1526641883519207,
+      "test_avg_ask": 0.1902800495662949,
+      "test_pnl_per_share": -0.03761586121437423,
+      "test_total_pnl_per_share": -151.78,
+      "test_roi_on_cost": -0.1976868373752898,
       "passes_holdout": false
     },
     {
       "min_pred_ev": 0.0,
-      "train_rows": 287,
-      "train_markets": 36,
-      "train_avg_pred_ev": 0.004660051545307893,
-      "train_win_prob": 0.0313588850174216,
-      "train_avg_ask": 0.032181184668989546,
-      "train_pnl_per_share": -0.0008222996515679446,
-      "train_total_pnl_per_share": -0.2360000000000001,
-      "train_roi_on_cost": -0.02555218709398009,
-      "test_rows": 263,
-      "test_markets": 17,
-      "test_avg_pred_ev": 0.007250983253814853,
-      "test_win_prob": 0.030418250950570342,
-      "test_avg_ask": 0.0361977186311787,
-      "test_pnl_per_share": -0.00577946768060837,
-      "test_total_pnl_per_share": -1.5200000000000014,
-      "test_roi_on_cost": -0.15966386554621864,
+      "train_rows": 4906,
+      "train_markets": 205,
+      "train_avg_pred_ev": 0.02980701544446691,
+      "train_win_prob": 0.2040358744394619,
+      "train_avg_ask": 0.17781512433754587,
+      "train_pnl_per_share": 0.02622075010191601,
+      "train_total_pnl_per_share": 128.63899999999995,
+      "train_roi_on_cost": 0.14746074159665545,
+      "test_rows": 2497,
+      "test_markets": 94,
+      "test_avg_pred_ev": 0.030812536090770226,
+      "test_win_prob": 0.12575090108129755,
+      "test_avg_ask": 0.17174209050861033,
+      "test_pnl_per_share": -0.04599118942731278,
+      "test_total_pnl_per_share": -114.84,
+      "test_roi_on_cost": -0.2677921835649659,
       "passes_holdout": false
     },
     {
       "min_pred_ev": 0.025,
-      "train_rows": 5,
-      "train_markets": 5,
-      "train_avg_pred_ev": 0.04641002451205978,
-      "train_win_prob": 0.6,
-      "train_avg_ask": 0.528,
-      "train_pnl_per_share": 0.07199999999999998,
-      "train_total_pnl_per_share": 0.3599999999999999,
-      "train_roi_on_cost": 0.1363636363636363,
-      "test_rows": 10,
-      "test_markets": 8,
-      "test_avg_pred_ev": 0.052691470357417045,
-      "test_win_prob": 0.4,
-      "test_avg_ask": 0.40800000000000003,
-      "test_pnl_per_share": -0.008000000000000005,
-      "test_total_pnl_per_share": -0.08000000000000006,
-      "test_roi_on_cost": -0.019607843137254916,
+      "train_rows": 2394,
+      "train_markets": 157,
+      "train_avg_pred_ev": 0.05027740811072767,
+      "train_win_prob": 0.2953216374269006,
+      "train_avg_ask": 0.24859231411862995,
+      "train_pnl_per_share": 0.046729323308270676,
+      "train_total_pnl_per_share": 111.86999999999999,
+      "train_roi_on_cost": 0.18797573639372905,
+      "test_rows": 1334,
+      "test_markets": 81,
+      "test_avg_pred_ev": 0.047813157725727515,
+      "test_win_prob": 0.16041979010494753,
+      "test_avg_ask": 0.20763118440779613,
+      "test_pnl_per_share": -0.04721139430284857,
+      "test_total_pnl_per_share": -62.97999999999999,
+      "test_roi_on_cost": -0.2273810383421185,
       "passes_holdout": false
     },
     {
       "min_pred_ev": 0.05,
-      "train_rows": 2,
-      "train_markets": 2,
-      "train_avg_pred_ev": 0.06460035362211547,
-      "train_win_prob": 0.5,
-      "train_avg_ask": 0.545,
-      "train_pnl_per_share": -0.04500000000000004,
-      "train_total_pnl_per_share": -0.09000000000000008,
-      "train_roi_on_cost": -0.08256880733944962,
-      "test_rows": 4,
-      "test_markets": 4,
-      "test_avg_pred_ev": 0.0738202144462862,
-      "test_win_prob": 0.5,
-      "test_avg_ask": 0.385,
-      "test_pnl_per_share": 0.11499999999999999,
-      "test_total_pnl_per_share": 0.45999999999999996,
-      "test_roi_on_cost": 0.2987012987012987,
+      "train_rows": 1007,
+      "train_markets": 125,
+      "train_avg_pred_ev": 0.0692270262328217,
+      "train_win_prob": 0.3872889771598808,
+      "train_avg_ask": 0.33351539225422044,
+      "train_pnl_per_share": 0.053773584905660386,
+      "train_total_pnl_per_share": 54.150000000000006,
+      "train_roi_on_cost": 0.16123269316659225,
+      "test_rows": 516,
+      "test_markets": 65,
+      "test_avg_pred_ev": 0.06560103824797796,
+      "test_win_prob": 0.23062015503875968,
+      "test_avg_ask": 0.2536821705426356,
+      "test_pnl_per_share": -0.023062015503875957,
+      "test_total_pnl_per_share": -11.899999999999993,
+      "test_roi_on_cost": -0.09090909090909087,
       "passes_holdout": false
     },
     {
       "min_pred_ev": 0.075,
-      "train_rows": 0,
-      "train_markets": 0,
-      "train_avg_pred_ev": null,
-      "train_win_prob": null,
-      "train_avg_ask": null,
-      "train_pnl_per_share": null,
-      "train_total_pnl_per_share": null,
-      "train_roi_on_cost": null,
-      "test_rows": 2,
-      "test_markets": 2,
-      "test_avg_pred_ev": 0.08789739472714024,
-      "test_win_prob": 0.0,
-      "test_avg_ask": 0.255,
-      "test_pnl_per_share": -0.255,
-      "test_total_pnl_per_share": -0.51,
-      "test_roi_on_cost": -1.0,
-      "passes_holdout": false
+      "train_rows": 306,
+      "train_markets": 79,
+      "train_avg_pred_ev": 0.08999415501434704,
+      "train_win_prob": 0.49019607843137253,
+      "train_avg_ask": 0.40294117647058825,
+      "train_pnl_per_share": 0.08725490196078432,
+      "train_total_pnl_per_share": 26.700000000000003,
+      "train_roi_on_cost": 0.21654501216545013,
+      "test_rows": 112,
+      "test_markets": 39,
+      "test_avg_pred_ev": 0.08610065651302048,
+      "test_win_prob": 0.4107142857142857,
+      "test_avg_ask": 0.37214285714285716,
+      "test_pnl_per_share": 0.038571428571428576,
+      "test_total_pnl_per_share": 4.32,
+      "test_roi_on_cost": 0.1036468330134357,
+      "passes_holdout": true
     },
     {
       "min_pred_ev": 0.1,
-      "train_rows": 0,
-      "train_markets": 0,
-      "train_avg_pred_ev": null,
-      "train_win_prob": null,
-      "train_avg_ask": null,
-      "train_pnl_per_share": null,
-      "train_total_pnl_per_share": null,
-      "train_roi_on_cost": null,
-      "test_rows": 0,
-      "test_markets": 0,
-      "test_avg_pred_ev": null,
-      "test_win_prob": null,
-      "test_avg_ask": null,
-      "test_pnl_per_share": null,
-      "test_total_pnl_per_share": null,
-      "test_roi_on_cost": null,
+      "train_rows": 65,
+      "train_markets": 32,
+      "train_avg_pred_ev": 0.10806284655779755,
+      "train_win_prob": 0.5230769230769231,
+      "train_avg_ask": 0.4724615384615385,
+      "train_pnl_per_share": 0.05061538461538462,
+      "train_total_pnl_per_share": 3.29,
+      "train_roi_on_cost": 0.10713122761315533,
+      "test_rows": 13,
+      "test_markets": 12,
+      "test_avg_pred_ev": 0.10705705157381767,
+      "test_win_prob": 0.46153846153846156,
+      "test_avg_ask": 0.4623076923076923,
+      "test_pnl_per_share": -0.0007692307692307699,
+      "test_total_pnl_per_share": -0.010000000000000009,
+      "test_roi_on_cost": -0.0016638935108153094,
       "passes_holdout": false
     },
     {
@@ -250,126 +250,147 @@
       "passes_holdout": false
     }
   ],
-  "passing_thresholds": [],
+  "passing_thresholds": [
+    {
+      "min_pred_ev": 0.075,
+      "train_rows": 306,
+      "train_markets": 79,
+      "train_avg_pred_ev": 0.08999415501434704,
+      "train_win_prob": 0.49019607843137253,
+      "train_avg_ask": 0.40294117647058825,
+      "train_pnl_per_share": 0.08725490196078432,
+      "train_total_pnl_per_share": 26.700000000000003,
+      "train_roi_on_cost": 0.21654501216545013,
+      "test_rows": 112,
+      "test_markets": 39,
+      "test_avg_pred_ev": 0.08610065651302048,
+      "test_win_prob": 0.4107142857142857,
+      "test_avg_ask": 0.37214285714285716,
+      "test_pnl_per_share": 0.038571428571428576,
+      "test_total_pnl_per_share": 4.32,
+      "test_roi_on_cost": 0.1036468330134357,
+      "passes_holdout": true
+    }
+  ],
   "top_coefficients": [
     {
-      "feature": "cheap_bid",
-      "coefficient": 0.5576209080903589
-    },
-    {
-      "feature": "cheap_side_is_up",
-      "coefficient": 0.46248060638770405
-    },
-    {
       "feature": "cheap_ask",
-      "coefficient": 0.44360687080443983
+      "coefficient": 0.4354341963565549
+    },
+    {
+      "feature": "cheap_has_bid",
+      "coefficient": 0.3413145457962202
     },
     {
       "feature": "abs_distance_bps",
-      "coefficient": -0.3385346874305696
+      "coefficient": -0.31576010664676535
     },
     {
       "feature": "max_abs_distance_so_far_bps",
-      "coefficient": -0.2512662830985416
+      "coefficient": -0.3060380166059643
+    },
+    {
+      "feature": "cheap_bid",
+      "coefficient": 0.28272313829123547
+    },
+    {
+      "feature": "cheap_side_is_up",
+      "coefficient": 0.22083556195102047
     },
     {
       "feature": "max_down_distance_so_far_bps",
-      "coefficient": 0.2109264961802283
+      "coefficient": 0.2183117238838256
     },
     {
-      "feature": "seconds_left",
-      "coefficient": 0.11569369076687513
-    },
-    {
-      "feature": "elapsed_seconds",
-      "coefficient": -0.11569369076687513
+      "feature": "cheap_ask_depth_5",
+      "coefficient": -0.17051686525337473
     },
     {
       "feature": "max_up_distance_so_far_bps",
-      "coefficient": -0.0813269739966695
+      "coefficient": -0.13984360574998603
     },
     {
-      "feature": "distance_bps",
-      "coefficient": 0.08007125550054267
+      "feature": "cheap_ask_size",
+      "coefficient": -0.13611545374627707
     },
     {
-      "feature": "up_depth_imbalance",
-      "coefficient": 0.07670027734839137
+      "feature": "realized_vol_30s_bps",
+      "coefficient": -0.12735756230152512
     },
     {
-      "feature": "down_depth_imbalance",
-      "coefficient": -0.07670027734839137
+      "feature": "up_trade_notional_15s",
+      "coefficient": -0.12332490320162819
     },
     {
-      "feature": "btc_return_1s_bps",
-      "coefficient": -0.06192398865928376
+      "feature": "down_trade_notional_15s",
+      "coefficient": -0.09022339291586151
     },
     {
       "feature": "cheap_bid_depth_5",
-      "coefficient": -0.04585006396200296
+      "coefficient": -0.07352104756755067
     },
     {
-      "feature": "btc_return_5s_bps",
-      "coefficient": 0.04526704302194165
+      "feature": "up_trade_notional_5s",
+      "coefficient": -0.05361725838797309
     }
   ],
   "test_calibration": [
     {
-      "rows": 153,
-      "avg_pred_win_prob": 0.0037696817637982464,
-      "win_prob": 0.006535947712418301,
-      "avg_ask": 0.01803921568627451,
-      "pnl_per_share": -0.011503267973856209
+      "rows": 725,
+      "avg_pred_win_prob": 0.015665159986082363,
+      "win_prob": 0.012413793103448275,
+      "avg_ask": 0.021282758620689655,
+      "pnl_per_share": -0.00886896551724138
     },
     {
-      "rows": 152,
-      "avg_pred_win_prob": 0.00867033247849115,
-      "win_prob": 0.02631578947368421,
-      "avg_ask": 0.030789473684210523,
-      "pnl_per_share": -0.004473684210526317
+      "rows": 724,
+      "avg_pred_win_prob": 0.04660487121315708,
+      "win_prob": 0.06629834254143646,
+      "avg_ask": 0.04494475138121547,
+      "pnl_per_share": 0.021353591160220994
     },
     {
-      "rows": 153,
-      "avg_pred_win_prob": 0.01247810501100202,
-      "win_prob": 0.0,
-      "avg_ask": 0.023529411764705882,
-      "pnl_per_share": -0.023529411764705882
+      "rows": 724,
+      "avg_pred_win_prob": 0.08120274390214904,
+      "win_prob": 0.03591160220994475,
+      "avg_ask": 0.08912983425414364,
+      "pnl_per_share": -0.0532182320441989
     },
     {
-      "rows": 152,
-      "avg_pred_win_prob": 0.017770983919815478,
-      "win_prob": 0.019736842105263157,
-      "avg_ask": 0.05184210526315789,
-      "pnl_per_share": -0.032105263157894734
+      "rows": 725,
+      "avg_pred_win_prob": 0.14174430796870535,
+      "win_prob": 0.0896551724137931,
+      "avg_ask": 0.18526896551724137,
+      "pnl_per_share": -0.09561379310344828
     },
     {
-      "rows": 152,
-      "avg_pred_win_prob": 0.031137972645502988,
-      "win_prob": 0.06578947368421052,
-      "avg_ask": 0.12138157894736841,
-      "pnl_per_share": -0.05559210526315789
+      "rows": 724,
+      "avg_pred_win_prob": 0.21643684370915772,
+      "win_prob": 0.23480662983425415,
+      "avg_ask": 0.278853591160221,
+      "pnl_per_share": -0.04404696132596685
     },
     {
-      "rows": 153,
-      "avg_pred_win_prob": 0.07592966628891602,
-      "win_prob": 0.1503267973856209,
-      "avg_ask": 0.26130718954248366,
-      "pnl_per_share": -0.11098039215686274
+      "rows": 724,
+      "avg_pred_win_prob": 0.29096883349039443,
+      "win_prob": 0.32044198895027626,
+      "avg_ask": 0.3438950276243094,
+      "pnl_per_share": -0.023453038674033155
     },
     {
-      "rows": 152,
-      "avg_pred_win_prob": 0.18451489607381452,
-      "win_prob": 0.2894736842105263,
-      "avg_ask": 0.38434210526315793,
-      "pnl_per_share": -0.09486842105263157
+      "rows": 724,
+      "avg_pred_win_prob": 0.3829065246880912,
+      "win_prob": 0.3756906077348066,
+      "avg_ask": 0.413439226519337,
+      "pnl_per_share": -0.037748618784530376
     },
     {
-      "rows": 153,
-      "avg_pred_win_prob": 0.362249030211112,
-      "win_prob": 0.4444444444444444,
-      "avg_ask": 0.46156862745098043,
-      "pnl_per_share": -0.01712418300653594
+      "rows": 725,
+      "avg_pred_win_prob": 0.5052322477661895,
+      "win_prob": 0.48413793103448277,
+      "avg_ask": 0.4828275862068966,
+      "pnl_per_share": 0.00131034482758621
     }
   ],
-  "interpretation": "This is a first EV model, not a deployment signal. In the current holdout, positive predicted EV thresholds do not yet produce robust positive test PnL."
+  "interpretation": "This is a first EV model, not a deployment signal. In the current holdout, 1 positive predicted-EV threshold passed the coarse robustness gate; the best test bucket used min_pred_ev=0.075 with 112 rows across 39 markets. Treat it as a candidate for more data and stricter execution-cost modeling."
 }
