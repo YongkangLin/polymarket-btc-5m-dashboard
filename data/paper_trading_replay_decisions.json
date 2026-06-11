@@ -1,6 +1,6 @@
 {
   "config_version": 1,
-  "generated_at": "2026-06-10T18:59:50.628317-07:00",
+  "generated_at": "2026-06-10T19:06:46.170768-07:00",
   "sources": {
     "config": "docs/data/paper_trading_config.json",
     "decision_table": "docs/data/selected_policy_decision_table.json",
