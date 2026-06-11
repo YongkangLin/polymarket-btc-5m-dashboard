@@ -1,6 +1,6 @@
 {
   "config_version": 1,
-  "generated_at": "2026-06-10T20:13:35.463768-07:00",
+  "generated_at": "2026-06-10T20:19:47.010501-07:00",
   "sources": {
     "model_diagnostics": "docs/data/model_diagnostics.json",
     "promotion_gate": "docs/data/model_promotion_gate.json",
@@ -10,6 +10,7 @@
     "decision_table": "docs/data/selected_policy_decision_table.json",
     "decision_table_walkforward": "docs/data/selected_policy_decision_table_walkforward.json",
     "paper_replay_decisions": "docs/data/paper_trading_replay_decisions.json",
+    "paper_risk_gate_walkforward": "docs/data/paper_risk_gate_walkforward.json",
     "execution_stress": "docs/data/selected_policy_execution_stress.json",
     "bankroll_stress": "docs/data/selected_policy_bankroll_stress.json",
     "edge_uncertainty": "docs/data/selected_policy_edge_uncertainty.json",
@@ -748,6 +749,37 @@
       "use_adaptive_for_order_sizing": false,
       "use_latency_oracle_for_order_sizing": false,
       "use_pretrade_risk_for_signal_suppression": false
+    },
+    "paper_risk_gate_walkforward": {
+      "status": "paper_only_insufficient_folds",
+      "path": "docs/data/paper_risk_gate_walkforward.json",
+      "summary": {
+        "folds": 1,
+        "signals": 80,
+        "fills": 55,
+        "planned_cost": 2000.0,
+        "pnl_dollars": 139.96185860181942,
+        "roi_on_planned_cost": 0.06998092930090971,
+        "baseline_signals": 86,
+        "baseline_fills": 60,
+        "baseline_planned_cost": 2150.0,
+        "baseline_pnl_dollars": 108.82150772462643,
+        "baseline_roi_on_planned_cost": 0.0506146547556402,
+        "roi_lift_vs_baseline": 0.019366274545269513,
+        "sample_gate_folds": 1,
+        "positive_gate_folds": 1,
+        "roi_lift_gate_folds": 1,
+        "drawdown_gate_folds": 1
+      },
+      "status_reasons": [
+        "insufficient_prior_only_folds"
+      ],
+      "runtime_contract": {
+        "use_for_live_suppression": false,
+        "use_for_paper_suppression": false,
+        "allowed_paper_action": "shadow_compare_risk_gate_only",
+        "diagnostic_note": "Risk gates must stay telemetry-only until enough later selected-policy days validate positive risk-adjusted lift out of sample."
+      }
     },
     "selected_policy_execution_stress": {
       "status": "paper_diagnostic_only",
