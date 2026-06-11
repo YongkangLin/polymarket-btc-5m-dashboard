@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-10T18:00:08.673079-07:00",
+  "generated_at": "2026-06-10T18:08:20.300335-07:00",
   "promotion_data_plan": "docs/data/promotion_data_plan.json",
   "download_plan": "reports/btc_5m_promotion_data_download_plan.csv",
   "execution_status": "blocked",
@@ -120,6 +120,11 @@
       "command": ".venv/bin/python scripts/run_walkforward_expansion_pipeline.py --plan reports/btc_5m_promotion_data_download_plan.csv --max-priority 7 --suffix promotion_data --download-telonex --download-binance-backup --execute"
     },
     {
+      "step": "validate_backfill_acceptance",
+      "requires_telonex_key": false,
+      "command": ".venv/bin/python scripts/validate_promotion_backfill_outputs.py --candidate-promotion-gate docs/data/model_promotion_gate_promotion_data.json --out docs/data/promotion_backfill_acceptance.json"
+    },
+    {
       "step": "dry_run_backfill_pipeline",
       "requires_telonex_key": false,
       "command": ".venv/bin/python scripts/run_walkforward_expansion_pipeline.py --plan reports/btc_5m_promotion_data_download_plan.csv --max-priority 7 --suffix promotion_data"
@@ -132,7 +137,8 @@
     "data/processed/btc_5m_features_1s_promotion_data.parquet",
     "data/processed/btc_5m_features_1s_reconciled_next.parquet",
     "docs/data/model_diagnostics_promotion_data.json",
-    "docs/data/model_promotion_gate_promotion_data.json"
+    "docs/data/model_promotion_gate_promotion_data.json",
+    "docs/data/promotion_backfill_acceptance.json"
   ],
   "interpretation": "Promotion backfill is not execution-ready yet: TELONEX_API_KEY is not set in the current environment. The plan covers 7 day(s), 2010 market row(s), and 10050 currently missing Telonex layer file(s)."
 }

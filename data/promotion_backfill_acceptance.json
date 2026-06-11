@@ -1,0 +1,193 @@
+{
+  "generated_at": "2026-06-10T18:08:20.950609-07:00",
+  "status": "waiting_for_backfill",
+  "status_label": "Waiting for backfill",
+  "baseline_promotion_gate": "docs/data/model_promotion_gate.json",
+  "candidate_promotion_gate": "docs/data/model_promotion_gate_promotion_data.json",
+  "promotion_data_plan": "docs/data/promotion_data_plan.json",
+  "runbook": "docs/data/promotion_backfill_runbook.json",
+  "blockers": [
+    "TELONEX_API_KEY is not set in the current environment",
+    "candidate promotion gate not found: docs/data/model_promotion_gate_promotion_data.json"
+  ],
+  "plan_summary": {
+    "selected_day_count": 7,
+    "download_rows_required": 2010,
+    "expected_model_ready_gain": 1400,
+    "expected_gap_coverage": {
+      "covers_missing_model_ready_markets": true,
+      "covers_missing_half_covered_days": true,
+      "model_ready_gain_margin": 249,
+      "half_covered_day_margin": 0
+    },
+    "runbook_status": "blocked",
+    "expected_total_channel_jobs": 10050
+  },
+  "data_summary": {
+    "baseline_model_ready_markets": 849.0,
+    "candidate_model_ready_markets": 849.0,
+    "incremental_model_ready_markets": 0.0,
+    "target_model_ready_markets": 2000.0,
+    "baseline_half_covered_days": 3.0,
+    "candidate_half_covered_days": 3.0,
+    "incremental_half_covered_days": 0.0,
+    "target_half_covered_days": 10.0
+  },
+  "model_summary": {
+    "baseline_selected_forward_days": 2.0,
+    "candidate_selected_forward_days": 2.0,
+    "target_selected_forward_days": 10.0,
+    "baseline_signals": 158.0,
+    "candidate_signals": 158.0,
+    "target_signals": 500.0,
+    "candidate_positive_forward_days": 2.0,
+    "target_positive_forward_days": 8.0
+  },
+  "data_acceptance": {
+    "passed": false,
+    "passed_checks": 0,
+    "total_checks": 5,
+    "checks": [
+      {
+        "id": "candidate_outputs_exist",
+        "label": "Candidate outputs exist",
+        "actual": false,
+        "target": true,
+        "comparator": "is",
+        "unit": "boolean",
+        "passed": false,
+        "gap": 1,
+        "reason": "The acceptance gate only becomes decisive after the promotion-data pipeline writes a candidate gate."
+      },
+      {
+        "id": "clean_model_ready_markets",
+        "label": "Clean model-ready markets",
+        "actual": 849.0,
+        "target": 2000.0,
+        "comparator": ">=",
+        "unit": "markets",
+        "passed": false,
+        "gap": 1151.0,
+        "reason": "Only strict-complete individual 5-minute windows can enter the model-ready universe."
+      },
+      {
+        "id": "incremental_clean_markets",
+        "label": "Incremental clean markets",
+        "actual": 0.0,
+        "target": 1151.0,
+        "comparator": ">=",
+        "unit": "markets",
+        "passed": false,
+        "gap": 1151.0,
+        "reason": "The promotion backfill must close the clean-market gap that existed before the run."
+      },
+      {
+        "id": "half_covered_days",
+        "label": "Half-covered days",
+        "actual": 3.0,
+        "target": 10.0,
+        "comparator": ">=",
+        "unit": "days",
+        "passed": false,
+        "gap": 7.0,
+        "reason": "Dense but not necessarily full days are needed for regime and time-of-day validation."
+      },
+      {
+        "id": "incremental_half_covered_days",
+        "label": "Incremental half-covered days",
+        "actual": 0.0,
+        "target": 7.0,
+        "comparator": ">=",
+        "unit": "days",
+        "passed": false,
+        "gap": 7.0,
+        "reason": "The selected dense-day plan is supposed to close the half-covered-day gap."
+      }
+    ]
+  },
+  "model_acceptance": {
+    "passed": false,
+    "passed_checks": 0,
+    "total_checks": 7,
+    "checks": [
+      {
+        "id": "paper_gate_passed",
+        "label": "Paper gate passed",
+        "actual": false,
+        "target": true,
+        "comparator": "is",
+        "unit": "boolean",
+        "passed": false,
+        "gap": 1,
+        "reason": "A refreshed candidate that loses paper eligibility should not advance."
+      },
+      {
+        "id": "small_live_gate_passed",
+        "label": "Small-live gate passed",
+        "actual": false,
+        "target": true,
+        "comparator": "is",
+        "unit": "boolean",
+        "passed": false,
+        "gap": 1,
+        "reason": "Small-live review requires the selected-policy live gate to clear after new data is included."
+      },
+      {
+        "id": "selected_forward_days",
+        "label": "Selected forward days",
+        "actual": 2.0,
+        "target": 10.0,
+        "comparator": ">=",
+        "unit": "days",
+        "passed": false,
+        "gap": 8.0,
+        "reason": "The selector needs enough independent forward dates before risking live capital."
+      },
+      {
+        "id": "incremental_selected_forward_days",
+        "label": "Incremental selected forward days",
+        "actual": 0.0,
+        "target": 8.0,
+        "comparator": ">=",
+        "unit": "days",
+        "passed": false,
+        "gap": 8.0,
+        "reason": "The promotion run should add the missing selected-policy forward days, not just more rows."
+      },
+      {
+        "id": "selected_policy_signals",
+        "label": "Selected-policy signals",
+        "actual": 158.0,
+        "target": 500.0,
+        "comparator": ">=",
+        "unit": "signals",
+        "passed": false,
+        "gap": 342.0,
+        "reason": "The selected policy needs a broader set of filled and unfilled states."
+      },
+      {
+        "id": "incremental_selected_policy_signals",
+        "label": "Incremental selected-policy signals",
+        "actual": 0.0,
+        "target": 342.0,
+        "comparator": ">=",
+        "unit": "signals",
+        "passed": false,
+        "gap": 342.0,
+        "reason": "The promotion run should close the signal-count gap."
+      },
+      {
+        "id": "positive_forward_days",
+        "label": "Positive selected forward days",
+        "actual": 2.0,
+        "target": 8.0,
+        "comparator": ">=",
+        "unit": "days",
+        "passed": false,
+        "gap": 6.0,
+        "reason": "Most selected forward days should be profitable before live sizing."
+      }
+    ]
+  },
+  "interpretation": "Waiting for backfill: TELONEX_API_KEY is not set in the current environment; candidate promotion gate not found: docs/data/model_promotion_gate_promotion_data.json. Acceptance will require at least 2,000 clean model-ready markets, 10 half-covered days, 10 selected forward days, and 500 selected-policy signals."
+}
