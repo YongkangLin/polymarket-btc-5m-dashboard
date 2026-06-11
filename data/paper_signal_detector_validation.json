@@ -1,0 +1,49 @@
+{
+  "config_version": 1,
+  "generated_at": "2026-06-10T19:13:43.977084-07:00",
+  "sources": {
+    "config": "docs/data/paper_trading_config.json",
+    "features": "data/processed/btc_5m_features_1s_reconciled.parquet",
+    "reference_replay": "reports/btc_5m_taker_first_entry_policy_replay.csv"
+  },
+  "policy_name": "order_25_2s_2c_risk_adjusted",
+  "status": "pass",
+  "decision_step_seconds": 5,
+  "signal_rules": [
+    {
+      "rule_id": 1403,
+      "side_filter": "Up",
+      "min_ask_exclusive": 0.5,
+      "max_ask_inclusive": 0.75,
+      "max_abs_distance_bps": 5,
+      "min_seconds_left": 241,
+      "max_seconds_left": 300,
+      "order_notional_usd": 25.0,
+      "latency_assumption_seconds": 2,
+      "max_slippage": 0.02,
+      "selection_source": "prior_only_selected_policy_folds"
+    }
+  ],
+  "summary": {
+    "reference_signals": 158,
+    "reference_markets": 158,
+    "detector_found_signals": 158.0,
+    "exact_signal_matches": 158.0,
+    "missing_detector_signals": 0.0,
+    "mismatched_signals": 0.0,
+    "signal_time_mismatches": 0.0,
+    "outcome_mismatches": 0.0,
+    "rule_mismatches": 0.0,
+    "detector_extra_reference_signals": 0,
+    "all_clean_feature_markets_matching_config_rule": 265,
+    "exact_match_rate": 1.0
+  },
+  "mismatch_sample": [],
+  "runtime_contract": {
+    "required_decision_cadence_seconds": 5,
+    "first_signal_order": "highest seconds_left first, then earliest timestamp, then rule order",
+    "must_match_replay_before_live": true,
+    "live_action_when_config_unchanged": "blocked"
+  },
+  "interpretation": "Config-driven detector matched 158/158 selected-policy replay signals at a 5s decision cadence."
+}

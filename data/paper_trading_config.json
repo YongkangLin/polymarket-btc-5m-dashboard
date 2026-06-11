@@ -1,6 +1,6 @@
 {
   "config_version": 1,
-  "generated_at": "2026-06-10T19:06:44.594049-07:00",
+  "generated_at": "2026-06-10T19:12:08.525766-07:00",
   "sources": {
     "model_diagnostics": "docs/data/model_diagnostics.json",
     "promotion_gate": "docs/data/model_promotion_gate.json",
@@ -10,7 +10,8 @@
     "decision_table": "docs/data/selected_policy_decision_table.json",
     "decision_table_walkforward": "docs/data/selected_policy_decision_table_walkforward.json",
     "paper_replay_decisions": "docs/data/paper_trading_replay_decisions.json",
-    "execution_stress": "docs/data/selected_policy_execution_stress.json"
+    "execution_stress": "docs/data/selected_policy_execution_stress.json",
+    "signal_detector_validation": "docs/data/paper_signal_detector_validation.json"
   },
   "deployment": {
     "status": "paper_only",
@@ -664,8 +665,8 @@
           "win_prob_filled": 0.5982905982905983,
           "planned_cost": 3950.0,
           "filled_cost": 2925.0,
-          "pnl_dollars": 460.1782257312425,
-          "roi_on_planned_cost": 0.11650081664082089,
+          "pnl_dollars": 460.17822573124243,
+          "roi_on_planned_cost": 0.11650081664082088,
           "roi_on_filled_cost": 0.15732588913888632,
           "missing_fill_state_signals": 0,
           "avg_price_drift": -0.0008860759493670926,
@@ -712,6 +713,31 @@
         "use_for_live_sizing": false,
         "allowed_paper_action": "Log observed latency, fill price, and available top-of-book size against this grid. Do not raise live size from stress results while the promotion gate is paper-only."
       }
+    },
+    "paper_signal_detector_validation": {
+      "status": "pass",
+      "path": "docs/data/paper_signal_detector_validation.json",
+      "decision_step_seconds": 5,
+      "summary": {
+        "reference_signals": 158,
+        "reference_markets": 158,
+        "detector_found_signals": 158.0,
+        "exact_signal_matches": 158.0,
+        "missing_detector_signals": 0.0,
+        "mismatched_signals": 0.0,
+        "signal_time_mismatches": 0.0,
+        "outcome_mismatches": 0.0,
+        "rule_mismatches": 0.0,
+        "detector_extra_reference_signals": 0,
+        "all_clean_feature_markets_matching_config_rule": 265,
+        "exact_match_rate": 1.0
+      },
+      "runtime_contract": {
+        "required_decision_cadence_seconds": 5,
+        "first_signal_order": "highest seconds_left first, then earliest timestamp, then rule order",
+        "must_match_replay_before_live": true,
+        "live_action_when_config_unchanged": "blocked"
+      }
     }
   },
   "risk": {
@@ -726,6 +752,7 @@
   },
   "feature_contract": {
     "hard_inclusion_unit": "individual_strict_complete_5m_market",
+    "decision_step_seconds": 5,
     "model_ready_markets": 849,
     "feature_rows": 255549,
     "best_day_markets": 259,
