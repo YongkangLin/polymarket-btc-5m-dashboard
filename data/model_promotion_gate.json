@@ -1,0 +1,280 @@
+{
+  "generated_at": "2026-06-10T17:46:00.467371-07:00",
+  "model_diagnostics": "docs/data/model_diagnostics.json",
+  "deployment_status": "paper_only",
+  "deployment_status_label": "Paper only",
+  "current_best_policy": {
+    "policy_name": "order_25_2s_2c_risk_adjusted",
+    "selected_folds": 2,
+    "signals": 158,
+    "fills": 117,
+    "fill_rate": 0.740506329113924,
+    "roi_on_planned_cost": 0.1165008166408209,
+    "max_drawdown_planned_roi": 0.06489557848455839,
+    "day_bootstrap_p05": 0.05061465475564022,
+    "research_stake_fraction_cap": 0.0025
+  },
+  "gates": {
+    "paper_trade_selected_policy": {
+      "name": "paper_trade_selected_policy",
+      "passed": true,
+      "passed_checks": 7,
+      "total_checks": 7,
+      "checks": [
+        {
+          "id": "selected_forward_days",
+          "label": "Selected forward days",
+          "actual": 2.0,
+          "target": 2,
+          "comparator": ">=",
+          "unit": "days",
+          "passed": true,
+          "gap": null,
+          "reason": "Paper trading needs at least two independent selected forward days."
+        },
+        {
+          "id": "signals",
+          "label": "Replay signals",
+          "actual": 158.0,
+          "target": 100,
+          "comparator": ">=",
+          "unit": "signals",
+          "passed": true,
+          "gap": null,
+          "reason": "Small samples can be dominated by one or two lucky markets."
+        },
+        {
+          "id": "fill_rate",
+          "label": "Simulated fill rate",
+          "actual": 0.740506329113924,
+          "target": 0.5,
+          "comparator": ">=",
+          "unit": "share",
+          "passed": true,
+          "gap": null,
+          "reason": "A policy that rarely fills is mostly a theoretical signal."
+        },
+        {
+          "id": "planned_roi",
+          "label": "Planned-cost ROI",
+          "actual": 0.1165008166408209,
+          "target": 0,
+          "comparator": ">",
+          "unit": "roi",
+          "passed": true,
+          "gap": null,
+          "reason": "The selected replay must be positive before paper execution."
+        },
+        {
+          "id": "bootstrap_floor",
+          "label": "Day-bootstrap 5th percentile ROI",
+          "actual": 0.05061465475564022,
+          "target": 0,
+          "comparator": ">",
+          "unit": "roi",
+          "passed": true,
+          "gap": null,
+          "reason": "The day-bootstrap lower tail should remain above break-even."
+        },
+        {
+          "id": "drawdown",
+          "label": "Max planned-cost drawdown",
+          "actual": 0.06489557848455839,
+          "target": 0.1,
+          "comparator": "<=",
+          "unit": "drawdown",
+          "passed": true,
+          "gap": null,
+          "reason": "Paper candidates should not already show large drawdowns in the small sample."
+        },
+        {
+          "id": "positive_forward_days",
+          "label": "Positive selected forward days",
+          "actual": 2.0,
+          "target": 2,
+          "comparator": ">=",
+          "unit": "days",
+          "passed": true,
+          "gap": null,
+          "reason": "Both current selected forward days should be positive before paper monitoring."
+        }
+      ]
+    },
+    "small_live_selected_policy": {
+      "name": "small_live_selected_policy",
+      "passed": false,
+      "passed_checks": 3,
+      "total_checks": 8,
+      "checks": [
+        {
+          "id": "selected_forward_days",
+          "label": "Selected forward days",
+          "actual": 2.0,
+          "target": 10,
+          "comparator": ">=",
+          "unit": "days",
+          "passed": false,
+          "gap": 8.0,
+          "reason": "Live sizing needs enough independent forward days to reduce regime luck."
+        },
+        {
+          "id": "signals",
+          "label": "Replay signals",
+          "actual": 158.0,
+          "target": 500,
+          "comparator": ">=",
+          "unit": "signals",
+          "passed": false,
+          "gap": 342.0,
+          "reason": "Live sizing needs a wider set of filled and unfilled market states."
+        },
+        {
+          "id": "positive_forward_days",
+          "label": "Positive selected forward days",
+          "actual": 2.0,
+          "target": 8,
+          "comparator": ">=",
+          "unit": "days",
+          "passed": false,
+          "gap": 6.0,
+          "reason": "Most selected forward days should make money before real risk is introduced."
+        },
+        {
+          "id": "worst_forward_day_roi",
+          "label": "Worst selected-day ROI",
+          "actual": 0.05061465475564022,
+          "target": 0,
+          "comparator": ">=",
+          "unit": "roi",
+          "passed": true,
+          "gap": null,
+          "reason": "The live gate currently requires no losing selected forward day."
+        },
+        {
+          "id": "bootstrap_floor",
+          "label": "Day-bootstrap 5th percentile ROI",
+          "actual": 0.05061465475564022,
+          "target": 0.02,
+          "comparator": ">=",
+          "unit": "roi",
+          "passed": true,
+          "gap": null,
+          "reason": "The lower-tail estimate should leave room for fees, latency drift, and execution error."
+        },
+        {
+          "id": "drawdown",
+          "label": "Max planned-cost drawdown",
+          "actual": 0.06489557848455839,
+          "target": 0.08,
+          "comparator": "<=",
+          "unit": "drawdown",
+          "passed": true,
+          "gap": null,
+          "reason": "Drawdown should stay modest before any live sizing."
+        },
+        {
+          "id": "model_ready_markets",
+          "label": "Clean model-ready markets",
+          "actual": 849.0,
+          "target": 2000,
+          "comparator": ">=",
+          "unit": "markets",
+          "passed": false,
+          "gap": 1151.0,
+          "reason": "More clean windows are needed so the selected policy sees more regimes."
+        },
+        {
+          "id": "half_covered_days",
+          "label": "Days with at least half coverage",
+          "actual": 3.0,
+          "target": 10,
+          "comparator": ">=",
+          "unit": "days",
+          "passed": false,
+          "gap": 7.0,
+          "reason": "The clean set needs more dense days for time-of-day and regime validation."
+        }
+      ]
+    },
+    "raw_wallet_ev_overlay_live": {
+      "name": "raw_wallet_ev_overlay_live",
+      "passed": false,
+      "passed_checks": 1,
+      "total_checks": 3,
+      "checks": [
+        {
+          "id": "sample_gated_folds",
+          "label": "Sample-gated overlay folds",
+          "actual": 1.0,
+          "target": 5,
+          "comparator": ">=",
+          "unit": "folds",
+          "passed": false,
+          "gap": 4.0,
+          "reason": "An EV overlay needs several forward folds before it can prune live entries."
+        },
+        {
+          "id": "risk_gated_folds",
+          "label": "Risk-gated overlay folds",
+          "actual": 1.0,
+          "target": 5,
+          "comparator": ">=",
+          "unit": "folds",
+          "passed": false,
+          "gap": 4.0,
+          "reason": "The overlay should repeatedly improve ROI and reduce drawdown."
+        },
+        {
+          "id": "roi_lift",
+          "label": "Overlay ROI lift",
+          "actual": 0.007543327948369122,
+          "target": 0,
+          "comparator": ">",
+          "unit": "roi_lift",
+          "passed": true,
+          "gap": null,
+          "reason": "The overlay must improve the selected policy versus the same-day unfiltered baseline."
+        }
+      ]
+    }
+  },
+  "promotion_gap": {
+    "missing_forward_days": 8,
+    "missing_signals": 342,
+    "estimated_signals_per_selected_day": 79.0,
+    "estimated_additional_forward_days": 8,
+    "missing_model_ready_markets": 1151,
+    "missing_half_covered_days": 7,
+    "current_model_ready_markets": 849,
+    "current_half_covered_days": 3
+  },
+  "component_statuses": {
+    "selected_policy": {
+      "status": "paper_candidate",
+      "live_gate_passed": false
+    },
+    "raw_wallet_ev_overlay": {
+      "status": "paper_filter_only",
+      "live_gate_passed": false,
+      "selected_folds": 1,
+      "risk_gated_folds": 1,
+      "roi_on_planned_cost": 0.05815798270400935,
+      "baseline_roi_on_planned_cost": 0.050614654755640226,
+      "roi_lift_vs_unfiltered": 0.007543327948369122
+    },
+    "calibrated_ev": {
+      "status": "diagnostic_only",
+      "day_robust_threshold_count": 0,
+      "selected_overlay_roi_lift": 0.0
+    },
+    "regime_filters": {
+      "status": "disabled",
+      "roi_lift_vs_unfiltered": null
+    },
+    "maker_1c": {
+      "status": "disabled",
+      "reason": "Queue-aware maker 1c walk-forward has no passing rules."
+    }
+  },
+  "interpretation": "Deployment status remains Paper only. The selected policy passes the paper gate, but live sizing is short 8 selected forward day(s), 342 signal(s), 1151 clean model-ready market(s), and 7 half-covered day(s). Raw wallet EV overlay lift is 0.8%, but the overlay still lacks enough forward folds for live pruning."
+}

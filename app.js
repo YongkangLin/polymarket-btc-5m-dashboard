@@ -75,7 +75,7 @@ function renderMetrics(data) {
   byId("fillStats").textContent = `${money.format(fills.entry_notional || 0)} notional, ${fmt.format(fills.large_wallets || 0)} large wallets`;
 }
 
-function renderModelGate(model) {
+function renderModelGate(model, gate) {
   const panel = byId("modelPanel");
   if (!model) {
     panel.hidden = true;
@@ -83,31 +83,36 @@ function renderModelGate(model) {
   }
   panel.hidden = false;
 
-  const risk = model.taker_first_entry_policy_risk?.best_policy || {};
+  const risk = gate?.current_best_policy || model.taker_first_entry_policy_risk?.best_policy || {};
   const rawWallet = model.taker_first_entry_policy_ev_overlay_wallet_flow?.best_policy || {};
   const rawSummary = rawWallet.summary || {};
-  const calibrated = model.taker_ev_calibration_wallet_flow?.calibrated || {};
-  const calibratedBase = model.taker_ev_calibration?.calibrated || {};
-  const calibratedOverlay = model.taker_first_entry_policy_ev_overlay_wallet_flow_calibrated?.best_policy || {};
-  const calibratedOverlaySummary = calibratedOverlay.summary || {};
+  const liveGate = gate?.gates?.small_live_selected_policy || {};
+  const paperGate = gate?.gates?.paper_trade_selected_policy || {};
+  const gap = gate?.promotion_gap || {};
+  const overlayStatus = gate?.component_statuses?.raw_wallet_ev_overlay || {};
 
-  byId("modelStatus").textContent = "Paper only";
+  byId("modelStatus").textContent = gate?.deployment_status_label || "Paper only";
   byId("selectedPolicy").textContent = risk.policy_name || "No selected policy";
   byId("selectedPolicyStats").textContent = risk.signals
     ? `${fmt.format(risk.signals)} signals, ${pct(risk.roi_on_planned_cost)} planned ROI, ${pct(risk.max_drawdown_planned_roi)} max drawdown`
     : "Waiting for selected-policy replay";
 
   byId("walletOverlay").textContent = rawWallet.policy_name || "No overlay lift";
-  byId("walletOverlayStats").textContent = rawSummary.selected_folds
-    ? `${pct(rawSummary.roi_on_planned_cost)} ROI, ${signedPct(rawSummary.roi_on_planned_cost - rawSummary.baseline_roi_on_planned_cost)} vs unfiltered, ${fmt.format(rawSummary.test_risk_gate_folds || 0)}/${fmt.format(rawSummary.selected_folds || 0)} risk-gated folds`
+  const overlayRoi = rawSummary.roi_on_planned_cost ?? overlayStatus.roi_on_planned_cost;
+  const overlayLift = overlayStatus.roi_lift_vs_unfiltered
+    ?? (rawSummary.roi_on_planned_cost - rawSummary.baseline_roi_on_planned_cost);
+  const riskGatedFolds = overlayStatus.risk_gated_folds || rawSummary.test_risk_gate_folds || 0;
+  const overlayFolds = overlayStatus.selected_folds || rawSummary.selected_folds || 0;
+  byId("walletOverlayStats").textContent = rawSummary.selected_folds || overlayStatus.selected_folds
+    ? `${pct(overlayRoi)} ROI, ${signedPct(overlayLift)} vs unfiltered, ${fmt.format(riskGatedFolds)}/${fmt.format(overlayFolds)} risk-gated folds`
     : "No sample-gated overlay fold";
 
-  const calibratedRobust = Number(calibrated.day_robust_threshold_count || 0);
-  const baseCalibratedRobust = Number(calibratedBase.day_robust_threshold_count || 0);
-  byId("calibratedEv").textContent = `${fmt.format(calibratedRobust + baseCalibratedRobust)} day-robust thresholds`;
-  byId("calibratedEvStats").textContent = calibratedOverlaySummary.selected_folds
-    ? `Selected replay: ${pct(calibratedOverlaySummary.roi_on_planned_cost)} ROI, ${signedPct(calibratedOverlaySummary.roi_on_planned_cost - calibratedOverlaySummary.baseline_roi_on_planned_cost)} vs unfiltered`
-    : "Calibration improved pooled buckets only; selected-policy replay did not improve";
+  byId("promotionGap").textContent = liveGate.passed
+    ? "Live gate passed"
+    : `${fmt.format(gap.estimated_additional_forward_days || gap.missing_forward_days || 0)} forward days short`;
+  byId("promotionGapStats").textContent = liveGate.total_checks
+    ? `${fmt.format(paperGate.passed_checks || 0)}/${fmt.format(paperGate.total_checks || 0)} paper checks, ${fmt.format(liveGate.passed_checks || 0)}/${fmt.format(liveGate.total_checks || 0)} live checks; need ${fmt.format(gap.missing_model_ready_markets || 0)} clean markets`
+    : "Waiting for promotion gate data";
 }
 
 function renderMarketSelect(data) {
@@ -248,14 +253,16 @@ function renderWallets(data) {
 }
 
 async function main() {
-  const [response, modelResponse] = await Promise.all([
+  const [response, modelResponse, gateResponse] = await Promise.all([
     fetch("data/summary.json", { cache: "no-store" }),
     fetch("data/model_diagnostics.json", { cache: "no-store" }).catch(() => null),
+    fetch("data/model_promotion_gate.json", { cache: "no-store" }).catch(() => null),
   ]);
   state.data = await response.json();
   state.model = modelResponse?.ok ? await modelResponse.json() : null;
+  state.gate = gateResponse?.ok ? await gateResponse.json() : null;
   renderMetrics(state.data);
-  renderModelGate(state.model);
+  renderModelGate(state.model, state.gate);
   renderMarketSelect(state.data);
   renderEntryMap(state.data);
   renderWallets(state.data);
