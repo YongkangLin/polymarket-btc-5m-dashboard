@@ -1,6 +1,6 @@
 {
   "config_version": 1,
-  "generated_at": "2026-06-10T19:46:50.058511-07:00",
+  "generated_at": "2026-06-10T19:51:43.632973-07:00",
   "sources": {
     "model_diagnostics": "docs/data/model_diagnostics.json",
     "promotion_gate": "docs/data/model_promotion_gate.json",
@@ -13,6 +13,7 @@
     "execution_stress": "docs/data/selected_policy_execution_stress.json",
     "bankroll_stress": "docs/data/selected_policy_bankroll_stress.json",
     "edge_uncertainty": "docs/data/selected_policy_edge_uncertainty.json",
+    "paper_stake_selector": "docs/data/selected_policy_paper_stake_selector.json",
     "signal_detector_validation": "docs/data/paper_signal_detector_validation.json",
     "signal_universe": "docs/data/config_signal_universe.json"
   },
@@ -1107,6 +1108,138 @@
         "use_for_live_sizing": false,
         "use_for_paper_sizing": true,
         "paper_sizing_note": "Use this to choose paper stake size and drawdown alerts. Do not enable live size from this artifact while the promotion gate is paper-only."
+      }
+    },
+    "selected_policy_paper_stake_selector": {
+      "status": "paper_sizing_diagnostic_only",
+      "path": "docs/data/selected_policy_paper_stake_selector.json",
+      "selector_contract": {
+        "max_configured_order_notional": 25.0,
+        "min_probability_planned_roi_positive": 0.95,
+        "min_p05_planned_roi": 0.0,
+        "requires_bankroll_risk_contract": true,
+        "requires_order_at_or_below_configured_max": true
+      },
+      "configured_order": {
+        "order_notional": 25.0,
+        "edge_confidence": "posterior_positive_lower_bound",
+        "probability_planned_roi_positive": 0.96958,
+        "p05_planned_roi": 0.014816930914051141,
+        "recommended_min_bankroll": 10000.0,
+        "min_tested_bankroll_passing_selector": 10000.0
+      },
+      "recommendations_by_bankroll": [
+        {
+          "bankroll": 250.0,
+          "selected_paper_order_notional": 0.0,
+          "selected_candidate": null,
+          "status": "paper_trade_disabled_for_bankroll",
+          "disabled_reasons": [
+            "no_tested_order_passes_selector",
+            "bootstrap_p95_drawdown_above_target",
+            "observed_drawdown_above_target",
+            "stake_fraction_above_config_cap"
+          ]
+        },
+        {
+          "bankroll": 500.0,
+          "selected_paper_order_notional": 0.0,
+          "selected_candidate": null,
+          "status": "paper_trade_disabled_for_bankroll",
+          "disabled_reasons": [
+            "no_tested_order_passes_selector",
+            "bootstrap_p95_drawdown_above_target",
+            "observed_drawdown_above_target",
+            "stake_fraction_above_config_cap"
+          ]
+        },
+        {
+          "bankroll": 1000.0,
+          "selected_paper_order_notional": 0.0,
+          "selected_candidate": null,
+          "status": "paper_trade_disabled_for_bankroll",
+          "disabled_reasons": [
+            "no_tested_order_passes_selector",
+            "bootstrap_p95_drawdown_above_target",
+            "observed_drawdown_above_target",
+            "stake_fraction_above_config_cap"
+          ]
+        },
+        {
+          "bankroll": 2000.0,
+          "selected_paper_order_notional": 5.0,
+          "selected_candidate": {
+            "bankroll": 2000.0,
+            "order_notional": 5.0,
+            "passes_selector": true,
+            "selector_reasons": [],
+            "passes_risk_contract": true,
+            "passes_edge_contract": true,
+            "passes_order_cap": true,
+            "stake_fraction": 0.0025,
+            "observed_max_drawdown_fraction": 0.030633753501400563,
+            "market_bootstrap_p95_drawdown_fraction": 0.033360478858037564,
+            "probability_planned_roi_positive": 0.97078,
+            "p05_planned_roi": 0.017250037470450834,
+            "realized_roi_on_planned_cost": 0.12393334217699467,
+            "fill_rate": 0.8291139240506329,
+            "edge_confidence": "posterior_positive_lower_bound"
+          },
+          "status": "paper_order_selected",
+          "disabled_reasons": []
+        },
+        {
+          "bankroll": 5000.0,
+          "selected_paper_order_notional": 10.0,
+          "selected_candidate": {
+            "bankroll": 5000.0,
+            "order_notional": 10.0,
+            "passes_selector": true,
+            "selector_reasons": [],
+            "passes_risk_contract": true,
+            "passes_edge_contract": true,
+            "passes_order_cap": true,
+            "stake_fraction": 0.002,
+            "observed_max_drawdown_fraction": 0.02450700280112045,
+            "market_bootstrap_p95_drawdown_fraction": 0.02709433582508261,
+            "probability_planned_roi_positive": 0.96018,
+            "p05_planned_roi": 0.007460838276061231,
+            "realized_roi_on_planned_cost": 0.1134161192164949,
+            "fill_rate": 0.8037974683544303,
+            "edge_confidence": "posterior_positive_lower_bound"
+          },
+          "status": "paper_order_selected",
+          "disabled_reasons": []
+        },
+        {
+          "bankroll": 10000.0,
+          "selected_paper_order_notional": 25.0,
+          "selected_candidate": {
+            "bankroll": 10000.0,
+            "order_notional": 25.0,
+            "passes_selector": true,
+            "selector_reasons": [],
+            "passes_risk_contract": true,
+            "passes_edge_contract": true,
+            "passes_order_cap": true,
+            "stake_fraction": 0.0025,
+            "observed_max_drawdown_fraction": 0.025633753501400566,
+            "market_bootstrap_p95_drawdown_fraction": 0.03075408881174223,
+            "probability_planned_roi_positive": 0.96958,
+            "p05_planned_roi": 0.014816930914051141,
+            "realized_roi_on_planned_cost": 0.1165008166408209,
+            "fill_rate": 0.740506329113924,
+            "edge_confidence": "posterior_positive_lower_bound"
+          },
+          "status": "paper_order_selected",
+          "disabled_reasons": []
+        }
+      ],
+      "runtime_contract": {
+        "use_for_live_sizing": false,
+        "use_for_paper_sizing": true,
+        "default_when_bankroll_unknown": "do_not_trade",
+        "diagnostic_note": "This selector chooses paper order size only from tested order sizes that pass both bankroll risk constraints and posterior edge thresholds. It is not a live-sizing approval."
       }
     },
     "stop_if_live_gate_fails": true,
