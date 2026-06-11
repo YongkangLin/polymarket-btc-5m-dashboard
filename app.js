@@ -1,7 +1,13 @@
 const fmt = new Intl.NumberFormat("en-US");
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
-const state = { data: null, role: "both", market: "all", signalMarket: "all" };
+const state = {
+  data: null,
+  role: "both",
+  market: "all",
+  signalMarket: "all",
+  signalRiskIndex: new Map(),
+};
 
 function byId(id) {
   return document.getElementById(id);
@@ -64,6 +70,10 @@ function signalLabel(row) {
   const ask = Number(row.signal_ask || 0).toFixed(2);
   const outcome = row.intended_outcome || "entry";
   return `${when} • ${outcome} @ ${ask}`;
+}
+
+function riskForSignal(row) {
+  return state.signalRiskIndex.get(row.condition_id) || null;
 }
 
 function renderMetrics(data) {
@@ -187,10 +197,15 @@ function renderSignalUniverse(universe) {
   const all = summary.all_config_rule_signals || {};
   const selected = summary.selected_reference_signals || {};
   const diagnostic = summary.non_selected_clean_signals || {};
+  const riskGate = (state.signalRiskUniverse?.risk_gate_candidates || [])
+    .find((row) => row.gate_id === "exclude_high_risk");
   byId("ruleSignalCount").textContent = fmt.format(all.signals || universe.signals.length || 0);
   byId("ruleFillRate").textContent = pct(all.fill_rate);
   byId("ruleRoi").textContent = roiPct(all.roi_on_planned_cost);
   byId("ruleScope").textContent = `${fmt.format(selected.signals || 0)} selected / ${fmt.format(diagnostic.signals || 0)} diagnostic`;
+  byId("ruleScope").title = riskGate
+    ? `Telemetry only: excluding high-risk rows keeps ${fmt.format(riskGate.signals || 0)} signals and moves diagnostic ROI to ${roiPct(riskGate.roi_on_planned_cost)}.`
+    : "";
 
   renderSignalSelect(universe);
   renderSignalMap(universe);
@@ -237,7 +252,9 @@ function renderSignalMap(universe) {
       const seconds = Number(row.signal_seconds_left || maxSeconds);
       const ask = Number(row.signal_ask || 0);
       const radius = state.signalMarket === "all" ? 5.5 : 9;
-      const title = `${signalLabel(row)} • ${filled} • ${roiPct(Number(row.pnl_dollars || 0) / 25, 1)} on $25`;
+      const risk = riskForSignal(row);
+      const riskText = risk ? ` • ${risk.pretrade_risk_band} risk, score ${risk.pretrade_risk_score}` : "";
+      const title = `${signalLabel(row)} • ${filled}${riskText} • ${roiPct(Number(row.pnl_dollars || 0) / 25, 1)} on $25`;
       return `
         <circle class="signal-point ${evidence} ${filled}" cx="${xFor(seconds)}" cy="${yFor(ask)}" r="${radius}">
           <title>${title}</title>
@@ -268,10 +285,13 @@ function renderSignalDetails(rows) {
     const evidence = row.is_selected_reference ? "Selected replay" : "Diagnostic clean";
     const futureAsk = row.future_ask === null || row.future_ask === undefined ? "--" : Number(row.future_ask).toFixed(2);
     const fillText = row.is_filled ? `Filled at ${futureAsk}` : `No full fill; future ask ${futureAsk}`;
+    const risk = riskForSignal(row);
+    const riskText = risk ? `${risk.pretrade_risk_band} risk, score ${risk.pretrade_risk_score}` : "Risk not scored";
     return `
       <div class="signal-row">
         <strong>${signalLabel(row)}</strong>
         <span>${evidence}</span>
+        <span>${riskText}</span>
         <span>${fillText}</span>
         <span>${pnl >= 0 ? "+" : ""}${money.format(pnl)}</span>
       </div>`;
@@ -416,7 +436,16 @@ function renderWallets(data) {
 }
 
 async function main() {
-  const [response, modelResponse, gateResponse, dataPlanResponse, runbookResponse, acceptanceResponse, signalResponse] = await Promise.all([
+  const [
+    response,
+    modelResponse,
+    gateResponse,
+    dataPlanResponse,
+    runbookResponse,
+    acceptanceResponse,
+    signalResponse,
+    signalRiskResponse,
+  ] = await Promise.all([
     fetch("data/summary.json", { cache: "no-store" }),
     fetch("data/model_diagnostics.json", { cache: "no-store" }).catch(() => null),
     fetch("data/model_promotion_gate.json", { cache: "no-store" }).catch(() => null),
@@ -424,6 +453,7 @@ async function main() {
     fetch("data/promotion_backfill_runbook.json", { cache: "no-store" }).catch(() => null),
     fetch("data/promotion_backfill_acceptance.json", { cache: "no-store" }).catch(() => null),
     fetch("data/config_signal_universe.json", { cache: "no-store" }).catch(() => null),
+    fetch("data/config_signal_risk_universe.json", { cache: "no-store" }).catch(() => null),
   ]);
   state.data = await response.json();
   state.model = modelResponse?.ok ? await modelResponse.json() : null;
@@ -432,6 +462,8 @@ async function main() {
   state.runbook = runbookResponse?.ok ? await runbookResponse.json() : null;
   state.acceptance = acceptanceResponse?.ok ? await acceptanceResponse.json() : null;
   state.signalUniverse = signalResponse?.ok ? await signalResponse.json() : null;
+  state.signalRiskUniverse = signalRiskResponse?.ok ? await signalRiskResponse.json() : null;
+  state.signalRiskIndex = new Map((state.signalRiskUniverse?.signals || []).map((row) => [row.condition_id, row]));
   renderMetrics(state.data);
   renderModelGate(state.model, state.gate, state.dataPlan, state.runbook, state.acceptance);
   renderSignalUniverse(state.signalUniverse);
