@@ -1,6 +1,6 @@
 {
   "config_version": 1,
-  "generated_at": "2026-06-10T19:12:08.525766-07:00",
+  "generated_at": "2026-06-10T19:18:52.879088-07:00",
   "sources": {
     "model_diagnostics": "docs/data/model_diagnostics.json",
     "promotion_gate": "docs/data/model_promotion_gate.json",
@@ -11,7 +11,8 @@
     "decision_table_walkforward": "docs/data/selected_policy_decision_table_walkforward.json",
     "paper_replay_decisions": "docs/data/paper_trading_replay_decisions.json",
     "execution_stress": "docs/data/selected_policy_execution_stress.json",
-    "signal_detector_validation": "docs/data/paper_signal_detector_validation.json"
+    "signal_detector_validation": "docs/data/paper_signal_detector_validation.json",
+    "signal_universe": "docs/data/config_signal_universe.json"
   },
   "deployment": {
     "status": "paper_only",
@@ -737,6 +738,77 @@
         "first_signal_order": "highest seconds_left first, then earliest timestamp, then rule order",
         "must_match_replay_before_live": true,
         "live_action_when_config_unchanged": "blocked"
+      }
+    },
+    "config_signal_universe": {
+      "status": "diagnostic_only",
+      "path": "docs/data/config_signal_universe.json",
+      "summary": {
+        "all_config_rule_signals": {
+          "signals": 265,
+          "markets": 265,
+          "days": 16,
+          "selected_reference_signals": 158.0,
+          "price_ok_signals": 222.0,
+          "liquidity_ok_signals": 222.0,
+          "fills": 189.0,
+          "price_ok_rate": 0.8377358490566038,
+          "liquidity_ok_rate": 0.8377358490566038,
+          "fill_rate": 0.7132075471698113,
+          "win_prob_filled": 0.5873015873015873,
+          "planned_cost": 6625.0,
+          "filled_cost": 4725.0,
+          "pnl_dollars": 599.1602164948544,
+          "roi_on_planned_cost": 0.09043927796148744,
+          "roi_on_filled_cost": 0.126806395025366
+        },
+        "selected_reference_signals": {
+          "signals": 158,
+          "markets": 158,
+          "days": 2,
+          "selected_reference_signals": 158.0,
+          "price_ok_signals": 133.0,
+          "liquidity_ok_signals": 136.0,
+          "fills": 117.0,
+          "price_ok_rate": 0.8417721518987342,
+          "liquidity_ok_rate": 0.8607594936708861,
+          "fill_rate": 0.740506329113924,
+          "win_prob_filled": 0.5982905982905983,
+          "planned_cost": 3950.0,
+          "filled_cost": 2925.0,
+          "pnl_dollars": 460.17822573124226,
+          "roi_on_planned_cost": 0.11650081664082082,
+          "roi_on_filled_cost": 0.15732588913888623
+        },
+        "non_selected_clean_signals": {
+          "signals": 107,
+          "markets": 107,
+          "days": 14,
+          "selected_reference_signals": 0.0,
+          "price_ok_signals": 89.0,
+          "liquidity_ok_signals": 86.0,
+          "fills": 72.0,
+          "price_ok_rate": 0.8317757009345794,
+          "liquidity_ok_rate": 0.8037383177570093,
+          "fill_rate": 0.6728971962616822,
+          "win_prob_filled": 0.5694444444444444,
+          "planned_cost": 2675.0,
+          "filled_cost": 1800.0,
+          "pnl_dollars": 138.98199076361175,
+          "roi_on_planned_cost": 0.05195588439761187,
+          "roi_on_filled_cost": 0.07721221709089542
+        },
+        "reference_match_summary": {
+          "detector_reference_signals": 158.0,
+          "exact_reference_time_matches": 158.0,
+          "reference_time_mismatches": 0.0
+        }
+      },
+      "runtime_contract": {
+        "use_for_live_sizing": false,
+        "use_for_policy_promotion": false,
+        "selected_reference_replay_remains_authoritative": true,
+        "diagnostic_note": "This applies the current config rule to every clean model-ready market. Rows outside the selected prior-only replay can help diagnose rule breadth, but they are not promotion evidence."
       }
     }
   },
