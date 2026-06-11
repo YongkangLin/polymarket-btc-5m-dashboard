@@ -1,0 +1,832 @@
+{
+  "config_version": 1,
+  "generated_at": "2026-06-10T19:40:06.932434-07:00",
+  "sources": {
+    "config": "docs/data/paper_trading_config.json",
+    "replay": "reports/btc_5m_taker_first_entry_policy_replay.csv",
+    "features": "data/processed/btc_5m_features_1s_reconciled.parquet"
+  },
+  "policy_name": "order_25_2s_2c_risk_adjusted",
+  "status": "paper_diagnostic_only",
+  "status_reasons": [
+    "bankroll_stress_not_standalone_live_approval",
+    "paper_only_live_gate_false",
+    "selected_forward_days_below_10",
+    "bankroll_stress_has_too_few_days"
+  ],
+  "configured_execution": {
+    "latency_seconds": 2,
+    "max_slippage": 0.02,
+    "configured_order_notional": 25.0,
+    "selected_forward_days": 2
+  },
+  "risk_contract": {
+    "stake_fraction_cap": 0.0025,
+    "target_drawdown_fraction": 0.05,
+    "target_day_loss_fraction": 0.05,
+    "bootstrap_iterations": 5000,
+    "bankrolls_tested": [
+      250.0,
+      500.0,
+      1000.0,
+      2000.0,
+      5000.0,
+      10000.0
+    ],
+    "order_notionals_tested": [
+      5.0,
+      10.0,
+      25.0,
+      50.0
+    ]
+  },
+  "configured_order_summary": {
+    "order_notional": 25.0,
+    "signals": 158,
+    "fills": 117,
+    "fill_rate": 0.740506329113924,
+    "planned_cost": 3950.0,
+    "filled_cost": 2925.0,
+    "pnl_dollars": 460.17822573124255,
+    "roi_on_planned_cost": 0.1165008166408209,
+    "roi_on_filled_cost": 0.15732588913888634,
+    "observed_win_prob_filled": 0.5982905982905983,
+    "avg_fill_break_even_win_prob": 0.5151282051282051,
+    "max_drawdown_dollars": 256.33753501400565,
+    "max_drawdown_planned_roi": 0.06489557848455839,
+    "max_consecutive_losing_fills": 8,
+    "max_consecutive_unfilled_signals": 2,
+    "worst_day_loss_dollars": 0.0,
+    "market_bootstrap": {
+      "roi_on_planned_cost": {
+        "p05": 0.009403966084703933,
+        "p50": 0.117727266800997,
+        "p95": 0.22627988716915576
+      },
+      "max_drawdown_dollars": {
+        "p50": 162.04118465494713,
+        "p95": 307.5408881174223
+      }
+    },
+    "day_bootstrap": {
+      "roi_on_planned_cost": {
+        "p05": 0.05061465475564022,
+        "p50": 0.11650081664082089,
+        "p95": 0.19519817667034223
+      },
+      "max_drawdown_dollars": {
+        "p50": 0.0,
+        "p95": 0.0
+      }
+    },
+    "required_bankroll": {
+      "stake_fraction_cap": 0.0025,
+      "target_drawdown_fraction": 0.05,
+      "target_day_loss_fraction": 0.05,
+      "by_stake_fraction_cap": 10000.0,
+      "by_observed_max_drawdown": 5126.750700280113,
+      "by_market_bootstrap_p95_drawdown": 6150.817762348445,
+      "by_worst_day_loss": 0.0,
+      "recommended_min_bankroll": 10000.0
+    },
+    "bankroll_scenarios": [
+      {
+        "bankroll": 250.0,
+        "order_notional": 25.0,
+        "stake_fraction": 0.1,
+        "total_pnl_fraction": 1.8407129029249703,
+        "observed_max_drawdown_fraction": 1.0253501400560225,
+        "market_bootstrap_p95_drawdown_fraction": 1.2301635524696892,
+        "worst_day_loss_fraction": 0.0,
+        "passes_paper_risk_contract": false,
+        "risk_reasons": [
+          "stake_fraction_above_config_cap",
+          "observed_drawdown_above_target",
+          "bootstrap_p95_drawdown_above_target"
+        ]
+      },
+      {
+        "bankroll": 500.0,
+        "order_notional": 25.0,
+        "stake_fraction": 0.05,
+        "total_pnl_fraction": 0.9203564514624851,
+        "observed_max_drawdown_fraction": 0.5126750700280113,
+        "market_bootstrap_p95_drawdown_fraction": 0.6150817762348446,
+        "worst_day_loss_fraction": 0.0,
+        "passes_paper_risk_contract": false,
+        "risk_reasons": [
+          "stake_fraction_above_config_cap",
+          "observed_drawdown_above_target",
+          "bootstrap_p95_drawdown_above_target"
+        ]
+      },
+      {
+        "bankroll": 1000.0,
+        "order_notional": 25.0,
+        "stake_fraction": 0.025,
+        "total_pnl_fraction": 0.46017822573124256,
+        "observed_max_drawdown_fraction": 0.25633753501400564,
+        "market_bootstrap_p95_drawdown_fraction": 0.3075408881174223,
+        "worst_day_loss_fraction": 0.0,
+        "passes_paper_risk_contract": false,
+        "risk_reasons": [
+          "stake_fraction_above_config_cap",
+          "observed_drawdown_above_target",
+          "bootstrap_p95_drawdown_above_target"
+        ]
+      },
+      {
+        "bankroll": 2000.0,
+        "order_notional": 25.0,
+        "stake_fraction": 0.0125,
+        "total_pnl_fraction": 0.23008911286562128,
+        "observed_max_drawdown_fraction": 0.12816876750700282,
+        "market_bootstrap_p95_drawdown_fraction": 0.15377044405871115,
+        "worst_day_loss_fraction": 0.0,
+        "passes_paper_risk_contract": false,
+        "risk_reasons": [
+          "stake_fraction_above_config_cap",
+          "observed_drawdown_above_target",
+          "bootstrap_p95_drawdown_above_target"
+        ]
+      },
+      {
+        "bankroll": 5000.0,
+        "order_notional": 25.0,
+        "stake_fraction": 0.005,
+        "total_pnl_fraction": 0.09203564514624851,
+        "observed_max_drawdown_fraction": 0.05126750700280113,
+        "market_bootstrap_p95_drawdown_fraction": 0.06150817762348446,
+        "worst_day_loss_fraction": 0.0,
+        "passes_paper_risk_contract": false,
+        "risk_reasons": [
+          "stake_fraction_above_config_cap",
+          "observed_drawdown_above_target",
+          "bootstrap_p95_drawdown_above_target"
+        ]
+      },
+      {
+        "bankroll": 10000.0,
+        "order_notional": 25.0,
+        "stake_fraction": 0.0025,
+        "total_pnl_fraction": 0.046017822573124256,
+        "observed_max_drawdown_fraction": 0.025633753501400566,
+        "market_bootstrap_p95_drawdown_fraction": 0.03075408881174223,
+        "worst_day_loss_fraction": 0.0,
+        "passes_paper_risk_contract": true,
+        "risk_reasons": []
+      }
+    ],
+    "days": [
+      {
+        "test_date": "2026-06-06 00:00:00",
+        "signals": 72,
+        "fills": 57,
+        "planned_cost": 1800.0,
+        "filled_cost": 1425.0,
+        "pnl_dollars": 351.356718006616,
+        "roi_on_planned_cost": 0.19519817667034223
+      },
+      {
+        "test_date": "2026-06-07 00:00:00",
+        "signals": 86,
+        "fills": 60,
+        "planned_cost": 2150.0,
+        "filled_cost": 1500.0,
+        "pnl_dollars": 108.82150772462647,
+        "roi_on_planned_cost": 0.05061465475564022
+      }
+    ]
+  },
+  "order_summaries": [
+    {
+      "order_notional": 5.0,
+      "signals": 158,
+      "fills": 131,
+      "fill_rate": 0.8291139240506329,
+      "planned_cost": 790.0,
+      "filled_cost": 655.0,
+      "pnl_dollars": 97.90734031982579,
+      "roi_on_planned_cost": 0.12393334217699467,
+      "roi_on_filled_cost": 0.14947685545011571,
+      "observed_win_prob_filled": 0.5954198473282443,
+      "avg_fill_break_even_win_prob": 0.5161832061068703,
+      "max_drawdown_dollars": 61.267507002801125,
+      "max_drawdown_planned_roi": 0.07755380633265965,
+      "max_consecutive_losing_fills": 8,
+      "max_consecutive_unfilled_signals": 2,
+      "worst_day_loss_dollars": 0.0,
+      "market_bootstrap": {
+        "roi_on_planned_cost": {
+          "p05": 0.008596855571898753,
+          "p50": 0.12467547531995915,
+          "p95": 0.2345543441577644
+        },
+        "max_drawdown_dollars": {
+          "p50": 35.0,
+          "p95": 66.72095771607513
+        }
+      },
+      "day_bootstrap": {
+        "roi_on_planned_cost": {
+          "p05": 0.04139540434377635,
+          "p50": 0.12393334217699466,
+          "p95": 0.2225203234777832
+        },
+        "max_drawdown_dollars": {
+          "p50": 0.0,
+          "p95": 0.0
+        }
+      },
+      "required_bankroll": {
+        "stake_fraction_cap": 0.0025,
+        "target_drawdown_fraction": 0.05,
+        "target_day_loss_fraction": 0.05,
+        "by_stake_fraction_cap": 2000.0,
+        "by_observed_max_drawdown": 1225.3501400560224,
+        "by_market_bootstrap_p95_drawdown": 1334.4191543215027,
+        "by_worst_day_loss": 0.0,
+        "recommended_min_bankroll": 2000.0
+      },
+      "bankroll_scenarios": [
+        {
+          "bankroll": 250.0,
+          "order_notional": 5.0,
+          "stake_fraction": 0.02,
+          "total_pnl_fraction": 0.39162936127930315,
+          "observed_max_drawdown_fraction": 0.2450700280112045,
+          "market_bootstrap_p95_drawdown_fraction": 0.2668838308643005,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": false,
+          "risk_reasons": [
+            "stake_fraction_above_config_cap",
+            "observed_drawdown_above_target",
+            "bootstrap_p95_drawdown_above_target"
+          ]
+        },
+        {
+          "bankroll": 500.0,
+          "order_notional": 5.0,
+          "stake_fraction": 0.01,
+          "total_pnl_fraction": 0.19581468063965157,
+          "observed_max_drawdown_fraction": 0.12253501400560225,
+          "market_bootstrap_p95_drawdown_fraction": 0.13344191543215025,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": false,
+          "risk_reasons": [
+            "stake_fraction_above_config_cap",
+            "observed_drawdown_above_target",
+            "bootstrap_p95_drawdown_above_target"
+          ]
+        },
+        {
+          "bankroll": 1000.0,
+          "order_notional": 5.0,
+          "stake_fraction": 0.005,
+          "total_pnl_fraction": 0.09790734031982579,
+          "observed_max_drawdown_fraction": 0.061267507002801126,
+          "market_bootstrap_p95_drawdown_fraction": 0.06672095771607513,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": false,
+          "risk_reasons": [
+            "stake_fraction_above_config_cap",
+            "observed_drawdown_above_target",
+            "bootstrap_p95_drawdown_above_target"
+          ]
+        },
+        {
+          "bankroll": 2000.0,
+          "order_notional": 5.0,
+          "stake_fraction": 0.0025,
+          "total_pnl_fraction": 0.04895367015991289,
+          "observed_max_drawdown_fraction": 0.030633753501400563,
+          "market_bootstrap_p95_drawdown_fraction": 0.033360478858037564,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": true,
+          "risk_reasons": []
+        },
+        {
+          "bankroll": 5000.0,
+          "order_notional": 5.0,
+          "stake_fraction": 0.001,
+          "total_pnl_fraction": 0.019581468063965157,
+          "observed_max_drawdown_fraction": 0.012253501400560226,
+          "market_bootstrap_p95_drawdown_fraction": 0.013344191543215027,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": true,
+          "risk_reasons": []
+        },
+        {
+          "bankroll": 10000.0,
+          "order_notional": 5.0,
+          "stake_fraction": 0.0005,
+          "total_pnl_fraction": 0.009790734031982579,
+          "observed_max_drawdown_fraction": 0.006126750700280113,
+          "market_bootstrap_p95_drawdown_fraction": 0.006672095771607513,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": true,
+          "risk_reasons": []
+        }
+      ],
+      "days": [
+        {
+          "test_date": "2026-06-06 00:00:00",
+          "signals": 72,
+          "fills": 61,
+          "planned_cost": 360.0,
+          "filled_cost": 305.0,
+          "pnl_dollars": 80.10731645200195,
+          "roi_on_planned_cost": 0.2225203234777832
+        },
+        {
+          "test_date": "2026-06-07 00:00:00",
+          "signals": 86,
+          "fills": 70,
+          "planned_cost": 430.0,
+          "filled_cost": 350.0,
+          "pnl_dollars": 17.800023867823832,
+          "roi_on_planned_cost": 0.04139540434377635
+        }
+      ]
+    },
+    {
+      "order_notional": 10.0,
+      "signals": 158,
+      "fills": 127,
+      "fill_rate": 0.8037974683544303,
+      "planned_cost": 1580.0,
+      "filled_cost": 1270.0,
+      "pnl_dollars": 179.19746836206195,
+      "roi_on_planned_cost": 0.1134161192164949,
+      "roi_on_filled_cost": 0.14110036878902515,
+      "observed_win_prob_filled": 0.5905511811023622,
+      "avg_fill_break_even_win_prob": 0.5155905511811024,
+      "max_drawdown_dollars": 122.53501400560225,
+      "max_drawdown_planned_roi": 0.07755380633265965,
+      "max_consecutive_losing_fills": 8,
+      "max_consecutive_unfilled_signals": 2,
+      "worst_day_loss_dollars": 0.0,
+      "market_bootstrap": {
+        "roi_on_planned_cost": {
+          "p05": 0.0018762737094486133,
+          "p50": 0.11246931594345845,
+          "p95": 0.22491379299705752
+        },
+        "max_drawdown_dollars": {
+          "p50": 70.62900514482409,
+          "p95": 135.47167912541306
+        }
+      },
+      "day_bootstrap": {
+        "roi_on_planned_cost": {
+          "p05": 0.032806517080031704,
+          "p50": 0.1134161192164949,
+          "p95": 0.2096998106572704
+        },
+        "max_drawdown_dollars": {
+          "p50": 0.0,
+          "p95": 0.0
+        }
+      },
+      "required_bankroll": {
+        "stake_fraction_cap": 0.0025,
+        "target_drawdown_fraction": 0.05,
+        "target_day_loss_fraction": 0.05,
+        "by_stake_fraction_cap": 4000.0,
+        "by_observed_max_drawdown": 2450.7002801120448,
+        "by_market_bootstrap_p95_drawdown": 2709.433582508261,
+        "by_worst_day_loss": 0.0,
+        "recommended_min_bankroll": 4000.0
+      },
+      "bankroll_scenarios": [
+        {
+          "bankroll": 250.0,
+          "order_notional": 10.0,
+          "stake_fraction": 0.04,
+          "total_pnl_fraction": 0.7167898734482478,
+          "observed_max_drawdown_fraction": 0.490140056022409,
+          "market_bootstrap_p95_drawdown_fraction": 0.5418867165016522,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": false,
+          "risk_reasons": [
+            "stake_fraction_above_config_cap",
+            "observed_drawdown_above_target",
+            "bootstrap_p95_drawdown_above_target"
+          ]
+        },
+        {
+          "bankroll": 500.0,
+          "order_notional": 10.0,
+          "stake_fraction": 0.02,
+          "total_pnl_fraction": 0.3583949367241239,
+          "observed_max_drawdown_fraction": 0.2450700280112045,
+          "market_bootstrap_p95_drawdown_fraction": 0.2709433582508261,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": false,
+          "risk_reasons": [
+            "stake_fraction_above_config_cap",
+            "observed_drawdown_above_target",
+            "bootstrap_p95_drawdown_above_target"
+          ]
+        },
+        {
+          "bankroll": 1000.0,
+          "order_notional": 10.0,
+          "stake_fraction": 0.01,
+          "total_pnl_fraction": 0.17919746836206196,
+          "observed_max_drawdown_fraction": 0.12253501400560225,
+          "market_bootstrap_p95_drawdown_fraction": 0.13547167912541305,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": false,
+          "risk_reasons": [
+            "stake_fraction_above_config_cap",
+            "observed_drawdown_above_target",
+            "bootstrap_p95_drawdown_above_target"
+          ]
+        },
+        {
+          "bankroll": 2000.0,
+          "order_notional": 10.0,
+          "stake_fraction": 0.005,
+          "total_pnl_fraction": 0.08959873418103098,
+          "observed_max_drawdown_fraction": 0.061267507002801126,
+          "market_bootstrap_p95_drawdown_fraction": 0.06773583956270653,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": false,
+          "risk_reasons": [
+            "stake_fraction_above_config_cap",
+            "observed_drawdown_above_target",
+            "bootstrap_p95_drawdown_above_target"
+          ]
+        },
+        {
+          "bankroll": 5000.0,
+          "order_notional": 10.0,
+          "stake_fraction": 0.002,
+          "total_pnl_fraction": 0.03583949367241239,
+          "observed_max_drawdown_fraction": 0.02450700280112045,
+          "market_bootstrap_p95_drawdown_fraction": 0.02709433582508261,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": true,
+          "risk_reasons": []
+        },
+        {
+          "bankroll": 10000.0,
+          "order_notional": 10.0,
+          "stake_fraction": 0.001,
+          "total_pnl_fraction": 0.017919746836206195,
+          "observed_max_drawdown_fraction": 0.012253501400560226,
+          "market_bootstrap_p95_drawdown_fraction": 0.013547167912541305,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": true,
+          "risk_reasons": []
+        }
+      ],
+      "days": [
+        {
+          "test_date": "2026-06-06 00:00:00",
+          "signals": 72,
+          "fills": 60,
+          "planned_cost": 720.0,
+          "filled_cost": 600.0,
+          "pnl_dollars": 150.98386367323468,
+          "roi_on_planned_cost": 0.2096998106572704
+        },
+        {
+          "test_date": "2026-06-07 00:00:00",
+          "signals": 86,
+          "fills": 67,
+          "planned_cost": 860.0,
+          "filled_cost": 670.0,
+          "pnl_dollars": 28.213604688827264,
+          "roi_on_planned_cost": 0.032806517080031704
+        }
+      ]
+    },
+    {
+      "order_notional": 25.0,
+      "signals": 158,
+      "fills": 117,
+      "fill_rate": 0.740506329113924,
+      "planned_cost": 3950.0,
+      "filled_cost": 2925.0,
+      "pnl_dollars": 460.17822573124255,
+      "roi_on_planned_cost": 0.1165008166408209,
+      "roi_on_filled_cost": 0.15732588913888634,
+      "observed_win_prob_filled": 0.5982905982905983,
+      "avg_fill_break_even_win_prob": 0.5151282051282051,
+      "max_drawdown_dollars": 256.33753501400565,
+      "max_drawdown_planned_roi": 0.06489557848455839,
+      "max_consecutive_losing_fills": 8,
+      "max_consecutive_unfilled_signals": 2,
+      "worst_day_loss_dollars": 0.0,
+      "market_bootstrap": {
+        "roi_on_planned_cost": {
+          "p05": 0.009403966084703933,
+          "p50": 0.117727266800997,
+          "p95": 0.22627988716915576
+        },
+        "max_drawdown_dollars": {
+          "p50": 162.04118465494713,
+          "p95": 307.5408881174223
+        }
+      },
+      "day_bootstrap": {
+        "roi_on_planned_cost": {
+          "p05": 0.05061465475564022,
+          "p50": 0.11650081664082089,
+          "p95": 0.19519817667034223
+        },
+        "max_drawdown_dollars": {
+          "p50": 0.0,
+          "p95": 0.0
+        }
+      },
+      "required_bankroll": {
+        "stake_fraction_cap": 0.0025,
+        "target_drawdown_fraction": 0.05,
+        "target_day_loss_fraction": 0.05,
+        "by_stake_fraction_cap": 10000.0,
+        "by_observed_max_drawdown": 5126.750700280113,
+        "by_market_bootstrap_p95_drawdown": 6150.817762348445,
+        "by_worst_day_loss": 0.0,
+        "recommended_min_bankroll": 10000.0
+      },
+      "bankroll_scenarios": [
+        {
+          "bankroll": 250.0,
+          "order_notional": 25.0,
+          "stake_fraction": 0.1,
+          "total_pnl_fraction": 1.8407129029249703,
+          "observed_max_drawdown_fraction": 1.0253501400560225,
+          "market_bootstrap_p95_drawdown_fraction": 1.2301635524696892,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": false,
+          "risk_reasons": [
+            "stake_fraction_above_config_cap",
+            "observed_drawdown_above_target",
+            "bootstrap_p95_drawdown_above_target"
+          ]
+        },
+        {
+          "bankroll": 500.0,
+          "order_notional": 25.0,
+          "stake_fraction": 0.05,
+          "total_pnl_fraction": 0.9203564514624851,
+          "observed_max_drawdown_fraction": 0.5126750700280113,
+          "market_bootstrap_p95_drawdown_fraction": 0.6150817762348446,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": false,
+          "risk_reasons": [
+            "stake_fraction_above_config_cap",
+            "observed_drawdown_above_target",
+            "bootstrap_p95_drawdown_above_target"
+          ]
+        },
+        {
+          "bankroll": 1000.0,
+          "order_notional": 25.0,
+          "stake_fraction": 0.025,
+          "total_pnl_fraction": 0.46017822573124256,
+          "observed_max_drawdown_fraction": 0.25633753501400564,
+          "market_bootstrap_p95_drawdown_fraction": 0.3075408881174223,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": false,
+          "risk_reasons": [
+            "stake_fraction_above_config_cap",
+            "observed_drawdown_above_target",
+            "bootstrap_p95_drawdown_above_target"
+          ]
+        },
+        {
+          "bankroll": 2000.0,
+          "order_notional": 25.0,
+          "stake_fraction": 0.0125,
+          "total_pnl_fraction": 0.23008911286562128,
+          "observed_max_drawdown_fraction": 0.12816876750700282,
+          "market_bootstrap_p95_drawdown_fraction": 0.15377044405871115,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": false,
+          "risk_reasons": [
+            "stake_fraction_above_config_cap",
+            "observed_drawdown_above_target",
+            "bootstrap_p95_drawdown_above_target"
+          ]
+        },
+        {
+          "bankroll": 5000.0,
+          "order_notional": 25.0,
+          "stake_fraction": 0.005,
+          "total_pnl_fraction": 0.09203564514624851,
+          "observed_max_drawdown_fraction": 0.05126750700280113,
+          "market_bootstrap_p95_drawdown_fraction": 0.06150817762348446,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": false,
+          "risk_reasons": [
+            "stake_fraction_above_config_cap",
+            "observed_drawdown_above_target",
+            "bootstrap_p95_drawdown_above_target"
+          ]
+        },
+        {
+          "bankroll": 10000.0,
+          "order_notional": 25.0,
+          "stake_fraction": 0.0025,
+          "total_pnl_fraction": 0.046017822573124256,
+          "observed_max_drawdown_fraction": 0.025633753501400566,
+          "market_bootstrap_p95_drawdown_fraction": 0.03075408881174223,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": true,
+          "risk_reasons": []
+        }
+      ],
+      "days": [
+        {
+          "test_date": "2026-06-06 00:00:00",
+          "signals": 72,
+          "fills": 57,
+          "planned_cost": 1800.0,
+          "filled_cost": 1425.0,
+          "pnl_dollars": 351.356718006616,
+          "roi_on_planned_cost": 0.19519817667034223
+        },
+        {
+          "test_date": "2026-06-07 00:00:00",
+          "signals": 86,
+          "fills": 60,
+          "planned_cost": 2150.0,
+          "filled_cost": 1500.0,
+          "pnl_dollars": 108.82150772462647,
+          "roi_on_planned_cost": 0.05061465475564022
+        }
+      ]
+    },
+    {
+      "order_notional": 50.0,
+      "signals": 158,
+      "fills": 103,
+      "fill_rate": 0.6518987341772152,
+      "planned_cost": 7900.0,
+      "filled_cost": 5150.0,
+      "pnl_dollars": 742.3705658420563,
+      "roi_on_planned_cost": 0.09397095770152611,
+      "roi_on_filled_cost": 0.14414962443535073,
+      "observed_win_prob_filled": 0.5922330097087378,
+      "avg_fill_break_even_win_prob": 0.5150485436893205,
+      "max_drawdown_dollars": 475.74285479390915,
+      "max_drawdown_planned_roi": 0.06022061453087457,
+      "max_consecutive_losing_fills": 8,
+      "max_consecutive_unfilled_signals": 6,
+      "worst_day_loss_dollars": 0.0,
+      "market_bootstrap": {
+        "roi_on_planned_cost": {
+          "p05": -0.0068671576889995384,
+          "p50": 0.09354209197116334,
+          "p95": 0.19090459325282583
+        },
+        "max_drawdown_dollars": {
+          "p50": 322.79582925038744,
+          "p95": 624.4937362323759
+        }
+      },
+      "day_bootstrap": {
+        "roi_on_planned_cost": {
+          "p05": 0.041422946114037816,
+          "p50": 0.09397095770152611,
+          "p95": 0.1567366382088038
+        },
+        "max_drawdown_dollars": {
+          "p50": 0.0,
+          "p95": 0.0
+        }
+      },
+      "required_bankroll": {
+        "stake_fraction_cap": 0.0025,
+        "target_drawdown_fraction": 0.05,
+        "target_day_loss_fraction": 0.05,
+        "by_stake_fraction_cap": 20000.0,
+        "by_observed_max_drawdown": 9514.857095878182,
+        "by_market_bootstrap_p95_drawdown": 12489.874724647518,
+        "by_worst_day_loss": 0.0,
+        "recommended_min_bankroll": 20000.0
+      },
+      "bankroll_scenarios": [
+        {
+          "bankroll": 250.0,
+          "order_notional": 50.0,
+          "stake_fraction": 0.2,
+          "total_pnl_fraction": 2.969482263368225,
+          "observed_max_drawdown_fraction": 1.9029714191756366,
+          "market_bootstrap_p95_drawdown_fraction": 2.4979749449295037,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": false,
+          "risk_reasons": [
+            "stake_fraction_above_config_cap",
+            "observed_drawdown_above_target",
+            "bootstrap_p95_drawdown_above_target"
+          ]
+        },
+        {
+          "bankroll": 500.0,
+          "order_notional": 50.0,
+          "stake_fraction": 0.1,
+          "total_pnl_fraction": 1.4847411316841126,
+          "observed_max_drawdown_fraction": 0.9514857095878183,
+          "market_bootstrap_p95_drawdown_fraction": 1.2489874724647518,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": false,
+          "risk_reasons": [
+            "stake_fraction_above_config_cap",
+            "observed_drawdown_above_target",
+            "bootstrap_p95_drawdown_above_target"
+          ]
+        },
+        {
+          "bankroll": 1000.0,
+          "order_notional": 50.0,
+          "stake_fraction": 0.05,
+          "total_pnl_fraction": 0.7423705658420563,
+          "observed_max_drawdown_fraction": 0.47574285479390915,
+          "market_bootstrap_p95_drawdown_fraction": 0.6244937362323759,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": false,
+          "risk_reasons": [
+            "stake_fraction_above_config_cap",
+            "observed_drawdown_above_target",
+            "bootstrap_p95_drawdown_above_target"
+          ]
+        },
+        {
+          "bankroll": 2000.0,
+          "order_notional": 50.0,
+          "stake_fraction": 0.025,
+          "total_pnl_fraction": 0.37118528292102815,
+          "observed_max_drawdown_fraction": 0.23787142739695458,
+          "market_bootstrap_p95_drawdown_fraction": 0.31224686811618796,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": false,
+          "risk_reasons": [
+            "stake_fraction_above_config_cap",
+            "observed_drawdown_above_target",
+            "bootstrap_p95_drawdown_above_target"
+          ]
+        },
+        {
+          "bankroll": 5000.0,
+          "order_notional": 50.0,
+          "stake_fraction": 0.01,
+          "total_pnl_fraction": 0.14847411316841125,
+          "observed_max_drawdown_fraction": 0.09514857095878183,
+          "market_bootstrap_p95_drawdown_fraction": 0.12489874724647518,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": false,
+          "risk_reasons": [
+            "stake_fraction_above_config_cap",
+            "observed_drawdown_above_target",
+            "bootstrap_p95_drawdown_above_target"
+          ]
+        },
+        {
+          "bankroll": 10000.0,
+          "order_notional": 50.0,
+          "stake_fraction": 0.005,
+          "total_pnl_fraction": 0.07423705658420562,
+          "observed_max_drawdown_fraction": 0.04757428547939092,
+          "market_bootstrap_p95_drawdown_fraction": 0.06244937362323759,
+          "worst_day_loss_fraction": 0.0,
+          "passes_paper_risk_contract": false,
+          "risk_reasons": [
+            "stake_fraction_above_config_cap",
+            "bootstrap_p95_drawdown_above_target"
+          ]
+        }
+      ],
+      "days": [
+        {
+          "test_date": "2026-06-06 00:00:00",
+          "signals": 72,
+          "fills": 54,
+          "planned_cost": 3600.0,
+          "filled_cost": 2700.0,
+          "pnl_dollars": 564.2518975516937,
+          "roi_on_planned_cost": 0.1567366382088038
+        },
+        {
+          "test_date": "2026-06-07 00:00:00",
+          "signals": 86,
+          "fills": 49,
+          "planned_cost": 4300.0,
+          "filled_cost": 2450.0,
+          "pnl_dollars": 178.11866829036262,
+          "roi_on_planned_cost": 0.041422946114037816
+        }
+      ]
+    }
+  ],
+  "runtime_contract": {
+    "use_for_live_sizing": false,
+    "use_for_paper_sizing": true,
+    "paper_sizing_note": "Use this to choose paper stake size and drawdown alerts. Do not enable live size from this artifact while the promotion gate is paper-only."
+  },
+  "interpretation": "order_25_2s_2c_risk_adjusted bankroll stress keeps the configured 25 USD paper stake diagnostic-only. At the configured stake, observed replay ROI is 11.65% with 256.34 USD max drawdown across 158 selected signals."
+}
