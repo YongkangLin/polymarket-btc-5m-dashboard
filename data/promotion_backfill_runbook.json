@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-10T18:35:44.222731-07:00",
+  "generated_at": "2026-06-10T18:47:42.336573-07:00",
   "promotion_data_plan": "docs/data/promotion_data_plan.json",
   "download_plan": "reports/btc_5m_promotion_data_download_plan.csv",
   "execution_status": "blocked",
@@ -139,6 +139,7 @@
     "docs/data/model_diagnostics_promotion_data.json",
     "docs/data/model_promotion_gate_promotion_data.json",
     "docs/data/selected_policy_route_walkforward_promotion_data.json",
+    "docs/data/selected_policy_decision_table_promotion_data.json",
     "docs/data/paper_trading_config_promotion_data.json",
     "docs/data/promotion_backfill_acceptance.json"
   ],
