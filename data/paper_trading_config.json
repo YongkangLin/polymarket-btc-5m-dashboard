@@ -1,6 +1,6 @@
 {
   "config_version": 1,
-  "generated_at": "2026-06-10T19:51:43.632973-07:00",
+  "generated_at": "2026-06-10T20:00:20.934116-07:00",
   "sources": {
     "model_diagnostics": "docs/data/model_diagnostics.json",
     "promotion_gate": "docs/data/model_promotion_gate.json",
@@ -14,6 +14,7 @@
     "bankroll_stress": "docs/data/selected_policy_bankroll_stress.json",
     "edge_uncertainty": "docs/data/selected_policy_edge_uncertainty.json",
     "paper_stake_selector": "docs/data/selected_policy_paper_stake_selector.json",
+    "adaptive_sizing": "docs/data/selected_policy_adaptive_sizing.json",
     "signal_detector_validation": "docs/data/paper_signal_detector_validation.json",
     "signal_universe": "docs/data/config_signal_universe.json"
   },
@@ -1240,6 +1241,87 @@
         "use_for_paper_sizing": true,
         "default_when_bankroll_unknown": "do_not_trade",
         "diagnostic_note": "This selector chooses paper order size only from tested order sizes that pass both bankroll risk constraints and posterior edge thresholds. It is not a live-sizing approval."
+      }
+    },
+    "selected_policy_adaptive_sizing": {
+      "status": "paper_sizing_diagnostic_only",
+      "path": "docs/data/selected_policy_adaptive_sizing.json",
+      "input_summary": {
+        "clean_selected_signals": 158,
+        "available_order_sizes": [
+          5.0,
+          10.0,
+          25.0,
+          50.0
+        ],
+        "depth_haircut": 0.5,
+        "bootstrap_iterations": 5000
+      },
+      "best_practical_signal_depth_capped": {
+        "signals": 158,
+        "attempted_orders": 158,
+        "fills": 117,
+        "skip_count": 0,
+        "fill_rate_on_signals": 0.740506329113924,
+        "fill_rate_on_attempts": 0.740506329113924,
+        "avg_order_notional_on_attempts": 25.0,
+        "planned_cost": 3950.0,
+        "filled_cost": 2925.0,
+        "pnl_dollars": 460.1782257312426,
+        "roi_on_planned_cost": 0.11650081664082092,
+        "roi_on_filled_cost": 0.15732588913888637,
+        "max_drawdown_dollars": 256.33753501400565,
+        "max_drawdown_planned_roi": 0.06489557848455839,
+        "bootstrap": {
+          "roi_on_planned_cost": {
+            "p05": 0.009451493596758896,
+            "p50": 0.11607691219108068,
+            "p95": 0.22333376803329702
+          },
+          "max_drawdown_dollars": {
+            "p50": 161.97889250846282,
+            "p95": 315.08957883179147
+          }
+        },
+        "days": [
+          {
+            "test_date": "2026-06-06",
+            "signals": 72,
+            "attempted_orders": 72,
+            "fills": 57,
+            "planned_cost": 1800.0,
+            "filled_cost": 1425.0,
+            "pnl_dollars": 351.35671800661606,
+            "roi_on_planned_cost": 0.19519817667034225
+          },
+          {
+            "test_date": "2026-06-07",
+            "signals": 86,
+            "attempted_orders": 86,
+            "fills": 60,
+            "planned_cost": 2150.0,
+            "filled_cost": 1500.0,
+            "pnl_dollars": 108.82150772462649,
+            "roi_on_planned_cost": 0.050614654755640226
+          }
+        ],
+        "strategy_id": "signal_depth_capped",
+        "strategy_label": "Pre-signal depth capped",
+        "selector_cap": 25.0,
+        "bankroll": 10000.0,
+        "lift_vs_fixed_selector": {
+          "attempted_orders_delta": 0.0,
+          "fills_delta": 0.0,
+          "pnl_delta": 0.0,
+          "planned_roi_delta": 0.0,
+          "drawdown_delta": 0.0
+        }
+      },
+      "runtime_contract": {
+        "use_for_live_sizing": false,
+        "use_for_paper_sizing": false,
+        "safe_to_log_in_paper": true,
+        "paper_logging_note": "Log the signal-depth-capped recommendation beside the fixed stake. Do not change order size until this diagnostic is validated on later clean 5-minute markets."
       }
     },
     "stop_if_live_gate_fails": true,

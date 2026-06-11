@@ -1,0 +1,1179 @@
+{
+  "config_version": 1,
+  "generated_at": "2026-06-10T19:59:11.135510-07:00",
+  "sources": {
+    "bankroll_rows": "reports/btc_5m_selected_policy_bankroll_stress.csv",
+    "stake_selector": "docs/data/selected_policy_paper_stake_selector.json"
+  },
+  "policy_name": "order_25_2s_2c_risk_adjusted",
+  "status": "paper_sizing_diagnostic_only",
+  "status_reasons": [
+    "adaptive_sizing_not_standalone_live_approval",
+    "latency_capacity_oracle_is_forward_looking_upper_bound"
+  ],
+  "input_summary": {
+    "clean_selected_signals": 158,
+    "available_order_sizes": [
+      5.0,
+      10.0,
+      25.0,
+      50.0
+    ],
+    "depth_haircut": 0.5,
+    "bootstrap_iterations": 5000
+  },
+  "strategy_contract": {
+    "fixed_selector": "Submit the stake selector order size on every selected signal.",
+    "signal_depth_capped": "Before the latency wait, submit the largest tested order at or below the stake selector cap and at or below signal ask top-5 depth notional times the configured haircut.",
+    "latency_capacity_oracle": "Forward-looking upper bound: choose the largest tested order that the future latency book fully fills. Use this only to estimate how much fixed-size fill loss is caused by sizing."
+  },
+  "bankroll_summaries": [
+    {
+      "bankroll": 250.0,
+      "selector_status": "paper_trade_disabled_for_bankroll",
+      "selector_cap": 0.0,
+      "strategies": [
+        {
+          "signals": 158,
+          "attempted_orders": 0,
+          "fills": 0,
+          "skip_count": 158,
+          "fill_rate_on_signals": 0.0,
+          "fill_rate_on_attempts": null,
+          "avg_order_notional_on_attempts": null,
+          "planned_cost": 0.0,
+          "filled_cost": 0.0,
+          "pnl_dollars": 0.0,
+          "roi_on_planned_cost": null,
+          "roi_on_filled_cost": null,
+          "max_drawdown_dollars": 0.0,
+          "max_drawdown_planned_roi": null,
+          "bootstrap": {
+            "roi_on_planned_cost": {
+              "p05": null,
+              "p50": null,
+              "p95": null
+            },
+            "max_drawdown_dollars": {
+              "p50": 0.0,
+              "p95": 0.0
+            }
+          },
+          "days": [
+            {
+              "test_date": "2026-06-06",
+              "signals": 72,
+              "attempted_orders": 0,
+              "fills": 0,
+              "planned_cost": 0.0,
+              "filled_cost": 0.0,
+              "pnl_dollars": 0.0,
+              "roi_on_planned_cost": null
+            },
+            {
+              "test_date": "2026-06-07",
+              "signals": 86,
+              "attempted_orders": 0,
+              "fills": 0,
+              "planned_cost": 0.0,
+              "filled_cost": 0.0,
+              "pnl_dollars": 0.0,
+              "roi_on_planned_cost": null
+            }
+          ],
+          "strategy_id": "fixed_selector",
+          "strategy_label": "Fixed stake selector",
+          "selector_cap": 0.0,
+          "bankroll": 250.0
+        },
+        {
+          "signals": 158,
+          "attempted_orders": 0,
+          "fills": 0,
+          "skip_count": 158,
+          "fill_rate_on_signals": 0.0,
+          "fill_rate_on_attempts": null,
+          "avg_order_notional_on_attempts": null,
+          "planned_cost": 0.0,
+          "filled_cost": 0.0,
+          "pnl_dollars": 0.0,
+          "roi_on_planned_cost": null,
+          "roi_on_filled_cost": null,
+          "max_drawdown_dollars": 0.0,
+          "max_drawdown_planned_roi": null,
+          "bootstrap": {
+            "roi_on_planned_cost": {
+              "p05": null,
+              "p50": null,
+              "p95": null
+            },
+            "max_drawdown_dollars": {
+              "p50": 0.0,
+              "p95": 0.0
+            }
+          },
+          "days": [
+            {
+              "test_date": "2026-06-06",
+              "signals": 72,
+              "attempted_orders": 0,
+              "fills": 0,
+              "planned_cost": 0.0,
+              "filled_cost": 0.0,
+              "pnl_dollars": 0.0,
+              "roi_on_planned_cost": null
+            },
+            {
+              "test_date": "2026-06-07",
+              "signals": 86,
+              "attempted_orders": 0,
+              "fills": 0,
+              "planned_cost": 0.0,
+              "filled_cost": 0.0,
+              "pnl_dollars": 0.0,
+              "roi_on_planned_cost": null
+            }
+          ],
+          "strategy_id": "signal_depth_capped",
+          "strategy_label": "Pre-signal depth capped",
+          "selector_cap": 0.0,
+          "bankroll": 250.0,
+          "lift_vs_fixed_selector": {
+            "attempted_orders_delta": 0.0,
+            "fills_delta": 0.0,
+            "pnl_delta": 0.0,
+            "planned_roi_delta": null,
+            "drawdown_delta": 0.0
+          }
+        },
+        {
+          "signals": 158,
+          "attempted_orders": 0,
+          "fills": 0,
+          "skip_count": 158,
+          "fill_rate_on_signals": 0.0,
+          "fill_rate_on_attempts": null,
+          "avg_order_notional_on_attempts": null,
+          "planned_cost": 0.0,
+          "filled_cost": 0.0,
+          "pnl_dollars": 0.0,
+          "roi_on_planned_cost": null,
+          "roi_on_filled_cost": null,
+          "max_drawdown_dollars": 0.0,
+          "max_drawdown_planned_roi": null,
+          "bootstrap": {
+            "roi_on_planned_cost": {
+              "p05": null,
+              "p50": null,
+              "p95": null
+            },
+            "max_drawdown_dollars": {
+              "p50": 0.0,
+              "p95": 0.0
+            }
+          },
+          "days": [
+            {
+              "test_date": "2026-06-06",
+              "signals": 72,
+              "attempted_orders": 0,
+              "fills": 0,
+              "planned_cost": 0.0,
+              "filled_cost": 0.0,
+              "pnl_dollars": 0.0,
+              "roi_on_planned_cost": null
+            },
+            {
+              "test_date": "2026-06-07",
+              "signals": 86,
+              "attempted_orders": 0,
+              "fills": 0,
+              "planned_cost": 0.0,
+              "filled_cost": 0.0,
+              "pnl_dollars": 0.0,
+              "roi_on_planned_cost": null
+            }
+          ],
+          "strategy_id": "latency_capacity_oracle",
+          "strategy_label": "Latency capacity oracle",
+          "selector_cap": 0.0,
+          "bankroll": 250.0,
+          "lift_vs_fixed_selector": {
+            "attempted_orders_delta": 0.0,
+            "fills_delta": 0.0,
+            "pnl_delta": 0.0,
+            "planned_roi_delta": null,
+            "drawdown_delta": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "bankroll": 500.0,
+      "selector_status": "paper_trade_disabled_for_bankroll",
+      "selector_cap": 0.0,
+      "strategies": [
+        {
+          "signals": 158,
+          "attempted_orders": 0,
+          "fills": 0,
+          "skip_count": 158,
+          "fill_rate_on_signals": 0.0,
+          "fill_rate_on_attempts": null,
+          "avg_order_notional_on_attempts": null,
+          "planned_cost": 0.0,
+          "filled_cost": 0.0,
+          "pnl_dollars": 0.0,
+          "roi_on_planned_cost": null,
+          "roi_on_filled_cost": null,
+          "max_drawdown_dollars": 0.0,
+          "max_drawdown_planned_roi": null,
+          "bootstrap": {
+            "roi_on_planned_cost": {
+              "p05": null,
+              "p50": null,
+              "p95": null
+            },
+            "max_drawdown_dollars": {
+              "p50": 0.0,
+              "p95": 0.0
+            }
+          },
+          "days": [
+            {
+              "test_date": "2026-06-06",
+              "signals": 72,
+              "attempted_orders": 0,
+              "fills": 0,
+              "planned_cost": 0.0,
+              "filled_cost": 0.0,
+              "pnl_dollars": 0.0,
+              "roi_on_planned_cost": null
+            },
+            {
+              "test_date": "2026-06-07",
+              "signals": 86,
+              "attempted_orders": 0,
+              "fills": 0,
+              "planned_cost": 0.0,
+              "filled_cost": 0.0,
+              "pnl_dollars": 0.0,
+              "roi_on_planned_cost": null
+            }
+          ],
+          "strategy_id": "fixed_selector",
+          "strategy_label": "Fixed stake selector",
+          "selector_cap": 0.0,
+          "bankroll": 500.0
+        },
+        {
+          "signals": 158,
+          "attempted_orders": 0,
+          "fills": 0,
+          "skip_count": 158,
+          "fill_rate_on_signals": 0.0,
+          "fill_rate_on_attempts": null,
+          "avg_order_notional_on_attempts": null,
+          "planned_cost": 0.0,
+          "filled_cost": 0.0,
+          "pnl_dollars": 0.0,
+          "roi_on_planned_cost": null,
+          "roi_on_filled_cost": null,
+          "max_drawdown_dollars": 0.0,
+          "max_drawdown_planned_roi": null,
+          "bootstrap": {
+            "roi_on_planned_cost": {
+              "p05": null,
+              "p50": null,
+              "p95": null
+            },
+            "max_drawdown_dollars": {
+              "p50": 0.0,
+              "p95": 0.0
+            }
+          },
+          "days": [
+            {
+              "test_date": "2026-06-06",
+              "signals": 72,
+              "attempted_orders": 0,
+              "fills": 0,
+              "planned_cost": 0.0,
+              "filled_cost": 0.0,
+              "pnl_dollars": 0.0,
+              "roi_on_planned_cost": null
+            },
+            {
+              "test_date": "2026-06-07",
+              "signals": 86,
+              "attempted_orders": 0,
+              "fills": 0,
+              "planned_cost": 0.0,
+              "filled_cost": 0.0,
+              "pnl_dollars": 0.0,
+              "roi_on_planned_cost": null
+            }
+          ],
+          "strategy_id": "signal_depth_capped",
+          "strategy_label": "Pre-signal depth capped",
+          "selector_cap": 0.0,
+          "bankroll": 500.0,
+          "lift_vs_fixed_selector": {
+            "attempted_orders_delta": 0.0,
+            "fills_delta": 0.0,
+            "pnl_delta": 0.0,
+            "planned_roi_delta": null,
+            "drawdown_delta": 0.0
+          }
+        },
+        {
+          "signals": 158,
+          "attempted_orders": 0,
+          "fills": 0,
+          "skip_count": 158,
+          "fill_rate_on_signals": 0.0,
+          "fill_rate_on_attempts": null,
+          "avg_order_notional_on_attempts": null,
+          "planned_cost": 0.0,
+          "filled_cost": 0.0,
+          "pnl_dollars": 0.0,
+          "roi_on_planned_cost": null,
+          "roi_on_filled_cost": null,
+          "max_drawdown_dollars": 0.0,
+          "max_drawdown_planned_roi": null,
+          "bootstrap": {
+            "roi_on_planned_cost": {
+              "p05": null,
+              "p50": null,
+              "p95": null
+            },
+            "max_drawdown_dollars": {
+              "p50": 0.0,
+              "p95": 0.0
+            }
+          },
+          "days": [
+            {
+              "test_date": "2026-06-06",
+              "signals": 72,
+              "attempted_orders": 0,
+              "fills": 0,
+              "planned_cost": 0.0,
+              "filled_cost": 0.0,
+              "pnl_dollars": 0.0,
+              "roi_on_planned_cost": null
+            },
+            {
+              "test_date": "2026-06-07",
+              "signals": 86,
+              "attempted_orders": 0,
+              "fills": 0,
+              "planned_cost": 0.0,
+              "filled_cost": 0.0,
+              "pnl_dollars": 0.0,
+              "roi_on_planned_cost": null
+            }
+          ],
+          "strategy_id": "latency_capacity_oracle",
+          "strategy_label": "Latency capacity oracle",
+          "selector_cap": 0.0,
+          "bankroll": 500.0,
+          "lift_vs_fixed_selector": {
+            "attempted_orders_delta": 0.0,
+            "fills_delta": 0.0,
+            "pnl_delta": 0.0,
+            "planned_roi_delta": null,
+            "drawdown_delta": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "bankroll": 1000.0,
+      "selector_status": "paper_trade_disabled_for_bankroll",
+      "selector_cap": 0.0,
+      "strategies": [
+        {
+          "signals": 158,
+          "attempted_orders": 0,
+          "fills": 0,
+          "skip_count": 158,
+          "fill_rate_on_signals": 0.0,
+          "fill_rate_on_attempts": null,
+          "avg_order_notional_on_attempts": null,
+          "planned_cost": 0.0,
+          "filled_cost": 0.0,
+          "pnl_dollars": 0.0,
+          "roi_on_planned_cost": null,
+          "roi_on_filled_cost": null,
+          "max_drawdown_dollars": 0.0,
+          "max_drawdown_planned_roi": null,
+          "bootstrap": {
+            "roi_on_planned_cost": {
+              "p05": null,
+              "p50": null,
+              "p95": null
+            },
+            "max_drawdown_dollars": {
+              "p50": 0.0,
+              "p95": 0.0
+            }
+          },
+          "days": [
+            {
+              "test_date": "2026-06-06",
+              "signals": 72,
+              "attempted_orders": 0,
+              "fills": 0,
+              "planned_cost": 0.0,
+              "filled_cost": 0.0,
+              "pnl_dollars": 0.0,
+              "roi_on_planned_cost": null
+            },
+            {
+              "test_date": "2026-06-07",
+              "signals": 86,
+              "attempted_orders": 0,
+              "fills": 0,
+              "planned_cost": 0.0,
+              "filled_cost": 0.0,
+              "pnl_dollars": 0.0,
+              "roi_on_planned_cost": null
+            }
+          ],
+          "strategy_id": "fixed_selector",
+          "strategy_label": "Fixed stake selector",
+          "selector_cap": 0.0,
+          "bankroll": 1000.0
+        },
+        {
+          "signals": 158,
+          "attempted_orders": 0,
+          "fills": 0,
+          "skip_count": 158,
+          "fill_rate_on_signals": 0.0,
+          "fill_rate_on_attempts": null,
+          "avg_order_notional_on_attempts": null,
+          "planned_cost": 0.0,
+          "filled_cost": 0.0,
+          "pnl_dollars": 0.0,
+          "roi_on_planned_cost": null,
+          "roi_on_filled_cost": null,
+          "max_drawdown_dollars": 0.0,
+          "max_drawdown_planned_roi": null,
+          "bootstrap": {
+            "roi_on_planned_cost": {
+              "p05": null,
+              "p50": null,
+              "p95": null
+            },
+            "max_drawdown_dollars": {
+              "p50": 0.0,
+              "p95": 0.0
+            }
+          },
+          "days": [
+            {
+              "test_date": "2026-06-06",
+              "signals": 72,
+              "attempted_orders": 0,
+              "fills": 0,
+              "planned_cost": 0.0,
+              "filled_cost": 0.0,
+              "pnl_dollars": 0.0,
+              "roi_on_planned_cost": null
+            },
+            {
+              "test_date": "2026-06-07",
+              "signals": 86,
+              "attempted_orders": 0,
+              "fills": 0,
+              "planned_cost": 0.0,
+              "filled_cost": 0.0,
+              "pnl_dollars": 0.0,
+              "roi_on_planned_cost": null
+            }
+          ],
+          "strategy_id": "signal_depth_capped",
+          "strategy_label": "Pre-signal depth capped",
+          "selector_cap": 0.0,
+          "bankroll": 1000.0,
+          "lift_vs_fixed_selector": {
+            "attempted_orders_delta": 0.0,
+            "fills_delta": 0.0,
+            "pnl_delta": 0.0,
+            "planned_roi_delta": null,
+            "drawdown_delta": 0.0
+          }
+        },
+        {
+          "signals": 158,
+          "attempted_orders": 0,
+          "fills": 0,
+          "skip_count": 158,
+          "fill_rate_on_signals": 0.0,
+          "fill_rate_on_attempts": null,
+          "avg_order_notional_on_attempts": null,
+          "planned_cost": 0.0,
+          "filled_cost": 0.0,
+          "pnl_dollars": 0.0,
+          "roi_on_planned_cost": null,
+          "roi_on_filled_cost": null,
+          "max_drawdown_dollars": 0.0,
+          "max_drawdown_planned_roi": null,
+          "bootstrap": {
+            "roi_on_planned_cost": {
+              "p05": null,
+              "p50": null,
+              "p95": null
+            },
+            "max_drawdown_dollars": {
+              "p50": 0.0,
+              "p95": 0.0
+            }
+          },
+          "days": [
+            {
+              "test_date": "2026-06-06",
+              "signals": 72,
+              "attempted_orders": 0,
+              "fills": 0,
+              "planned_cost": 0.0,
+              "filled_cost": 0.0,
+              "pnl_dollars": 0.0,
+              "roi_on_planned_cost": null
+            },
+            {
+              "test_date": "2026-06-07",
+              "signals": 86,
+              "attempted_orders": 0,
+              "fills": 0,
+              "planned_cost": 0.0,
+              "filled_cost": 0.0,
+              "pnl_dollars": 0.0,
+              "roi_on_planned_cost": null
+            }
+          ],
+          "strategy_id": "latency_capacity_oracle",
+          "strategy_label": "Latency capacity oracle",
+          "selector_cap": 0.0,
+          "bankroll": 1000.0,
+          "lift_vs_fixed_selector": {
+            "attempted_orders_delta": 0.0,
+            "fills_delta": 0.0,
+            "pnl_delta": 0.0,
+            "planned_roi_delta": null,
+            "drawdown_delta": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "bankroll": 2000.0,
+      "selector_status": "paper_order_selected",
+      "selector_cap": 5.0,
+      "strategies": [
+        {
+          "signals": 158,
+          "attempted_orders": 158,
+          "fills": 131,
+          "skip_count": 0,
+          "fill_rate_on_signals": 0.8291139240506329,
+          "fill_rate_on_attempts": 0.8291139240506329,
+          "avg_order_notional_on_attempts": 5.0,
+          "planned_cost": 790.0,
+          "filled_cost": 655.0,
+          "pnl_dollars": 97.90734031982579,
+          "roi_on_planned_cost": 0.12393334217699467,
+          "roi_on_filled_cost": 0.14947685545011571,
+          "max_drawdown_dollars": 61.267507002801125,
+          "max_drawdown_planned_roi": 0.07755380633265965,
+          "bootstrap": {
+            "roi_on_planned_cost": {
+              "p05": 0.011563007719733523,
+              "p50": 0.12436618300466194,
+              "p95": 0.23841626271526506
+            },
+            "max_drawdown_dollars": {
+              "p50": 35.19607843137254,
+              "p95": 65.18039038684519
+            }
+          },
+          "days": [
+            {
+              "test_date": "2026-06-06",
+              "signals": 72,
+              "attempted_orders": 72,
+              "fills": 61,
+              "planned_cost": 360.0,
+              "filled_cost": 305.0,
+              "pnl_dollars": 80.10731645200195,
+              "roi_on_planned_cost": 0.2225203234777832
+            },
+            {
+              "test_date": "2026-06-07",
+              "signals": 86,
+              "attempted_orders": 86,
+              "fills": 70,
+              "planned_cost": 430.0,
+              "filled_cost": 350.0,
+              "pnl_dollars": 17.80002386782384,
+              "roi_on_planned_cost": 0.04139540434377637
+            }
+          ],
+          "strategy_id": "fixed_selector",
+          "strategy_label": "Fixed stake selector",
+          "selector_cap": 5.0,
+          "bankroll": 2000.0
+        },
+        {
+          "signals": 158,
+          "attempted_orders": 158,
+          "fills": 131,
+          "skip_count": 0,
+          "fill_rate_on_signals": 0.8291139240506329,
+          "fill_rate_on_attempts": 0.8291139240506329,
+          "avg_order_notional_on_attempts": 5.0,
+          "planned_cost": 790.0,
+          "filled_cost": 655.0,
+          "pnl_dollars": 97.90734031982579,
+          "roi_on_planned_cost": 0.12393334217699467,
+          "roi_on_filled_cost": 0.14947685545011571,
+          "max_drawdown_dollars": 61.267507002801125,
+          "max_drawdown_planned_roi": 0.07755380633265965,
+          "bootstrap": {
+            "roi_on_planned_cost": {
+              "p05": 0.010341116061043964,
+              "p50": 0.12454367790857238,
+              "p95": 0.23839034001160347
+            },
+            "max_drawdown_dollars": {
+              "p50": 34.61711209165438,
+              "p95": 64.93434787056819
+            }
+          },
+          "days": [
+            {
+              "test_date": "2026-06-06",
+              "signals": 72,
+              "attempted_orders": 72,
+              "fills": 61,
+              "planned_cost": 360.0,
+              "filled_cost": 305.0,
+              "pnl_dollars": 80.10731645200195,
+              "roi_on_planned_cost": 0.2225203234777832
+            },
+            {
+              "test_date": "2026-06-07",
+              "signals": 86,
+              "attempted_orders": 86,
+              "fills": 70,
+              "planned_cost": 430.0,
+              "filled_cost": 350.0,
+              "pnl_dollars": 17.80002386782384,
+              "roi_on_planned_cost": 0.04139540434377637
+            }
+          ],
+          "strategy_id": "signal_depth_capped",
+          "strategy_label": "Pre-signal depth capped",
+          "selector_cap": 5.0,
+          "bankroll": 2000.0,
+          "lift_vs_fixed_selector": {
+            "attempted_orders_delta": 0.0,
+            "fills_delta": 0.0,
+            "pnl_delta": 0.0,
+            "planned_roi_delta": 0.0,
+            "drawdown_delta": 0.0
+          }
+        },
+        {
+          "signals": 158,
+          "attempted_orders": 131,
+          "fills": 131,
+          "skip_count": 27,
+          "fill_rate_on_signals": 0.8291139240506329,
+          "fill_rate_on_attempts": 1.0,
+          "avg_order_notional_on_attempts": 5.0,
+          "planned_cost": 655.0,
+          "filled_cost": 655.0,
+          "pnl_dollars": 97.90734031982579,
+          "roi_on_planned_cost": 0.14947685545011571,
+          "roi_on_filled_cost": 0.14947685545011571,
+          "max_drawdown_dollars": 61.267507002801125,
+          "max_drawdown_planned_roi": 0.09353817863023073,
+          "bootstrap": {
+            "roi_on_planned_cost": {
+              "p05": 0.012135722514069185,
+              "p50": 0.1489503421267882,
+              "p95": 0.2879159129309303
+            },
+            "max_drawdown_dollars": {
+              "p50": 35.0,
+              "p95": 66.43119510014202
+            }
+          },
+          "days": [
+            {
+              "test_date": "2026-06-06",
+              "signals": 72,
+              "attempted_orders": 61,
+              "fills": 61,
+              "planned_cost": 305.0,
+              "filled_cost": 305.0,
+              "pnl_dollars": 80.10731645200195,
+              "roi_on_planned_cost": 0.26264693918689164
+            },
+            {
+              "test_date": "2026-06-07",
+              "signals": 86,
+              "attempted_orders": 70,
+              "fills": 70,
+              "planned_cost": 350.0,
+              "filled_cost": 350.0,
+              "pnl_dollars": 17.80002386782384,
+              "roi_on_planned_cost": 0.050857211050925256
+            }
+          ],
+          "strategy_id": "latency_capacity_oracle",
+          "strategy_label": "Latency capacity oracle",
+          "selector_cap": 5.0,
+          "bankroll": 2000.0,
+          "lift_vs_fixed_selector": {
+            "attempted_orders_delta": -27.0,
+            "fills_delta": 0.0,
+            "pnl_delta": 0.0,
+            "planned_roi_delta": 0.025543513273121043,
+            "drawdown_delta": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "bankroll": 5000.0,
+      "selector_status": "paper_order_selected",
+      "selector_cap": 10.0,
+      "strategies": [
+        {
+          "signals": 158,
+          "attempted_orders": 158,
+          "fills": 127,
+          "skip_count": 0,
+          "fill_rate_on_signals": 0.8037974683544303,
+          "fill_rate_on_attempts": 0.8037974683544303,
+          "avg_order_notional_on_attempts": 10.0,
+          "planned_cost": 1580.0,
+          "filled_cost": 1270.0,
+          "pnl_dollars": 179.19746836206195,
+          "roi_on_planned_cost": 0.1134161192164949,
+          "roi_on_filled_cost": 0.14110036878902515,
+          "max_drawdown_dollars": 122.53501400560225,
+          "max_drawdown_planned_roi": 0.07755380633265965,
+          "bootstrap": {
+            "roi_on_planned_cost": {
+              "p05": -0.0006659228827702228,
+              "p50": 0.11471666855471863,
+              "p95": 0.2234557397676466
+            },
+            "max_drawdown_dollars": {
+              "p50": 70.02967328577083,
+              "p95": 135.64831064879144
+            }
+          },
+          "days": [
+            {
+              "test_date": "2026-06-06",
+              "signals": 72,
+              "attempted_orders": 72,
+              "fills": 60,
+              "planned_cost": 720.0,
+              "filled_cost": 600.0,
+              "pnl_dollars": 150.98386367323468,
+              "roi_on_planned_cost": 0.2096998106572704
+            },
+            {
+              "test_date": "2026-06-07",
+              "signals": 86,
+              "attempted_orders": 86,
+              "fills": 67,
+              "planned_cost": 860.0,
+              "filled_cost": 670.0,
+              "pnl_dollars": 28.213604688827264,
+              "roi_on_planned_cost": 0.032806517080031704
+            }
+          ],
+          "strategy_id": "fixed_selector",
+          "strategy_label": "Fixed stake selector",
+          "selector_cap": 10.0,
+          "bankroll": 5000.0
+        },
+        {
+          "signals": 158,
+          "attempted_orders": 158,
+          "fills": 127,
+          "skip_count": 0,
+          "fill_rate_on_signals": 0.8037974683544303,
+          "fill_rate_on_attempts": 0.8037974683544303,
+          "avg_order_notional_on_attempts": 10.0,
+          "planned_cost": 1580.0,
+          "filled_cost": 1270.0,
+          "pnl_dollars": 179.19746836206195,
+          "roi_on_planned_cost": 0.1134161192164949,
+          "roi_on_filled_cost": 0.14110036878902515,
+          "max_drawdown_dollars": 122.53501400560225,
+          "max_drawdown_planned_roi": 0.07755380633265965,
+          "bootstrap": {
+            "roi_on_planned_cost": {
+              "p05": 0.00281193141110498,
+              "p50": 0.11321594283958927,
+              "p95": 0.22619669066756776
+            },
+            "max_drawdown_dollars": {
+              "p50": 70.78431372549016,
+              "p95": 133.79508625472351
+            }
+          },
+          "days": [
+            {
+              "test_date": "2026-06-06",
+              "signals": 72,
+              "attempted_orders": 72,
+              "fills": 60,
+              "planned_cost": 720.0,
+              "filled_cost": 600.0,
+              "pnl_dollars": 150.98386367323468,
+              "roi_on_planned_cost": 0.2096998106572704
+            },
+            {
+              "test_date": "2026-06-07",
+              "signals": 86,
+              "attempted_orders": 86,
+              "fills": 67,
+              "planned_cost": 860.0,
+              "filled_cost": 670.0,
+              "pnl_dollars": 28.213604688827264,
+              "roi_on_planned_cost": 0.032806517080031704
+            }
+          ],
+          "strategy_id": "signal_depth_capped",
+          "strategy_label": "Pre-signal depth capped",
+          "selector_cap": 10.0,
+          "bankroll": 5000.0,
+          "lift_vs_fixed_selector": {
+            "attempted_orders_delta": 0.0,
+            "fills_delta": 0.0,
+            "pnl_delta": 0.0,
+            "planned_roi_delta": 0.0,
+            "drawdown_delta": 0.0
+          }
+        },
+        {
+          "signals": 158,
+          "attempted_orders": 131,
+          "fills": 131,
+          "skip_count": 27,
+          "fill_rate_on_signals": 0.8291139240506329,
+          "fill_rate_on_attempts": 1.0,
+          "avg_order_notional_on_attempts": 9.84732824427481,
+          "planned_cost": 1290.0,
+          "filled_cost": 1290.0,
+          "pnl_dollars": 187.50607450085676,
+          "roi_on_planned_cost": 0.14535354612469517,
+          "roi_on_filled_cost": 0.14535354612469517,
+          "max_drawdown_dollars": 122.53501400560225,
+          "max_drawdown_planned_roi": 0.09498838295007926,
+          "bootstrap": {
+            "roi_on_planned_cost": {
+              "p05": 0.008665027214926948,
+              "p50": 0.1491386845005798,
+              "p95": 0.2853427074221976
+            },
+            "max_drawdown_dollars": {
+              "p50": 70.0,
+              "p95": 131.90612312157876
+            }
+          },
+          "days": [
+            {
+              "test_date": "2026-06-06",
+              "signals": 72,
+              "attempted_orders": 61,
+              "fills": 61,
+              "planned_cost": 605.0,
+              "filled_cost": 605.0,
+              "pnl_dollars": 155.5992482886193,
+              "roi_on_planned_cost": 0.2571888401464782
+            },
+            {
+              "test_date": "2026-06-07",
+              "signals": 86,
+              "attempted_orders": 70,
+              "fills": 70,
+              "planned_cost": 685.0,
+              "filled_cost": 685.0,
+              "pnl_dollars": 31.906826212237466,
+              "roi_on_planned_cost": 0.046579308339032795
+            }
+          ],
+          "strategy_id": "latency_capacity_oracle",
+          "strategy_label": "Latency capacity oracle",
+          "selector_cap": 10.0,
+          "bankroll": 5000.0,
+          "lift_vs_fixed_selector": {
+            "attempted_orders_delta": -27.0,
+            "fills_delta": 4.0,
+            "pnl_delta": 8.3086061387948,
+            "planned_roi_delta": 0.03193742690820027,
+            "drawdown_delta": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "bankroll": 10000.0,
+      "selector_status": "paper_order_selected",
+      "selector_cap": 25.0,
+      "strategies": [
+        {
+          "signals": 158,
+          "attempted_orders": 158,
+          "fills": 117,
+          "skip_count": 0,
+          "fill_rate_on_signals": 0.740506329113924,
+          "fill_rate_on_attempts": 0.740506329113924,
+          "avg_order_notional_on_attempts": 25.0,
+          "planned_cost": 3950.0,
+          "filled_cost": 2925.0,
+          "pnl_dollars": 460.1782257312426,
+          "roi_on_planned_cost": 0.11650081664082092,
+          "roi_on_filled_cost": 0.15732588913888637,
+          "max_drawdown_dollars": 256.33753501400565,
+          "max_drawdown_planned_roi": 0.06489557848455839,
+          "bootstrap": {
+            "roi_on_planned_cost": {
+              "p05": 0.007530903381875792,
+              "p50": 0.11642173542387288,
+              "p95": 0.22728474466651247
+            },
+            "max_drawdown_dollars": {
+              "p50": 160.71531679665122,
+              "p95": 311.0951591973671
+            }
+          },
+          "days": [
+            {
+              "test_date": "2026-06-06",
+              "signals": 72,
+              "attempted_orders": 72,
+              "fills": 57,
+              "planned_cost": 1800.0,
+              "filled_cost": 1425.0,
+              "pnl_dollars": 351.35671800661606,
+              "roi_on_planned_cost": 0.19519817667034225
+            },
+            {
+              "test_date": "2026-06-07",
+              "signals": 86,
+              "attempted_orders": 86,
+              "fills": 60,
+              "planned_cost": 2150.0,
+              "filled_cost": 1500.0,
+              "pnl_dollars": 108.82150772462649,
+              "roi_on_planned_cost": 0.050614654755640226
+            }
+          ],
+          "strategy_id": "fixed_selector",
+          "strategy_label": "Fixed stake selector",
+          "selector_cap": 25.0,
+          "bankroll": 10000.0
+        },
+        {
+          "signals": 158,
+          "attempted_orders": 158,
+          "fills": 117,
+          "skip_count": 0,
+          "fill_rate_on_signals": 0.740506329113924,
+          "fill_rate_on_attempts": 0.740506329113924,
+          "avg_order_notional_on_attempts": 25.0,
+          "planned_cost": 3950.0,
+          "filled_cost": 2925.0,
+          "pnl_dollars": 460.1782257312426,
+          "roi_on_planned_cost": 0.11650081664082092,
+          "roi_on_filled_cost": 0.15732588913888637,
+          "max_drawdown_dollars": 256.33753501400565,
+          "max_drawdown_planned_roi": 0.06489557848455839,
+          "bootstrap": {
+            "roi_on_planned_cost": {
+              "p05": 0.009451493596758896,
+              "p50": 0.11607691219108068,
+              "p95": 0.22333376803329702
+            },
+            "max_drawdown_dollars": {
+              "p50": 161.97889250846282,
+              "p95": 315.08957883179147
+            }
+          },
+          "days": [
+            {
+              "test_date": "2026-06-06",
+              "signals": 72,
+              "attempted_orders": 72,
+              "fills": 57,
+              "planned_cost": 1800.0,
+              "filled_cost": 1425.0,
+              "pnl_dollars": 351.35671800661606,
+              "roi_on_planned_cost": 0.19519817667034225
+            },
+            {
+              "test_date": "2026-06-07",
+              "signals": 86,
+              "attempted_orders": 86,
+              "fills": 60,
+              "planned_cost": 2150.0,
+              "filled_cost": 1500.0,
+              "pnl_dollars": 108.82150772462649,
+              "roi_on_planned_cost": 0.050614654755640226
+            }
+          ],
+          "strategy_id": "signal_depth_capped",
+          "strategy_label": "Pre-signal depth capped",
+          "selector_cap": 25.0,
+          "bankroll": 10000.0,
+          "lift_vs_fixed_selector": {
+            "attempted_orders_delta": 0.0,
+            "fills_delta": 0.0,
+            "pnl_delta": 0.0,
+            "planned_roi_delta": 0.0,
+            "drawdown_delta": 0.0
+          }
+        },
+        {
+          "signals": 158,
+          "attempted_orders": 131,
+          "fills": 131,
+          "skip_count": 27,
+          "fill_rate_on_signals": 0.8291139240506329,
+          "fill_rate_on_attempts": 1.0,
+          "avg_order_notional_on_attempts": 23.244274809160306,
+          "planned_cost": 3045.0,
+          "filled_cost": 3045.0,
+          "pnl_dollars": 463.6130099396023,
+          "roi_on_planned_cost": 0.15225386204913047,
+          "roi_on_filled_cost": 0.15225386204913047,
+          "max_drawdown_dollars": 276.3375350140056,
+          "max_drawdown_planned_roi": 0.090751243025946,
+          "bootstrap": {
+            "roi_on_planned_cost": {
+              "p05": 0.00945530194127219,
+              "p50": 0.1536408202193694,
+              "p95": 0.29519993892791085
+            },
+            "max_drawdown_dollars": {
+              "p50": 164.4971001383538,
+              "p95": 318.8497912222883
+            }
+          },
+          "days": [
+            {
+              "test_date": "2026-06-06",
+              "signals": 72,
+              "attempted_orders": 61,
+              "fills": 61,
+              "planned_cost": 1460.0,
+              "filled_cost": 1460.0,
+              "pnl_dollars": 366.41327909258894,
+              "roi_on_planned_cost": 0.2509679993784856
+            },
+            {
+              "test_date": "2026-06-07",
+              "signals": 86,
+              "attempted_orders": 70,
+              "fills": 70,
+              "planned_cost": 1585.0,
+              "filled_cost": 1585.0,
+              "pnl_dollars": 97.19973084701334,
+              "roi_on_planned_cost": 0.06132475132303681
+            }
+          ],
+          "strategy_id": "latency_capacity_oracle",
+          "strategy_label": "Latency capacity oracle",
+          "selector_cap": 25.0,
+          "bankroll": 10000.0,
+          "lift_vs_fixed_selector": {
+            "attempted_orders_delta": -27.0,
+            "fills_delta": 14.0,
+            "pnl_delta": 3.4347842083597016,
+            "planned_roi_delta": 0.03575304540830955,
+            "drawdown_delta": 19.999999999999943
+          }
+        }
+      ]
+    }
+  ],
+  "best_practical_signal_depth_capped": {
+    "signals": 158,
+    "attempted_orders": 158,
+    "fills": 117,
+    "skip_count": 0,
+    "fill_rate_on_signals": 0.740506329113924,
+    "fill_rate_on_attempts": 0.740506329113924,
+    "avg_order_notional_on_attempts": 25.0,
+    "planned_cost": 3950.0,
+    "filled_cost": 2925.0,
+    "pnl_dollars": 460.1782257312426,
+    "roi_on_planned_cost": 0.11650081664082092,
+    "roi_on_filled_cost": 0.15732588913888637,
+    "max_drawdown_dollars": 256.33753501400565,
+    "max_drawdown_planned_roi": 0.06489557848455839,
+    "bootstrap": {
+      "roi_on_planned_cost": {
+        "p05": 0.009451493596758896,
+        "p50": 0.11607691219108068,
+        "p95": 0.22333376803329702
+      },
+      "max_drawdown_dollars": {
+        "p50": 161.97889250846282,
+        "p95": 315.08957883179147
+      }
+    },
+    "days": [
+      {
+        "test_date": "2026-06-06",
+        "signals": 72,
+        "attempted_orders": 72,
+        "fills": 57,
+        "planned_cost": 1800.0,
+        "filled_cost": 1425.0,
+        "pnl_dollars": 351.35671800661606,
+        "roi_on_planned_cost": 0.19519817667034225
+      },
+      {
+        "test_date": "2026-06-07",
+        "signals": 86,
+        "attempted_orders": 86,
+        "fills": 60,
+        "planned_cost": 2150.0,
+        "filled_cost": 1500.0,
+        "pnl_dollars": 108.82150772462649,
+        "roi_on_planned_cost": 0.050614654755640226
+      }
+    ],
+    "strategy_id": "signal_depth_capped",
+    "strategy_label": "Pre-signal depth capped",
+    "selector_cap": 25.0,
+    "bankroll": 10000.0,
+    "lift_vs_fixed_selector": {
+      "attempted_orders_delta": 0.0,
+      "fills_delta": 0.0,
+      "pnl_delta": 0.0,
+      "planned_roi_delta": 0.0,
+      "drawdown_delta": 0.0
+    }
+  },
+  "runtime_contract": {
+    "use_for_live_sizing": false,
+    "use_for_paper_sizing": false,
+    "safe_to_log_in_paper": true,
+    "paper_logging_note": "Log the signal-depth-capped recommendation beside the fixed stake. Do not change order size until this diagnostic is validated on later clean 5-minute markets."
+  },
+  "interpretation": "Adaptive sizing is diagnostic-only. The practical variant uses pre-signal top-5 ask depth with a 50% haircut; the oracle variant shows the upper bound from future latency book capacity and is not executable."
+}
