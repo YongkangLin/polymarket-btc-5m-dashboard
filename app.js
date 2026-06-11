@@ -23,6 +23,17 @@ function signedBps(value) {
   return `${number > 0 ? "+" : ""}${fmt.format(number)} bps`;
 }
 
+function pct(value, digits = 1) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "--";
+  return `${(Number(value) * 100).toFixed(digits)}%`;
+}
+
+function signedPct(value, digits = 1) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "--";
+  const number = Number(value) * 100;
+  return `${number > 0 ? "+" : ""}${number.toFixed(digits)} pp`;
+}
+
 function marketLabel(row) {
   const when = row.window_start
     ? new Date(row.window_start).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
@@ -62,6 +73,41 @@ function renderMetrics(data) {
   byId("tradeStats").textContent = `${fmt.format(trades.markets || 0)} markets, ${money.format(trades.notional || 0)} notional`;
   byId("entryRows").textContent = fmt.format(fills.entry_rows || 0);
   byId("fillStats").textContent = `${money.format(fills.entry_notional || 0)} notional, ${fmt.format(fills.large_wallets || 0)} large wallets`;
+}
+
+function renderModelGate(model) {
+  const panel = byId("modelPanel");
+  if (!model) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+
+  const risk = model.taker_first_entry_policy_risk?.best_policy || {};
+  const rawWallet = model.taker_first_entry_policy_ev_overlay_wallet_flow?.best_policy || {};
+  const rawSummary = rawWallet.summary || {};
+  const calibrated = model.taker_ev_calibration_wallet_flow?.calibrated || {};
+  const calibratedBase = model.taker_ev_calibration?.calibrated || {};
+  const calibratedOverlay = model.taker_first_entry_policy_ev_overlay_wallet_flow_calibrated?.best_policy || {};
+  const calibratedOverlaySummary = calibratedOverlay.summary || {};
+
+  byId("modelStatus").textContent = "Paper only";
+  byId("selectedPolicy").textContent = risk.policy_name || "No selected policy";
+  byId("selectedPolicyStats").textContent = risk.signals
+    ? `${fmt.format(risk.signals)} signals, ${pct(risk.roi_on_planned_cost)} planned ROI, ${pct(risk.max_drawdown_planned_roi)} max drawdown`
+    : "Waiting for selected-policy replay";
+
+  byId("walletOverlay").textContent = rawWallet.policy_name || "No overlay lift";
+  byId("walletOverlayStats").textContent = rawSummary.selected_folds
+    ? `${pct(rawSummary.roi_on_planned_cost)} ROI, ${signedPct(rawSummary.roi_on_planned_cost - rawSummary.baseline_roi_on_planned_cost)} vs unfiltered, ${fmt.format(rawSummary.test_risk_gate_folds || 0)}/${fmt.format(rawSummary.selected_folds || 0)} risk-gated folds`
+    : "No sample-gated overlay fold";
+
+  const calibratedRobust = Number(calibrated.day_robust_threshold_count || 0);
+  const baseCalibratedRobust = Number(calibratedBase.day_robust_threshold_count || 0);
+  byId("calibratedEv").textContent = `${fmt.format(calibratedRobust + baseCalibratedRobust)} day-robust thresholds`;
+  byId("calibratedEvStats").textContent = calibratedOverlaySummary.selected_folds
+    ? `Selected replay: ${pct(calibratedOverlaySummary.roi_on_planned_cost)} ROI, ${signedPct(calibratedOverlaySummary.roi_on_planned_cost - calibratedOverlaySummary.baseline_roi_on_planned_cost)} vs unfiltered`
+    : "Calibration improved pooled buckets only; selected-policy replay did not improve";
 }
 
 function renderMarketSelect(data) {
@@ -202,9 +248,14 @@ function renderWallets(data) {
 }
 
 async function main() {
-  const response = await fetch("data/summary.json", { cache: "no-store" });
+  const [response, modelResponse] = await Promise.all([
+    fetch("data/summary.json", { cache: "no-store" }),
+    fetch("data/model_diagnostics.json", { cache: "no-store" }).catch(() => null),
+  ]);
   state.data = await response.json();
+  state.model = modelResponse?.ok ? await modelResponse.json() : null;
   renderMetrics(state.data);
+  renderModelGate(state.model);
   renderMarketSelect(state.data);
   renderEntryMap(state.data);
   renderWallets(state.data);

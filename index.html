@@ -48,6 +48,33 @@
         </article>
       </section>
 
+      <section class="panel model-panel" id="modelPanel" hidden>
+        <div class="panel-head">
+          <div>
+            <h2>Model Gate</h2>
+            <p>Current selected-policy and EV-filter status on clean 5-minute windows.</p>
+          </div>
+          <strong id="modelStatus" class="gate-status">--</strong>
+        </div>
+        <div class="gate-grid">
+          <div class="gate-row">
+            <span>Selected policy</span>
+            <strong id="selectedPolicy">--</strong>
+            <small id="selectedPolicyStats">--</small>
+          </div>
+          <div class="gate-row">
+            <span>Raw wallet EV overlay</span>
+            <strong id="walletOverlay">--</strong>
+            <small id="walletOverlayStats">--</small>
+          </div>
+          <div class="gate-row">
+            <span>Calibrated EV</span>
+            <strong id="calibratedEv">--</strong>
+            <small id="calibratedEvStats">--</small>
+          </div>
+        </div>
+      </section>
+
       <section class="panel">
         <div class="panel-head">
           <div>
@@ -100,6 +127,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=20260610-10"></script>
+    <script src="app.js?v=20260610-11"></script>
   </body>
 </html>
