@@ -1,0 +1,435 @@
+{
+  "config_version": 1,
+  "generated_at": "2026-06-10T19:46:49.403499-07:00",
+  "sources": {
+    "config": "docs/data/paper_trading_config.json",
+    "bankroll_rows": "reports/btc_5m_selected_policy_bankroll_stress.csv"
+  },
+  "policy_name": "order_25_2s_2c_risk_adjusted",
+  "status": "paper_diagnostic_only",
+  "status_reasons": [
+    "edge_uncertainty_not_standalone_live_approval",
+    "selected_forward_days_below_10",
+    "edge_uncertainty_has_too_few_days"
+  ],
+  "configured_order_notional": 25.0,
+  "configured_order_summary": {
+    "order_notional": 25.0,
+    "realized": {
+      "signals": 158,
+      "fills": 117,
+      "unfilled": 41,
+      "wins": 70,
+      "losses": 47,
+      "fill_rate": 0.740506329113924,
+      "observed_win_prob_filled": 0.5982905982905983,
+      "break_even_win_prob_from_fill_odds": 0.5119974465724367,
+      "observed_win_edge_vs_break_even": 0.08629315171816154,
+      "mean_inverse_fill_odds": 1.9531347406017214,
+      "avg_fill_ask": 0.5151282051282051,
+      "planned_cost": 3950.0,
+      "filled_cost": 2925.0,
+      "pnl_dollars": 460.1782257312426,
+      "roi_on_planned_cost": 0.11650081664082092,
+      "roi_on_filled_cost": 0.15732588913888637
+    },
+    "posterior": {
+      "prior": "independent_beta_1_1_fill_and_filled_win_probability",
+      "samples": 50000,
+      "fill_probability": {
+        "p05": 0.6785132946544852,
+        "p25": 0.7146009279164123,
+        "p50": 0.7383005949618084,
+        "p75": 0.761158011966752,
+        "p95": 0.7922148710326241
+      },
+      "filled_win_probability": {
+        "p05": 0.5223232795084838,
+        "p25": 0.566385316228593,
+        "p50": 0.5973457454216802,
+        "p75": 0.6273810213823188,
+        "p95": 0.6697632027327691
+      },
+      "filled_roi_on_cost": {
+        "p05": 0.020167743033043018,
+        "p25": 0.10622683769275693,
+        "p50": 0.16669672753371545,
+        "p75": 0.2253596684559982,
+        "p95": 0.3081377792340452
+      },
+      "planned_roi_on_cost": {
+        "p05": 0.014816930914051141,
+        "p25": 0.07795798021451339,
+        "p50": 0.12258439352005776,
+        "p75": 0.16616024795047327,
+        "p95": 0.2282780805219657
+      },
+      "probability_filled_win_prob_above_break_even": 0.96958,
+      "probability_planned_roi_positive": 0.96958,
+      "expected_planned_roi_mean": 0.12211309943575012,
+      "expected_filled_roi_mean": 0.16559482893099925
+    },
+    "days": [
+      {
+        "test_date": "2026-06-06",
+        "signals": 72,
+        "fills": 57,
+        "wins": 37,
+        "planned_cost": 1800.0,
+        "filled_cost": 1425.0,
+        "pnl_dollars": 351.35671800661606,
+        "roi_on_planned_cost": 0.19519817667034225,
+        "filled_win_rate": 0.6491228070175439
+      },
+      {
+        "test_date": "2026-06-07",
+        "signals": 86,
+        "fills": 60,
+        "wins": 33,
+        "planned_cost": 2150.0,
+        "filled_cost": 1500.0,
+        "pnl_dollars": 108.82150772462649,
+        "roi_on_planned_cost": 0.050614654755640226,
+        "filled_win_rate": 0.55
+      }
+    ],
+    "edge_confidence": "posterior_positive_lower_bound"
+  },
+  "order_summaries": [
+    {
+      "order_notional": 5.0,
+      "realized": {
+        "signals": 158,
+        "fills": 131,
+        "unfilled": 27,
+        "wins": 78,
+        "losses": 53,
+        "fill_rate": 0.8291139240506329,
+        "observed_win_prob_filled": 0.5954198473282443,
+        "break_even_win_prob_from_fill_odds": 0.5130563321638992,
+        "observed_win_edge_vs_break_even": 0.08236351516434504,
+        "mean_inverse_fill_odds": 1.949103709104098,
+        "avg_fill_ask": 0.5161832061068703,
+        "planned_cost": 790.0,
+        "filled_cost": 655.0,
+        "pnl_dollars": 97.90734031982579,
+        "roi_on_planned_cost": 0.12393334217699467,
+        "roi_on_filled_cost": 0.14947685545011571
+      },
+      "posterior": {
+        "prior": "independent_beta_1_1_fill_and_filled_win_probability",
+        "samples": 50000,
+        "fill_probability": {
+          "p05": 0.7732115021566814,
+          "p25": 0.8057285533690376,
+          "p50": 0.8266939834525853,
+          "p75": 0.8460092252998253,
+          "p95": 0.8721395717608459
+        },
+        "filled_win_probability": {
+          "p05": 0.5238941116765993,
+          "p25": 0.5653364676329469,
+          "p50": 0.5940108760545504,
+          "p75": 0.6226422801750644,
+          "p95": 0.66235415913156
+        },
+        "filled_roi_on_cost": {
+          "p05": 0.021123956246656177,
+          "p25": 0.10189940595518548,
+          "p50": 0.15778880176609889,
+          "p75": 0.213594377734251,
+          "p95": 0.29099694830384953
+        },
+        "planned_roi_on_cost": {
+          "p05": 0.017250037470450834,
+          "p25": 0.0839547699923758,
+          "p50": 0.13010216302898758,
+          "p75": 0.1763398920048849,
+          "p95": 0.2408877769232771
+        },
+        "probability_filled_win_prob_above_break_even": 0.97078,
+        "probability_planned_roi_positive": 0.97078,
+        "expected_planned_roi_mean": 0.12986501508230328,
+        "expected_filled_roi_mean": 0.1573896888081542
+      },
+      "days": [
+        {
+          "test_date": "2026-06-06",
+          "signals": 72,
+          "fills": 61,
+          "wins": 40,
+          "planned_cost": 360.0,
+          "filled_cost": 305.0,
+          "pnl_dollars": 80.10731645200195,
+          "roi_on_planned_cost": 0.2225203234777832,
+          "filled_win_rate": 0.6557377049180327
+        },
+        {
+          "test_date": "2026-06-07",
+          "signals": 86,
+          "fills": 70,
+          "wins": 38,
+          "planned_cost": 430.0,
+          "filled_cost": 350.0,
+          "pnl_dollars": 17.80002386782384,
+          "roi_on_planned_cost": 0.04139540434377637,
+          "filled_win_rate": 0.5428571428571428
+        }
+      ],
+      "edge_confidence": "posterior_positive_lower_bound"
+    },
+    {
+      "order_notional": 10.0,
+      "realized": {
+        "signals": 158,
+        "fills": 127,
+        "unfilled": 31,
+        "wins": 75,
+        "losses": 52,
+        "fill_rate": 0.8037974683544303,
+        "observed_win_prob_filled": 0.5905511811023622,
+        "break_even_win_prob_from_fill_odds": 0.5124011511247313,
+        "observed_win_edge_vs_break_even": 0.07815002997763087,
+        "mean_inverse_fill_odds": 1.9515959279267405,
+        "avg_fill_ask": 0.5155905511811024,
+        "planned_cost": 1580.0,
+        "filled_cost": 1270.0,
+        "pnl_dollars": 179.19746836206195,
+        "roi_on_planned_cost": 0.1134161192164949,
+        "roi_on_filled_cost": 0.14110036878902515
+      },
+      "posterior": {
+        "prior": "independent_beta_1_1_fill_and_filled_win_probability",
+        "samples": 50000,
+        "fill_probability": {
+          "p05": 0.7458528628228537,
+          "p25": 0.779493905927804,
+          "p50": 0.8012536871042857,
+          "p75": 0.8219272207759769,
+          "p95": 0.8496853620415893
+        },
+        "filled_win_probability": {
+          "p05": 0.5171406290445824,
+          "p25": 0.5602815149928227,
+          "p50": 0.5898961969195127,
+          "p75": 0.6187545957872018,
+          "p95": 0.6591070595698999
+        },
+        "filled_roi_on_cost": {
+          "p05": 0.009249545808879956,
+          "p25": 0.09344312315261788,
+          "p50": 0.15123901580759147,
+          "p75": 0.20755894952425924,
+          "p95": 0.28631065352438406
+        },
+        "planned_roi_on_cost": {
+          "p05": 0.007460838276061231,
+          "p25": 0.07470444640570001,
+          "p50": 0.12102164657076295,
+          "p75": 0.165817660786016,
+          "p95": 0.22955778085256723
+        },
+        "probability_filled_win_prob_above_break_even": 0.96018,
+        "probability_planned_roi_positive": 0.96018,
+        "expected_planned_roi_mean": 0.11987519690648203,
+        "expected_filled_roi_mean": 0.14983377555813543
+      },
+      "days": [
+        {
+          "test_date": "2026-06-06",
+          "signals": 72,
+          "fills": 60,
+          "wins": 39,
+          "planned_cost": 720.0,
+          "filled_cost": 600.0,
+          "pnl_dollars": 150.98386367323468,
+          "roi_on_planned_cost": 0.2096998106572704,
+          "filled_win_rate": 0.65
+        },
+        {
+          "test_date": "2026-06-07",
+          "signals": 86,
+          "fills": 67,
+          "wins": 36,
+          "planned_cost": 860.0,
+          "filled_cost": 670.0,
+          "pnl_dollars": 28.213604688827264,
+          "roi_on_planned_cost": 0.032806517080031704,
+          "filled_win_rate": 0.5373134328358209
+        }
+      ],
+      "edge_confidence": "posterior_positive_lower_bound"
+    },
+    {
+      "order_notional": 25.0,
+      "realized": {
+        "signals": 158,
+        "fills": 117,
+        "unfilled": 41,
+        "wins": 70,
+        "losses": 47,
+        "fill_rate": 0.740506329113924,
+        "observed_win_prob_filled": 0.5982905982905983,
+        "break_even_win_prob_from_fill_odds": 0.5119974465724367,
+        "observed_win_edge_vs_break_even": 0.08629315171816154,
+        "mean_inverse_fill_odds": 1.9531347406017214,
+        "avg_fill_ask": 0.5151282051282051,
+        "planned_cost": 3950.0,
+        "filled_cost": 2925.0,
+        "pnl_dollars": 460.1782257312426,
+        "roi_on_planned_cost": 0.11650081664082092,
+        "roi_on_filled_cost": 0.15732588913888637
+      },
+      "posterior": {
+        "prior": "independent_beta_1_1_fill_and_filled_win_probability",
+        "samples": 50000,
+        "fill_probability": {
+          "p05": 0.6785132946544852,
+          "p25": 0.7146009279164123,
+          "p50": 0.7383005949618084,
+          "p75": 0.761158011966752,
+          "p95": 0.7922148710326241
+        },
+        "filled_win_probability": {
+          "p05": 0.5223232795084838,
+          "p25": 0.566385316228593,
+          "p50": 0.5973457454216802,
+          "p75": 0.6273810213823188,
+          "p95": 0.6697632027327691
+        },
+        "filled_roi_on_cost": {
+          "p05": 0.020167743033043018,
+          "p25": 0.10622683769275693,
+          "p50": 0.16669672753371545,
+          "p75": 0.2253596684559982,
+          "p95": 0.3081377792340452
+        },
+        "planned_roi_on_cost": {
+          "p05": 0.014816930914051141,
+          "p25": 0.07795798021451339,
+          "p50": 0.12258439352005776,
+          "p75": 0.16616024795047327,
+          "p95": 0.2282780805219657
+        },
+        "probability_filled_win_prob_above_break_even": 0.96958,
+        "probability_planned_roi_positive": 0.96958,
+        "expected_planned_roi_mean": 0.12211309943575012,
+        "expected_filled_roi_mean": 0.16559482893099925
+      },
+      "days": [
+        {
+          "test_date": "2026-06-06",
+          "signals": 72,
+          "fills": 57,
+          "wins": 37,
+          "planned_cost": 1800.0,
+          "filled_cost": 1425.0,
+          "pnl_dollars": 351.35671800661606,
+          "roi_on_planned_cost": 0.19519817667034225,
+          "filled_win_rate": 0.6491228070175439
+        },
+        {
+          "test_date": "2026-06-07",
+          "signals": 86,
+          "fills": 60,
+          "wins": 33,
+          "planned_cost": 2150.0,
+          "filled_cost": 1500.0,
+          "pnl_dollars": 108.82150772462649,
+          "roi_on_planned_cost": 0.050614654755640226,
+          "filled_win_rate": 0.55
+        }
+      ],
+      "edge_confidence": "posterior_positive_lower_bound"
+    },
+    {
+      "order_notional": 50.0,
+      "realized": {
+        "signals": 158,
+        "fills": 103,
+        "unfilled": 55,
+        "wins": 61,
+        "losses": 42,
+        "fill_rate": 0.6518987341772152,
+        "observed_win_prob_filled": 0.5922330097087378,
+        "break_even_win_prob_from_fill_odds": 0.5115718562062626,
+        "observed_win_edge_vs_break_even": 0.08066115350247527,
+        "mean_inverse_fill_odds": 1.954759605846664,
+        "avg_fill_ask": 0.5150485436893205,
+        "planned_cost": 7900.0,
+        "filled_cost": 5150.0,
+        "pnl_dollars": 742.3705658420563,
+        "roi_on_planned_cost": 0.09397095770152611,
+        "roi_on_filled_cost": 0.14414962443535073
+      },
+      "posterior": {
+        "prior": "independent_beta_1_1_fill_and_filled_win_probability",
+        "samples": 50000,
+        "fill_probability": {
+          "p05": 0.5868687767072405,
+          "p25": 0.62522527834696,
+          "p50": 0.650741989462309,
+          "p75": 0.6760754687565746,
+          "p95": 0.7107938787776137
+        },
+        "filled_win_probability": {
+          "p05": 0.5111438605172849,
+          "p25": 0.5589711014531757,
+          "p50": 0.5912877395657916,
+          "p75": 0.6229415451669263,
+          "p95": 0.667301513233012
+        },
+        "filled_roi_on_cost": {
+          "p05": -0.0008366286842899256,
+          "p25": 0.09265412995628547,
+          "p50": 0.1558253887355917,
+          "p75": 0.21770096929601285,
+          "p95": 0.30441404298824515
+        },
+        "planned_roi_on_cost": {
+          "p05": -0.0005427499654522369,
+          "p25": 0.06004287220302816,
+          "p50": 0.10099604476212917,
+          "p75": 0.14158047625241627,
+          "p95": 0.1994791004293156
+        },
+        "probability_filled_win_prob_above_break_even": 0.94894,
+        "probability_planned_roi_positive": 0.94894,
+        "expected_planned_roi_mean": 0.10029882265407677,
+        "expected_filled_roi_mean": 0.15425384083194082
+      },
+      "days": [
+        {
+          "test_date": "2026-06-06",
+          "signals": 72,
+          "fills": 54,
+          "wins": 34,
+          "planned_cost": 3600.0,
+          "filled_cost": 2700.0,
+          "pnl_dollars": 564.2518975516937,
+          "roi_on_planned_cost": 0.1567366382088038,
+          "filled_win_rate": 0.6296296296296297
+        },
+        {
+          "test_date": "2026-06-07",
+          "signals": 86,
+          "fills": 49,
+          "wins": 27,
+          "planned_cost": 4300.0,
+          "filled_cost": 2450.0,
+          "pnl_dollars": 178.11866829036265,
+          "roi_on_planned_cost": 0.04142294611403782,
+          "filled_win_rate": 0.5510204081632653
+        }
+      ],
+      "edge_confidence": "posterior_positive_probability_only"
+    }
+  ],
+  "runtime_contract": {
+    "use_for_live_sizing": false,
+    "use_for_live_signal_filtering": false,
+    "use_for_paper_sizing_context": true,
+    "diagnostic_note": "Posterior estimates use simple independent beta priors for fill probability and filled-win probability, with actual observed fill odds held fixed. Treat this as edge uncertainty telemetry until more selected forward days are available."
+  },
+  "interpretation": "order_25_2s_2c_risk_adjusted configured order has 97.0% posterior probability of positive planned ROI, with p05 planned ROI 1.48%. Status remains paper diagnostic because only 2 selected forward day(s) exist."
+}
