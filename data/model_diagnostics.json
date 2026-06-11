@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-10T18:26:01.746109-07:00",
+  "generated_at": "2026-06-10T18:30:15.781584-07:00",
   "features": {
     "rows": 255549,
     "markets": 849,
@@ -4299,9 +4299,9 @@
         "passes_policy_walkforward": true
       },
       {
-        "policy_name": "order_10_2s_2c_risk_adjusted",
-        "description": "Fixed $10 order, 2s latency, 2c slippage cap; select by risk-adjusted prior score.",
-        "score_kind": "risk_adjusted",
+        "policy_name": "order_10_2s_2c_train_roi",
+        "description": "Fixed $10 order, 2s latency, 2c slippage cap; select by prior ROI.",
+        "score_kind": "train_roi",
         "order_notional_filter": 10.0,
         "latency_seconds_filter": 2,
         "max_slippage_filter": 0.02,
@@ -4324,9 +4324,9 @@
         "passes_policy_walkforward": true
       },
       {
-        "policy_name": "order_10_2s_2c_train_roi",
-        "description": "Fixed $10 order, 2s latency, 2c slippage cap; select by prior ROI.",
-        "score_kind": "train_roi",
+        "policy_name": "order_10_2s_2c_risk_adjusted",
+        "description": "Fixed $10 order, 2s latency, 2c slippage cap; select by risk-adjusted prior score.",
+        "score_kind": "risk_adjusted",
         "order_notional_filter": 10.0,
         "latency_seconds_filter": 2,
         "max_slippage_filter": 0.02,
@@ -5973,6 +5973,9 @@
     "replay": "reports/btc_5m_taker_first_entry_policy_replay.csv",
     "policy_name": "order_25_2s_2c_risk_adjusted",
     "score_kind": "risk_adjusted",
+    "router_mode": "taker_default",
+    "min_maker_prior_roi_lift": 0.02,
+    "min_maker_prior_score_lift": 0.0,
     "min_prior_days": 1,
     "min_prior_signals": 50,
     "min_prior_fills": 20,
@@ -5982,46 +5985,51 @@
       "always_taker_folds": 1,
       "router_signals": 86,
       "always_taker_signals": 86,
-      "router_fills": 71.0,
+      "router_fills": 60.0,
       "always_taker_fills": 60.0,
-      "router_fill_rate": 0.8255813953488372,
+      "router_fill_rate": 0.6976744186046512,
       "always_taker_fill_rate": 0.6976744186046512,
-      "router_pnl_dollars": -120.3665513411597,
+      "router_pnl_dollars": 108.82150772462649,
       "always_taker_pnl_dollars": 108.82150772462649,
-      "router_roi_on_planned_cost": -0.05598444248426033,
+      "router_roi_on_planned_cost": 0.050614654755640226,
       "always_taker_roi_on_planned_cost": 0.050614654755640226,
-      "roi_lift_vs_always_taker": -0.10659909723990055,
-      "positive_router_folds": 0,
+      "roi_lift_vs_always_taker": 0.0,
+      "positive_router_folds": 1,
       "positive_always_taker_folds": 1,
-      "last_selected_route_label": "Maker 1c below ask for 30s"
+      "last_selected_route_label": "Taker cross"
     },
     "folds": [
       {
         "test_date": "2026-06-07",
-        "selected_route_id": "maker_h30_discount_1c",
-        "selected_route_type": "maker",
-        "selected_route_label": "Maker 1c below ask for 30s",
-        "quote_horizon_seconds": 30.0,
-        "discount_from_signal_ask": 0.01,
-        "selection_score": 1.3379526748414956,
+        "selected_route_id": "taker_cross",
+        "selected_route_type": "taker",
+        "selected_route_label": "Taker cross",
+        "quote_horizon_seconds": null,
+        "discount_from_signal_ask": null,
+        "selection_reason": "maker_prior_lift_too_small",
+        "selection_score": 1.1666901834428522,
+        "best_candidate_route_id": "maker_h30_discount_1c",
+        "best_candidate_route_label": "Maker 1c below ask for 30s",
+        "best_candidate_prior_roi_on_planned_cost": 0.19732663698400396,
+        "best_candidate_selection_score": 1.3379526748414956,
         "prior_signals": 72,
-        "prior_fills": 62.0,
-        "prior_fill_rate": 0.8611111111111112,
-        "prior_roi_on_planned_cost": 0.19732663698400396,
+        "prior_fills": 57.0,
+        "prior_fill_rate": 0.7916666666666666,
+        "prior_roi_on_planned_cost": 0.19519817667034225,
         "test_signals": 86,
-        "test_fills": 71.0,
-        "test_fill_rate": 0.8255813953488372,
-        "test_pnl_dollars": -120.3665513411597,
-        "test_roi_on_planned_cost": -0.05598444248426033,
+        "test_fills": 60.0,
+        "test_fill_rate": 0.6976744186046512,
+        "test_pnl_dollars": 108.82150772462649,
+        "test_roi_on_planned_cost": 0.050614654755640226,
         "always_taker_test_signals": 86,
         "always_taker_test_fills": 60.0,
         "always_taker_test_fill_rate": 0.6976744186046512,
         "always_taker_test_pnl_dollars": 108.82150772462649,
         "always_taker_test_roi_on_planned_cost": 0.050614654755640226,
-        "roi_lift_vs_always_taker": -0.10659909723990055
+        "roi_lift_vs_always_taker": 0.0
       }
     ],
-    "interpretation": "Prior-only route selection does not beat always-taker yet (-5.6% vs 5.1%). The last selected route was Maker 1c below ask for 30s; keep taker as the default execution route until maker routing wins out-of-sample on later clean days."
+    "interpretation": "Prior-only route selection does not beat always-taker yet (5.1% vs 5.1%). The last selected route was Taker cross; keep taker as the default execution route until maker routing wins out-of-sample on later clean days."
   },
   "taker_first_entry_policy_regimes": {
     "features": "data/processed/btc_5m_features_1s_reconciled.parquet",
@@ -13433,9 +13441,9 @@
       "passes_policy_walkforward": true
     },
     {
-      "policy_name": "order_10_2s_2c_risk_adjusted",
-      "description": "Fixed $10 order, 2s latency, 2c slippage cap; select by risk-adjusted prior score.",
-      "score_kind": "risk_adjusted",
+      "policy_name": "order_10_2s_2c_train_roi",
+      "description": "Fixed $10 order, 2s latency, 2c slippage cap; select by prior ROI.",
+      "score_kind": "train_roi",
       "order_notional_filter": 10.0,
       "latency_seconds_filter": 2,
       "max_slippage_filter": 0.02,
@@ -13458,9 +13466,9 @@
       "passes_policy_walkforward": true
     },
     {
-      "policy_name": "order_10_2s_2c_train_roi",
-      "description": "Fixed $10 order, 2s latency, 2c slippage cap; select by prior ROI.",
-      "score_kind": "train_roi",
+      "policy_name": "order_10_2s_2c_risk_adjusted",
+      "description": "Fixed $10 order, 2s latency, 2c slippage cap; select by risk-adjusted prior score.",
+      "score_kind": "risk_adjusted",
       "order_notional_filter": 10.0,
       "latency_seconds_filter": 2,
       "max_slippage_filter": 0.02,
@@ -13910,7 +13918,7 @@
       "rows": 192,
       "markets": 19,
       "win_prob": 0.13020833333333334,
-      "avg_ask": 0.020000000000000014,
+      "avg_ask": 0.02000000000000001,
       "avg_gross_ev": 0.11020833333333352
     },
     {
@@ -13988,7 +13996,7 @@
       "markets": 17,
       "win_prob": 0.0962962962962963,
       "avg_ask": 0.03688888888888889,
-      "avg_gross_ev": 0.059407407407407485
+      "avg_gross_ev": 0.05940740740740747
     },
     {
       "ask_bucket": "ask_>50c",
@@ -14032,7 +14040,7 @@
       "markets": 372,
       "win_prob": 0.42188159189987345,
       "avg_ask": 0.38119111236113085,
-      "avg_gross_ev": 0.040690479538742844
+      "avg_gross_ev": 0.04069047953874285
     },
     {
       "ask_bucket": "ask_25c_50c",
@@ -14057,7 +14065,7 @@
       "avg_gross_ev": 0.037846719803801436
     }
   ],
-  "interpretation": "The inclusion unit is a complete clean 5-minute market; model-ready coverage now has 849 such markets. Full-day continuity is preferred context, not a hard gate: 0 full 288-window days and 3 days with at least 50% of expected windows; the best day has 259/288 windows. 668 feature rows used source-tagged backup BTC prices. The maker 1c proxy has 30 positive coarse rules, but none pass the day-stability gate, so they remain fragile fill-proxy diagnostics. Queue-aware maker 1c walk-forward is stricter: 0/960 rules pass (0/8640 order/horizon rows; best pooled planned-cost ROI is -6.4%). Keep maker 1c disabled until this gate turns positive. The coarse taker-rule search has 38 pooled holdout-positive rules and 7 day-stable rules. Treat them as candidates for deeper latency-cost modeling, not live edges. With at most one taker entry per market, 73 rule variants are holdout-positive and 36 pass the day-stability gate; the strongest variants still only span 3 test days, so they need more clean-market coverage before sizing. Latency stress keeps 7/7 day-stable taker rules alive at 2s latency with a 2c slippage cap, but 0/7 survive at 10s with the same cap. First-entry execution sizing stress shows 35/36 rules still passing for $5 orders at 2s latency and a 2c cap (average fill rate 69.6%); $25 orders have 21/36 passing (average fill rate 60.8%). This suggests top-of-book size is not the main blocker at these small sizes in the current clean sample. Dense-day walk-forward validation is stricter: 1/36 day-stable first-entry variants pass with up to 2 eligible forward folds. This makes the current edge evidence fragile until more clean dense days are collected. Combined execution walk-forward is the strictest current gate: 16/36 rules pass at least one order/latency/slippage setting (352 parameter rows). At 2s latency and a 2c cap, $5 has 8/8 eligible rules passing and $25 has 8/8. Prior-selected execution policy validation is the closest current bot simulation: 11/11 policies pass across 2 selected forward folds. The best passing policy is order_25_2s_2c_risk_adjusted with pooled planned-cost ROI 11.7%, 74.1% fill rate, and worst-fold ROI 5.1%. This still needs more forward folds. Market-level replay of that selected-policy family has 158 signals, 117 simulated full top-of-book fills, 11.7% planned-cost ROI, and 6.5% max drawdown on planned cost. The day-bootstrap 5th percentile is 5.1%; the research-only per-signal cap is 0.25% while the selected forward-day count stays small. Maker-routing the selected taker signal is now measured separately: the best proxy variant posts 1c below the signal ask for 15s, fills 78.5% of signals, and earns 6.8% planned-cost ROI versus 11.7% for taker execution. Keep it in paper-routing logs until it beats taker on later clean forward days. Prior-only route selection currently has 1 scored fold: it selected Maker 1c below ask for 30s and produced -5.6% planned-cost ROI versus 5.1% for always-taker. Default to taker execution until the router beats this baseline on more clean forward days. Selected-policy regime analysis used order_25_2s_2c_risk_adjusted: 158 signals, 117 fills, 11.7% planned-cost ROI, and 6.5% max drawdown. 8 simple pre-trade filters lifted ROI while keeping enough sample. The top diagnostic filter is signal_depth_gte_1000 with 108 signals, 13.6% ROI, and 8.7% max drawdown. No tested filter both lifted ROI and reduced drawdown; the top ROI filter changes drawdown by 2.2%. This is an in-sample two-forward-day diagnostic, so treat filters as paper-trading candidates only. Prior-only regime-filter validation used risk_adjusted selection on 1 fold(s). The top sample-gated selected-filter policy was order_25_2s_2c_risk_adjusted: selected-filter ROI -2.5%, unfiltered same-day ROI 5.1%, and ROI lift -7.6%. 1/1 fold(s) met the next-day sample gate and 0/1 both improved ROI and reduced drawdown. Only 1 fold(s) are available because selected-policy replay currently spans two forward days. Train-only calibration for base_ev_model increased pooled-positive EV thresholds from 0 to 2, but did not clear the day-stability gate. Best calibrated pooled test ROI on cost is 8.3% at min_pred_ev=0.1. Keep it research-only. Train-only calibration for wallet_flow_ev_model increased pooled-positive EV thresholds from 0 to 1, but did not clear the day-stability gate. Best calibrated pooled test ROI on cost is 7.3% at min_pred_ev=0.15. Keep it research-only. Prior-only EV overlay validation for base_ev_model used risk_adjusted threshold selection on 1 fold(s). The top sample-gated policy was order_10_any_execution_risk_adjusted: overlay ROI 6.2%, unfiltered same-day ROI 6.2%, and ROI lift 0.0%. 1/1 fold(s) met the next-day sample gate and 0/1 both improved ROI and reduced drawdown. Prior-only EV overlay validation for wallet_flow_ev_model used risk_adjusted threshold selection on 1 fold(s). The top sample-gated policy was order_25_2s_2c_risk_adjusted: overlay ROI 5.8%, unfiltered same-day ROI 5.1%, and ROI lift 0.8%. 1/1 fold(s) met the next-day sample gate and 1/1 both improved ROI and reduced drawdown. Prior-only EV overlay validation for base_ev_model_calibrated used risk_adjusted threshold selection on 1 fold(s). The top sample-gated policy was order_10_any_execution_risk_adjusted: overlay ROI 6.2%, unfiltered same-day ROI 6.2%, and ROI lift 0.0%. 1/1 fold(s) met the next-day sample gate and 0/1 both improved ROI and reduced drawdown. Prior-only EV overlay validation for wallet_flow_ev_model_calibrated used risk_adjusted threshold selection on 1 fold(s). The top sample-gated policy was order_10_any_execution_risk_adjusted: overlay ROI 6.2%, unfiltered same-day ROI 6.2%, and ROI lift 0.0%. 1/1 fold(s) met the next-day sample gate and 0/1 both improved ROI and reduced drawdown. Feature ablation found pooled-positive EV thresholds in 2/6 groups, but none passed the day-stability gate. The best pooled group is btc_path_quote_depth with test AUC 0.785. Highest raw AUC is btc_path_quote_depth at 0.785.",
+  "interpretation": "The inclusion unit is a complete clean 5-minute market; model-ready coverage now has 849 such markets. Full-day continuity is preferred context, not a hard gate: 0 full 288-window days and 3 days with at least 50% of expected windows; the best day has 259/288 windows. 668 feature rows used source-tagged backup BTC prices. The maker 1c proxy has 30 positive coarse rules, but none pass the day-stability gate, so they remain fragile fill-proxy diagnostics. Queue-aware maker 1c walk-forward is stricter: 0/960 rules pass (0/8640 order/horizon rows; best pooled planned-cost ROI is -6.4%). Keep maker 1c disabled until this gate turns positive. The coarse taker-rule search has 38 pooled holdout-positive rules and 7 day-stable rules. Treat them as candidates for deeper latency-cost modeling, not live edges. With at most one taker entry per market, 73 rule variants are holdout-positive and 36 pass the day-stability gate; the strongest variants still only span 3 test days, so they need more clean-market coverage before sizing. Latency stress keeps 7/7 day-stable taker rules alive at 2s latency with a 2c slippage cap, but 0/7 survive at 10s with the same cap. First-entry execution sizing stress shows 35/36 rules still passing for $5 orders at 2s latency and a 2c cap (average fill rate 69.6%); $25 orders have 21/36 passing (average fill rate 60.8%). This suggests top-of-book size is not the main blocker at these small sizes in the current clean sample. Dense-day walk-forward validation is stricter: 1/36 day-stable first-entry variants pass with up to 2 eligible forward folds. This makes the current edge evidence fragile until more clean dense days are collected. Combined execution walk-forward is the strictest current gate: 16/36 rules pass at least one order/latency/slippage setting (352 parameter rows). At 2s latency and a 2c cap, $5 has 8/8 eligible rules passing and $25 has 8/8. Prior-selected execution policy validation is the closest current bot simulation: 11/11 policies pass across 2 selected forward folds. The best passing policy is order_25_2s_2c_risk_adjusted with pooled planned-cost ROI 11.7%, 74.1% fill rate, and worst-fold ROI 5.1%. This still needs more forward folds. Market-level replay of that selected-policy family has 158 signals, 117 simulated full top-of-book fills, 11.7% planned-cost ROI, and 6.5% max drawdown on planned cost. The day-bootstrap 5th percentile is 5.1%; the research-only per-signal cap is 0.25% while the selected forward-day count stays small. Maker-routing the selected taker signal is now measured separately: the best proxy variant posts 1c below the signal ask for 15s, fills 78.5% of signals, and earns 6.8% planned-cost ROI versus 11.7% for taker execution. Keep it in paper-routing logs until it beats taker on later clean forward days. Prior-only route selection currently has 1 scored fold under taker_default mode: it selected Taker cross and produced 5.1% planned-cost ROI versus 5.1% for always-taker. Default to taker execution until the router beats this baseline on more clean forward days. Selected-policy regime analysis used order_25_2s_2c_risk_adjusted: 158 signals, 117 fills, 11.7% planned-cost ROI, and 6.5% max drawdown. 8 simple pre-trade filters lifted ROI while keeping enough sample. The top diagnostic filter is signal_depth_gte_1000 with 108 signals, 13.6% ROI, and 8.7% max drawdown. No tested filter both lifted ROI and reduced drawdown; the top ROI filter changes drawdown by 2.2%. This is an in-sample two-forward-day diagnostic, so treat filters as paper-trading candidates only. Prior-only regime-filter validation used risk_adjusted selection on 1 fold(s). The top sample-gated selected-filter policy was order_25_2s_2c_risk_adjusted: selected-filter ROI -2.5%, unfiltered same-day ROI 5.1%, and ROI lift -7.6%. 1/1 fold(s) met the next-day sample gate and 0/1 both improved ROI and reduced drawdown. Only 1 fold(s) are available because selected-policy replay currently spans two forward days. Train-only calibration for base_ev_model increased pooled-positive EV thresholds from 0 to 2, but did not clear the day-stability gate. Best calibrated pooled test ROI on cost is 8.3% at min_pred_ev=0.1. Keep it research-only. Train-only calibration for wallet_flow_ev_model increased pooled-positive EV thresholds from 0 to 1, but did not clear the day-stability gate. Best calibrated pooled test ROI on cost is 7.3% at min_pred_ev=0.15. Keep it research-only. Prior-only EV overlay validation for base_ev_model used risk_adjusted threshold selection on 1 fold(s). The top sample-gated policy was order_10_any_execution_risk_adjusted: overlay ROI 6.2%, unfiltered same-day ROI 6.2%, and ROI lift 0.0%. 1/1 fold(s) met the next-day sample gate and 0/1 both improved ROI and reduced drawdown. Prior-only EV overlay validation for wallet_flow_ev_model used risk_adjusted threshold selection on 1 fold(s). The top sample-gated policy was order_25_2s_2c_risk_adjusted: overlay ROI 5.8%, unfiltered same-day ROI 5.1%, and ROI lift 0.8%. 1/1 fold(s) met the next-day sample gate and 1/1 both improved ROI and reduced drawdown. Prior-only EV overlay validation for base_ev_model_calibrated used risk_adjusted threshold selection on 1 fold(s). The top sample-gated policy was order_10_any_execution_risk_adjusted: overlay ROI 6.2%, unfiltered same-day ROI 6.2%, and ROI lift 0.0%. 1/1 fold(s) met the next-day sample gate and 0/1 both improved ROI and reduced drawdown. Prior-only EV overlay validation for wallet_flow_ev_model_calibrated used risk_adjusted threshold selection on 1 fold(s). The top sample-gated policy was order_10_any_execution_risk_adjusted: overlay ROI 6.2%, unfiltered same-day ROI 6.2%, and ROI lift 0.0%. 1/1 fold(s) met the next-day sample gate and 0/1 both improved ROI and reduced drawdown. Feature ablation found pooled-positive EV thresholds in 2/6 groups, but none passed the day-stability gate. The best pooled group is btc_path_quote_depth with test AUC 0.785. Highest raw AUC is btc_path_quote_depth at 0.785.",
   "taker_latency_stress": {
     "summary": {
       "rows": 280,
