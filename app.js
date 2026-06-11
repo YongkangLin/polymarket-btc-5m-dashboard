@@ -199,13 +199,20 @@ function renderSignalUniverse(universe) {
   const diagnostic = summary.non_selected_clean_signals || {};
   const riskGate = (state.signalRiskUniverse?.risk_gate_candidates || [])
     .find((row) => row.gate_id === "exclude_high_risk");
+  const fixedGate = (state.signalRiskGateWalkforward?.fixed_gate_summaries || [])
+    .find((row) => row.gate_id === "exclude_high_risk");
+  const walkSummary = state.signalRiskGateWalkforward?.summary || {};
   byId("ruleSignalCount").textContent = fmt.format(all.signals || universe.signals.length || 0);
   byId("ruleFillRate").textContent = pct(all.fill_rate);
   byId("ruleRoi").textContent = roiPct(all.roi_on_planned_cost);
   byId("ruleScope").textContent = `${fmt.format(selected.signals || 0)} selected / ${fmt.format(diagnostic.signals || 0)} diagnostic`;
-  byId("ruleScope").title = riskGate
-    ? `Telemetry only: excluding high-risk rows keeps ${fmt.format(riskGate.signals || 0)} signals and moves diagnostic ROI to ${roiPct(riskGate.roi_on_planned_cost)}.`
+  const riskTitle = riskGate
+    ? `Aggregate telemetry: excluding high-risk rows keeps ${fmt.format(riskGate.signals || 0)} signals and moves diagnostic ROI to ${roiPct(riskGate.roi_on_planned_cost)}.`
     : "";
+  const walkTitle = fixedGate
+    ? ` Fixed-gate walk-forward: ${fixedGate.gate_id} reaches ${roiPct(fixedGate.roi_on_planned_cost)} versus ${roiPct(fixedGate.baseline_roi_on_planned_cost)} with no gate; adaptive prior-chosen gate lift is ${signedPct(walkSummary.roi_lift_vs_baseline)}.`
+    : "";
+  byId("ruleScope").title = `${riskTitle}${walkTitle}`.trim();
 
   renderSignalSelect(universe);
   renderSignalMap(universe);
@@ -445,6 +452,7 @@ async function main() {
     acceptanceResponse,
     signalResponse,
     signalRiskResponse,
+    signalRiskGateResponse,
   ] = await Promise.all([
     fetch("data/summary.json", { cache: "no-store" }),
     fetch("data/model_diagnostics.json", { cache: "no-store" }).catch(() => null),
@@ -454,6 +462,7 @@ async function main() {
     fetch("data/promotion_backfill_acceptance.json", { cache: "no-store" }).catch(() => null),
     fetch("data/config_signal_universe.json", { cache: "no-store" }).catch(() => null),
     fetch("data/config_signal_risk_universe.json", { cache: "no-store" }).catch(() => null),
+    fetch("data/config_signal_risk_gate_walkforward.json", { cache: "no-store" }).catch(() => null),
   ]);
   state.data = await response.json();
   state.model = modelResponse?.ok ? await modelResponse.json() : null;
@@ -463,6 +472,7 @@ async function main() {
   state.acceptance = acceptanceResponse?.ok ? await acceptanceResponse.json() : null;
   state.signalUniverse = signalResponse?.ok ? await signalResponse.json() : null;
   state.signalRiskUniverse = signalRiskResponse?.ok ? await signalRiskResponse.json() : null;
+  state.signalRiskGateWalkforward = signalRiskGateResponse?.ok ? await signalRiskGateResponse.json() : null;
   state.signalRiskIndex = new Map((state.signalRiskUniverse?.signals || []).map((row) => [row.condition_id, row]));
   renderMetrics(state.data);
   renderModelGate(state.model, state.gate, state.dataPlan, state.runbook, state.acceptance);
