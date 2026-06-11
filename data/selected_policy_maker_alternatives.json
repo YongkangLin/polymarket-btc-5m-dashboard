@@ -321,6 +321,8 @@
       "fills": 37.0,
       "pnl_dollars": 158.88843819036134,
       "planned_cost": 1800.0,
+      "filled_cost": 890.99732186,
+      "fill_rate": 0.5138888888888888,
       "roi_on_planned_cost": 0.08827135455020074
     },
     {
@@ -331,6 +333,8 @@
       "fills": 40.0,
       "pnl_dollars": -157.69050312516742,
       "planned_cost": 2150.0,
+      "filled_cost": 904.9166642700001,
+      "fill_rate": 0.46511627906976744,
       "roi_on_planned_cost": -0.07334442005821741
     },
     {
@@ -341,6 +345,8 @@
       "fills": 3.0,
       "pnl_dollars": -5.5951115741379205,
       "planned_cost": 1800.0,
+      "filled_cost": 51.72516485000001,
+      "fill_rate": 0.041666666666666664,
       "roi_on_planned_cost": -0.0031083953189655115
     },
     {
@@ -351,6 +357,8 @@
       "fills": 4.0,
       "pnl_dollars": -2.9034690799396756,
       "planned_cost": 2150.0,
+      "filled_cost": 100.0,
+      "fill_rate": 0.046511627906976744,
       "roi_on_planned_cost": -0.001350450734855663
     },
     {
@@ -361,6 +369,8 @@
       "fills": 2.0,
       "pnl_dollars": -6.140350877192979,
       "planned_cost": 1800.0,
+      "filled_cost": 50.0,
+      "fill_rate": 0.027777777777777776,
       "roi_on_planned_cost": -0.0034113060428849883
     },
     {
@@ -371,6 +381,8 @@
       "fills": 1.0,
       "pnl_dollars": -25.0,
       "planned_cost": 2150.0,
+      "filled_cost": 25.0,
+      "fill_rate": 0.011627906976744186,
       "roi_on_planned_cost": -0.011627906976744186
     },
     {
@@ -381,6 +393,8 @@
       "fills": 58.0,
       "pnl_dollars": 356.1683387280699,
       "planned_cost": 1800.0,
+      "filled_cost": 1450.0,
+      "fill_rate": 0.8055555555555556,
       "roi_on_planned_cost": 0.19787129929337216
     },
     {
@@ -391,6 +405,8 @@
       "fills": 66.0,
       "pnl_dollars": -85.67586791808289,
       "planned_cost": 2150.0,
+      "filled_cost": 1640.8430311800003,
+      "fill_rate": 0.7674418604651163,
       "roi_on_planned_cost": -0.03984924089213158
     },
     {
@@ -401,6 +417,8 @@
       "fills": 17.0,
       "pnl_dollars": 14.825892957940923,
       "planned_cost": 1800.0,
+      "filled_cost": 400.6677112400001,
+      "fill_rate": 0.2361111111111111,
       "roi_on_planned_cost": 0.008236607198856069
     },
     {
@@ -411,6 +429,8 @@
       "fills": 15.0,
       "pnl_dollars": -23.254259384639454,
       "planned_cost": 2150.0,
+      "filled_cost": 362.97514707999994,
+      "fill_rate": 0.1744186046511628,
       "roi_on_planned_cost": -0.010815934597506722
     },
     {
@@ -421,6 +441,8 @@
       "fills": 15.0,
       "pnl_dollars": -0.6650782719829138,
       "planned_cost": 1800.0,
+      "filled_cost": 375.0,
+      "fill_rate": 0.20833333333333334,
       "roi_on_planned_cost": -0.00036948792887939657
     },
     {
@@ -431,6 +453,8 @@
       "fills": 12.0,
       "pnl_dollars": -69.48388113730114,
       "planned_cost": 2150.0,
+      "filled_cost": 284.94479044,
+      "fill_rate": 0.13953488372093023,
       "roi_on_planned_cost": -0.03231808424990751
     },
     {
@@ -441,6 +465,8 @@
       "fills": 62.0,
       "pnl_dollars": 355.18794657120714,
       "planned_cost": 1800.0,
+      "filled_cost": 1550.0,
+      "fill_rate": 0.8611111111111112,
       "roi_on_planned_cost": 0.19732663698400396
     },
     {
@@ -451,6 +477,8 @@
       "fills": 71.0,
       "pnl_dollars": -120.3665513411597,
       "planned_cost": 2150.0,
+      "filled_cost": 1773.6106376799999,
+      "fill_rate": 0.8255813953488372,
       "roi_on_planned_cost": -0.05598444248426033
     },
     {
@@ -461,6 +489,8 @@
       "fills": 34.0,
       "pnl_dollars": 98.07147201933088,
       "planned_cost": 1800.0,
+      "filled_cost": 840.7573091799995,
+      "fill_rate": 0.4722222222222222,
       "roi_on_planned_cost": 0.05448415112185049
     },
     {
@@ -471,6 +501,8 @@
       "fills": 38.0,
       "pnl_dollars": -121.46909491201757,
       "planned_cost": 2150.0,
+      "filled_cost": 886.9249477199992,
+      "fill_rate": 0.4418604651162791,
       "roi_on_planned_cost": -0.05649725344745003
     },
     {
@@ -481,6 +513,8 @@
       "fills": 30.0,
       "pnl_dollars": 75.40444199054585,
       "planned_cost": 1800.0,
+      "filled_cost": 745.81483568,
+      "fill_rate": 0.4166666666666667,
       "roi_on_planned_cost": 0.04189135666141436
     },
     {
@@ -491,6 +525,8 @@
       "fills": 29.0,
       "pnl_dollars": -74.95254316731675,
       "planned_cost": 2150.0,
+      "filled_cost": 718.7408512000001,
+      "fill_rate": 0.3372093023255814,
       "roi_on_planned_cost": -0.03486164798479849
     }
   ],
