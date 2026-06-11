@@ -75,7 +75,7 @@ function renderMetrics(data) {
   byId("fillStats").textContent = `${money.format(fills.entry_notional || 0)} notional, ${fmt.format(fills.large_wallets || 0)} large wallets`;
 }
 
-function renderModelGate(model, gate) {
+function renderModelGate(model, gate, dataPlan) {
   const panel = byId("modelPanel");
   if (!model) {
     panel.hidden = true;
@@ -90,6 +90,8 @@ function renderModelGate(model, gate) {
   const paperGate = gate?.gates?.paper_trade_selected_policy || {};
   const gap = gate?.promotion_gap || {};
   const overlayStatus = gate?.component_statuses?.raw_wallet_ev_overlay || {};
+  const plannedDays = Number(dataPlan?.selected_day_count || 0);
+  const plannedRows = Number(dataPlan?.download_rows_required || 0);
 
   byId("modelStatus").textContent = gate?.deployment_status_label || "Paper only";
   byId("selectedPolicy").textContent = risk.policy_name || "No selected policy";
@@ -110,8 +112,11 @@ function renderModelGate(model, gate) {
   byId("promotionGap").textContent = liveGate.passed
     ? "Live gate passed"
     : `${fmt.format(gap.estimated_additional_forward_days || gap.missing_forward_days || 0)} forward days short`;
+  const planText = plannedDays
+    ? `; plan ${fmt.format(plannedDays)} days / ${fmt.format(plannedRows)} rows`
+    : "";
   byId("promotionGapStats").textContent = liveGate.total_checks
-    ? `${fmt.format(paperGate.passed_checks || 0)}/${fmt.format(paperGate.total_checks || 0)} paper checks, ${fmt.format(liveGate.passed_checks || 0)}/${fmt.format(liveGate.total_checks || 0)} live checks; need ${fmt.format(gap.missing_model_ready_markets || 0)} clean markets`
+    ? `${fmt.format(paperGate.passed_checks || 0)}/${fmt.format(paperGate.total_checks || 0)} paper checks, ${fmt.format(liveGate.passed_checks || 0)}/${fmt.format(liveGate.total_checks || 0)} live checks; need ${fmt.format(gap.missing_model_ready_markets || 0)} clean markets${planText}`
     : "Waiting for promotion gate data";
 }
 
@@ -253,16 +258,18 @@ function renderWallets(data) {
 }
 
 async function main() {
-  const [response, modelResponse, gateResponse] = await Promise.all([
+  const [response, modelResponse, gateResponse, dataPlanResponse] = await Promise.all([
     fetch("data/summary.json", { cache: "no-store" }),
     fetch("data/model_diagnostics.json", { cache: "no-store" }).catch(() => null),
     fetch("data/model_promotion_gate.json", { cache: "no-store" }).catch(() => null),
+    fetch("data/promotion_data_plan.json", { cache: "no-store" }).catch(() => null),
   ]);
   state.data = await response.json();
   state.model = modelResponse?.ok ? await modelResponse.json() : null;
   state.gate = gateResponse?.ok ? await gateResponse.json() : null;
+  state.dataPlan = dataPlanResponse?.ok ? await dataPlanResponse.json() : null;
   renderMetrics(state.data);
-  renderModelGate(state.model, state.gate);
+  renderModelGate(state.model, state.gate, state.dataPlan);
   renderMarketSelect(state.data);
   renderEntryMap(state.data);
   renderWallets(state.data);
