@@ -1,6 +1,6 @@
 {
   "config_version": 1,
-  "generated_at": "2026-06-10T20:19:47.010501-07:00",
+  "generated_at": "2026-06-10T20:25:34.240057-07:00",
   "sources": {
     "model_diagnostics": "docs/data/model_diagnostics.json",
     "promotion_gate": "docs/data/model_promotion_gate.json",
@@ -11,6 +11,7 @@
     "decision_table_walkforward": "docs/data/selected_policy_decision_table_walkforward.json",
     "paper_replay_decisions": "docs/data/paper_trading_replay_decisions.json",
     "paper_risk_gate_walkforward": "docs/data/paper_risk_gate_walkforward.json",
+    "paper_shadow_routes": "docs/data/paper_shadow_routes.json",
     "execution_stress": "docs/data/selected_policy_execution_stress.json",
     "bankroll_stress": "docs/data/selected_policy_bankroll_stress.json",
     "edge_uncertainty": "docs/data/selected_policy_edge_uncertainty.json",
@@ -779,6 +780,81 @@
         "use_for_paper_suppression": false,
         "allowed_paper_action": "shadow_compare_risk_gate_only",
         "diagnostic_note": "Risk gates must stay telemetry-only until enough later selected-policy days validate positive risk-adjusted lift out of sample."
+      }
+    },
+    "paper_shadow_routes": {
+      "status": "paper_shadow_diagnostic_only",
+      "path": "docs/data/paper_shadow_routes.json",
+      "selected_shadow_route": {
+        "route_id": "risk_gate_exclude_high_risk",
+        "label": "Risk gate: exclude_high_risk",
+        "description": "Shadow route that suppresses signals blocked by the prior-selected risk gate.",
+        "risk_gate_id": "exclude_high_risk",
+        "use_bucket_multiplier": false,
+        "signals": 158,
+        "active_signals": 145,
+        "suppressed_signals": 13,
+        "fills": 107,
+        "fill_rate_on_active": 0.7379310344827587,
+        "planned_cost": 3625.0,
+        "filled_cost": 2675.0,
+        "pnl_dollars": 482.3335309772799,
+        "roi_on_planned_cost": 0.13305752578683583,
+        "roi_on_filled_cost": 0.18031160036533828,
+        "max_drawdown_dollars": 231.33753501400565,
+        "max_drawdown_planned_roi": 0.06381725103834639,
+        "avg_shadow_multiplier": 0.9177215189873418,
+        "days": [
+          {
+            "signals": 72,
+            "active_signals": 65,
+            "suppressed_signals": 7,
+            "fills": 52,
+            "fill_rate_on_active": 0.8,
+            "planned_cost": 1625.0,
+            "filled_cost": 1300.0,
+            "pnl_dollars": 342.37167237546043,
+            "roi_on_planned_cost": 0.21069025992336027,
+            "roi_on_filled_cost": 0.2633628249042003,
+            "max_drawdown_dollars": 50.0,
+            "max_drawdown_planned_roi": 0.03076923076923077,
+            "avg_shadow_multiplier": 0.9027777777777778,
+            "test_date": "2026-06-06"
+          },
+          {
+            "signals": 86,
+            "active_signals": 80,
+            "suppressed_signals": 6,
+            "fills": 55,
+            "fill_rate_on_active": 0.6875,
+            "planned_cost": 2000.0,
+            "filled_cost": 1375.0,
+            "pnl_dollars": 139.96185860181947,
+            "roi_on_planned_cost": 0.06998092930090974,
+            "roi_on_filled_cost": 0.10179044261950507,
+            "max_drawdown_dollars": 231.33753501400562,
+            "max_drawdown_planned_roi": 0.1156687675070028,
+            "avg_shadow_multiplier": 0.9302325581395349,
+            "test_date": "2026-06-07"
+          }
+        ],
+        "lift_vs_baseline": {
+          "roi_lift_vs_baseline": 0.01655670914601491,
+          "pnl_lift_vs_baseline": 22.1553052460373,
+          "drawdown_change_vs_baseline": -0.0010783274462120018,
+          "active_signal_delta_vs_baseline": -13
+        }
+      },
+      "status_reasons": [
+        "shadow_routes_not_live_approval",
+        "risk_gate_not_promoted"
+      ],
+      "runtime_contract": {
+        "use_for_live_routing": false,
+        "use_for_live_suppression": false,
+        "use_for_paper_suppression": false,
+        "allowed_paper_action": "log_shadow_route_comparison",
+        "diagnostic_note": "These routes compare hypothetical suppression and sizing telemetry. Do not alter paper or live execution until prior-only folds promote a route."
       }
     },
     "selected_policy_execution_stress": {
