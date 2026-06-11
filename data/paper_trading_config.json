@@ -1,6 +1,6 @@
 {
   "config_version": 1,
-  "generated_at": "2026-06-10T20:07:13.630557-07:00",
+  "generated_at": "2026-06-10T20:13:35.463768-07:00",
   "sources": {
     "model_diagnostics": "docs/data/model_diagnostics.json",
     "promotion_gate": "docs/data/model_promotion_gate.json",
@@ -744,8 +744,10 @@
       "use_bucket_for_signal_suppression": false,
       "logs_stake_selector_recommendations": true,
       "logs_adaptive_sizing_telemetry": true,
+      "logs_pretrade_risk_telemetry": true,
       "use_adaptive_for_order_sizing": false,
-      "use_latency_oracle_for_order_sizing": false
+      "use_latency_oracle_for_order_sizing": false,
+      "use_pretrade_risk_for_signal_suppression": false
     },
     "selected_policy_execution_stress": {
       "status": "paper_diagnostic_only",
