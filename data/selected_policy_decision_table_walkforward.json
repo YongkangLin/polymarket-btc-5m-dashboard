@@ -1,0 +1,290 @@
+{
+  "config_version": 1,
+  "generated_at": "2026-06-10T18:52:53.642468-07:00",
+  "sources": {
+    "replay": "reports/btc_5m_taker_first_entry_policy_replay.csv",
+    "features": "data/processed/btc_5m_features_1s_reconciled.parquet",
+    "wallet_features": "data/processed/btc_5m_features_1s_wallet_flow.parquet",
+    "promotion_gate": "docs/data/model_promotion_gate.json"
+  },
+  "policy_name": "order_25_2s_2c_risk_adjusted",
+  "status": "paper_only_insufficient_folds",
+  "minimums": {
+    "min_prior_signals": 20,
+    "min_prior_fills": 10,
+    "min_prior_days": 1,
+    "min_roi_lift_vs_train_policy": 0.01,
+    "max_worst_day_loss": 0.1,
+    "min_promotable_folds": 5,
+    "min_test_signals": 20,
+    "min_test_fills": 10
+  },
+  "bucket_definitions": [
+    {
+      "dimension": "signal_ask_band",
+      "source": "selected replay signal_ask",
+      "meaning": "Entry ask price at the signal second."
+    },
+    {
+      "dimension": "seconds_left_band",
+      "source": "selected replay signal_seconds_left",
+      "meaning": "Where inside the first eligible minute the signal fired."
+    },
+    {
+      "dimension": "ask_depth_5_band",
+      "source": "selected replay signal_ask_depth_5",
+      "meaning": "Top-5 ask-side depth available on the intended outcome at signal time."
+    },
+    {
+      "dimension": "abs_distance_bps_band",
+      "source": "feature table abs_distance_bps",
+      "meaning": "Absolute BTC distance from the 5-minute open at signal time."
+    },
+    {
+      "dimension": "realized_vol_30s_bps_band",
+      "source": "feature table realized_vol_30s_bps",
+      "meaning": "Recent BTC path volatility before the signal."
+    },
+    {
+      "dimension": "complement_ask_sum_band",
+      "source": "feature table complement_ask_sum",
+      "meaning": "Up ask plus Down ask; higher values imply more taker spread/friction."
+    },
+    {
+      "dimension": "cheap_trade_pressure_15s",
+      "source": "feature table signed trade notional on intended outcome",
+      "meaning": "Recent signed trade pressure on the side the selected policy wants to buy."
+    },
+    {
+      "dimension": "large_wallet_cheap_net_60s",
+      "source": "prior-qualified large-wallet features",
+      "meaning": "Net large-wallet notional on the cheap side over the prior 60 seconds."
+    }
+  ],
+  "summary": {
+    "folds": 1,
+    "min_promotable_folds": 5,
+    "min_test_signals": 20,
+    "min_test_fills": 10,
+    "status": "paper_only_insufficient_folds",
+    "status_reasons": [
+      "folds<5",
+      "no_positive_eligible_shadow_lift"
+    ],
+    "best_shadow_route": "avoid_suppressed_shadow_filter",
+    "best_shadow_route_summary": {
+      "folds": 1,
+      "signals": 86,
+      "fills": 60,
+      "fill_rate": 0.6976744186046512,
+      "planned_cost": 2150.0,
+      "filled_cost": 1500.0,
+      "pnl_dollars": 108.82150772462649,
+      "roi_on_planned_cost": 0.050614654755640226,
+      "roi_on_filled_cost": 0.07254767181641766,
+      "positive_folds": 1,
+      "worst_fold_roi_on_planned_cost": 0.050614654755640226,
+      "roi_lift_vs_baseline": 0.0,
+      "eligible_for_shadow_selection": true
+    },
+    "routes": {
+      "baseline_selected_policy": {
+        "folds": 1,
+        "signals": 86,
+        "fills": 60,
+        "fill_rate": 0.6976744186046512,
+        "planned_cost": 2150.0,
+        "filled_cost": 1500.0,
+        "pnl_dollars": 108.82150772462649,
+        "roi_on_planned_cost": 0.050614654755640226,
+        "roi_on_filled_cost": 0.07254767181641766,
+        "positive_folds": 1,
+        "worst_fold_roi_on_planned_cost": 0.050614654755640226,
+        "roi_lift_vs_baseline": 0.0,
+        "eligible_for_shadow_selection": false
+      },
+      "prefer_only_shadow_filter": {
+        "folds": 1,
+        "signals": 85,
+        "fills": 59,
+        "fill_rate": 0.6941176470588235,
+        "planned_cost": 2125.0,
+        "filled_cost": 1475.0,
+        "pnl_dollars": 86.65169640387175,
+        "roi_on_planned_cost": 0.04077726889593965,
+        "roi_on_filled_cost": 0.05874691281618424,
+        "positive_folds": 1,
+        "worst_fold_roi_on_planned_cost": 0.04077726889593965,
+        "roi_lift_vs_baseline": -0.009837385859700579,
+        "eligible_for_shadow_selection": true
+      },
+      "avoid_suppressed_shadow_filter": {
+        "folds": 1,
+        "signals": 86,
+        "fills": 60,
+        "fill_rate": 0.6976744186046512,
+        "planned_cost": 2150.0,
+        "filled_cost": 1500.0,
+        "pnl_dollars": 108.82150772462649,
+        "roi_on_planned_cost": 0.050614654755640226,
+        "roi_on_filled_cost": 0.07254767181641766,
+        "positive_folds": 1,
+        "worst_fold_roi_on_planned_cost": 0.050614654755640226,
+        "roi_lift_vs_baseline": 0.0,
+        "eligible_for_shadow_selection": true
+      },
+      "neutral_only_shadow_filter": {
+        "folds": 1,
+        "signals": 1,
+        "fills": 1,
+        "fill_rate": 1.0,
+        "planned_cost": 25.0,
+        "filled_cost": 25.0,
+        "pnl_dollars": 22.169811320754718,
+        "roi_on_planned_cost": 0.8867924528301887,
+        "roi_on_filled_cost": 0.8867924528301887,
+        "positive_folds": 1,
+        "worst_fold_roi_on_planned_cost": 0.8867924528301887,
+        "roi_lift_vs_baseline": 0.8361777980745485,
+        "eligible_for_shadow_selection": false
+      },
+      "shadow_bucket_multiplier": {
+        "folds": 1,
+        "signals": 86,
+        "fills": 60,
+        "fill_rate": 0.6976744186046512,
+        "planned_cost": 2681.25,
+        "filled_cost": 1868.75,
+        "pnl_dollars": 130.48443182559438,
+        "roi_on_planned_cost": 0.048665522359196044,
+        "roi_on_filled_cost": 0.06982444512406388,
+        "positive_folds": 1,
+        "worst_fold_roi_on_planned_cost": 0.048665522359196044,
+        "roi_lift_vs_baseline": -0.0019491323964441823,
+        "eligible_for_shadow_selection": true
+      }
+    }
+  },
+  "folds": [
+    {
+      "test_date": "2026-06-07",
+      "train_dates": [
+        "2026-06-06"
+      ],
+      "train_summary": {
+        "signals": 72,
+        "markets": 72,
+        "days": 1,
+        "fills": 57,
+        "fill_rate": 0.7916666666666666,
+        "price_ok_rate": 0.8611111111111112,
+        "liquidity_ok_rate": 0.8888888888888888,
+        "planned_cost": 1800.0,
+        "filled_cost": 1425.0,
+        "pnl_dollars": 351.35671800661606,
+        "roi_on_planned_cost": 0.19519817667034225,
+        "roi_on_filled_cost": 0.24656611789937968,
+        "win_prob_filled": 0.6491228070175439,
+        "positive_days": 1,
+        "positive_day_share": 1.0,
+        "worst_day_roi_on_planned_cost": 0.19519817667034223,
+        "best_day_roi_on_planned_cost": 0.19519817667034223,
+        "avg_signal_ask": 0.5323611111111111,
+        "avg_signal_seconds_left": 279.72222222222223,
+        "avg_signal_ask_depth_5": 1604.6691666666666,
+        "avg_abs_distance_bps": 0.6578927749400892,
+        "avg_realized_vol_30s_bps": 0.39849856036597925
+      },
+      "train_bucket_count": 26,
+      "train_prefer_bucket_count": 8,
+      "train_avoid_bucket_count": 0,
+      "train_prefer_buckets": [
+        "ask_depth_5_band=1000-2000",
+        "ask_depth_5_band=>=2000",
+        "cheap_trade_pressure_15s=cheap_negative",
+        "large_wallet_cheap_net_60s=cheap_negative",
+        "realized_vol_30s_bps_band=0.5-1",
+        "realized_vol_30s_bps_band=<0.25",
+        "seconds_left_band=245-270",
+        "seconds_left_band=285-300"
+      ],
+      "train_avoid_buckets": [],
+      "test_prefer_hit_signals": 85,
+      "test_avoid_hit_signals": 0,
+      "routes": {
+        "baseline_selected_policy": {
+          "signals": 86,
+          "markets": 86,
+          "fills": 60,
+          "fill_rate": 0.6976744186046512,
+          "planned_cost": 2150.0,
+          "filled_cost": 1500.0,
+          "pnl_dollars": 108.82150772462649,
+          "roi_on_planned_cost": 0.050614654755640226,
+          "roi_on_filled_cost": 0.07254767181641766,
+          "win_prob_filled": 0.55,
+          "roi_lift_vs_baseline": 0.0
+        },
+        "prefer_only_shadow_filter": {
+          "signals": 85,
+          "markets": 85,
+          "fills": 59,
+          "fill_rate": 0.6941176470588235,
+          "planned_cost": 2125.0,
+          "filled_cost": 1475.0,
+          "pnl_dollars": 86.65169640387175,
+          "roi_on_planned_cost": 0.04077726889593965,
+          "roi_on_filled_cost": 0.05874691281618424,
+          "win_prob_filled": 0.5423728813559322,
+          "roi_lift_vs_baseline": -0.009837385859700579
+        },
+        "avoid_suppressed_shadow_filter": {
+          "signals": 86,
+          "markets": 86,
+          "fills": 60,
+          "fill_rate": 0.6976744186046512,
+          "planned_cost": 2150.0,
+          "filled_cost": 1500.0,
+          "pnl_dollars": 108.82150772462649,
+          "roi_on_planned_cost": 0.050614654755640226,
+          "roi_on_filled_cost": 0.07254767181641766,
+          "win_prob_filled": 0.55,
+          "roi_lift_vs_baseline": 0.0
+        },
+        "neutral_only_shadow_filter": {
+          "signals": 1,
+          "markets": 1,
+          "fills": 1,
+          "fill_rate": 1.0,
+          "planned_cost": 25.0,
+          "filled_cost": 25.0,
+          "pnl_dollars": 22.169811320754718,
+          "roi_on_planned_cost": 0.8867924528301887,
+          "roi_on_filled_cost": 0.8867924528301887,
+          "win_prob_filled": 1.0,
+          "roi_lift_vs_baseline": 0.8361777980745485
+        },
+        "shadow_bucket_multiplier": {
+          "signals": 86,
+          "markets": 86,
+          "fills": 60,
+          "fill_rate": 0.6976744186046512,
+          "planned_cost": 2681.25,
+          "filled_cost": 1868.75,
+          "pnl_dollars": 130.48443182559438,
+          "roi_on_planned_cost": 0.048665522359196044,
+          "roi_on_filled_cost": 0.06982444512406388,
+          "win_prob_filled": 0.55,
+          "avg_multiplier": 1.247093023255814,
+          "roi_lift_vs_baseline": -0.0019491323964441823
+        }
+      }
+    }
+  ],
+  "runtime_contract": {
+    "use_for_live_sizing": false,
+    "use_for_signal_suppression": false,
+    "allowed_paper_action": "Compare prior-only bucket labels against the next selected-policy day. Use the labels for shadow logging only until enough later folds exist."
+  },
+  "interpretation": "Prior-only decision bucket validation has 1 fold(s). Best shadow route is avoid_suppressed_shadow_filter, but status is paper_only_insufficient_folds."
+}
