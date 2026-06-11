@@ -1,0 +1,138 @@
+{
+  "generated_at": "2026-06-10T18:00:08.673079-07:00",
+  "promotion_data_plan": "docs/data/promotion_data_plan.json",
+  "download_plan": "reports/btc_5m_promotion_data_download_plan.csv",
+  "execution_status": "blocked",
+  "api_key_present": false,
+  "blockers": [
+    "TELONEX_API_KEY is not set in the current environment"
+  ],
+  "selected_dates": [
+    "2026-04-19",
+    "2026-04-20",
+    "2026-05-05",
+    "2026-05-06",
+    "2026-05-16",
+    "2026-05-18",
+    "2026-04-03"
+  ],
+  "selected_day_count": 7,
+  "download_plan_rows": 2010,
+  "expected_channel_jobs": {
+    "book_snapshot_5": 4020,
+    "trades": 4020,
+    "onchain_fills": 2010
+  },
+  "expected_total_channel_jobs": 10050,
+  "expected_missing_files": {
+    "totals": {
+      "markets": 2010,
+      "missing_book_files": 4020,
+      "missing_trade_files": 4020,
+      "missing_fill_files": 2010,
+      "missing_files": 10050
+    },
+    "by_day": [
+      {
+        "market_date": "2026-04-03",
+        "markets": 286,
+        "missing_book_files": 572,
+        "missing_trade_files": 572,
+        "missing_fill_files": 286,
+        "missing_files": 1430
+      },
+      {
+        "market_date": "2026-04-19",
+        "markets": 287,
+        "missing_book_files": 574,
+        "missing_trade_files": 574,
+        "missing_fill_files": 287,
+        "missing_files": 1435
+      },
+      {
+        "market_date": "2026-04-20",
+        "markets": 286,
+        "missing_book_files": 572,
+        "missing_trade_files": 572,
+        "missing_fill_files": 286,
+        "missing_files": 1430
+      },
+      {
+        "market_date": "2026-05-05",
+        "markets": 288,
+        "missing_book_files": 576,
+        "missing_trade_files": 576,
+        "missing_fill_files": 288,
+        "missing_files": 1440
+      },
+      {
+        "market_date": "2026-05-06",
+        "markets": 288,
+        "missing_book_files": 576,
+        "missing_trade_files": 576,
+        "missing_fill_files": 288,
+        "missing_files": 1440
+      },
+      {
+        "market_date": "2026-05-16",
+        "markets": 288,
+        "missing_book_files": 576,
+        "missing_trade_files": 576,
+        "missing_fill_files": 288,
+        "missing_files": 1440
+      },
+      {
+        "market_date": "2026-05-18",
+        "markets": 287,
+        "missing_book_files": 574,
+        "missing_trade_files": 574,
+        "missing_fill_files": 287,
+        "missing_files": 1435
+      }
+    ]
+  },
+  "expected_model_ready_gain": 1400,
+  "expected_gap_coverage": {
+    "covers_missing_model_ready_markets": true,
+    "covers_missing_half_covered_days": true,
+    "model_ready_gain_margin": 249,
+    "half_covered_day_margin": 0
+  },
+  "commands": [
+    {
+      "step": "download_book_snapshot_5",
+      "requires_telonex_key": true,
+      "command": ".venv/bin/python scripts/download_btc_5m_channel.py --channel book_snapshot_5 --plan reports/btc_5m_promotion_data_download_plan.csv"
+    },
+    {
+      "step": "download_trades",
+      "requires_telonex_key": true,
+      "command": ".venv/bin/python scripts/download_btc_5m_channel.py --channel trades --plan reports/btc_5m_promotion_data_download_plan.csv"
+    },
+    {
+      "step": "download_onchain_fills",
+      "requires_telonex_key": true,
+      "command": ".venv/bin/python scripts/download_btc_5m_channel.py --channel onchain_fills --plan reports/btc_5m_promotion_data_download_plan.csv"
+    },
+    {
+      "step": "run_backfill_pipeline",
+      "requires_telonex_key": true,
+      "command": ".venv/bin/python scripts/run_walkforward_expansion_pipeline.py --plan reports/btc_5m_promotion_data_download_plan.csv --max-priority 7 --suffix promotion_data --download-telonex --download-binance-backup --execute"
+    },
+    {
+      "step": "dry_run_backfill_pipeline",
+      "requires_telonex_key": false,
+      "command": ".venv/bin/python scripts/run_walkforward_expansion_pipeline.py --plan reports/btc_5m_promotion_data_download_plan.csv --max-priority 7 --suffix promotion_data"
+    }
+  ],
+  "post_download_outputs": [
+    "data/processed/btc_1s_reconciled_prices_promotion_data.parquet",
+    "data/processed/btc_5m_quality_universe_promotion_data.parquet",
+    "data/processed/btc_5m_complete_layer_universe_promotion_data.parquet",
+    "data/processed/btc_5m_features_1s_promotion_data.parquet",
+    "data/processed/btc_5m_features_1s_reconciled_next.parquet",
+    "docs/data/model_diagnostics_promotion_data.json",
+    "docs/data/model_promotion_gate_promotion_data.json"
+  ],
+  "interpretation": "Promotion backfill is not execution-ready yet: TELONEX_API_KEY is not set in the current environment. The plan covers 7 day(s), 2010 market row(s), and 10050 currently missing Telonex layer file(s)."
+}
