@@ -1,7 +1,7 @@
 const fmt = new Intl.NumberFormat("en-US");
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
-const state = { data: null, role: "both", market: "all" };
+const state = { data: null, role: "both", market: "all", signalMarket: "all" };
 
 function byId(id) {
   return document.getElementById(id);
@@ -28,6 +28,12 @@ function pct(value, digits = 1) {
   return `${(Number(value) * 100).toFixed(digits)}%`;
 }
 
+function roiPct(value, digits = 1) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "--";
+  const number = Number(value) * 100;
+  return `${number > 0 ? "+" : ""}${number.toFixed(digits)}%`;
+}
+
 function signedPct(value, digits = 1) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "--";
   const number = Number(value) * 100;
@@ -49,6 +55,15 @@ function marketLabel(row) {
     : "Unknown";
   const suffix = String(row.slug || row.condition_id || "").replace("btc-updown-5m-", "");
   return `${when} • ${suffix}`;
+}
+
+function signalLabel(row) {
+  const when = row.signal_ts
+    ? new Date(row.signal_ts).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+    : marketLabel(row);
+  const ask = Number(row.signal_ask || 0).toFixed(2);
+  const outcome = row.intended_outcome || "entry";
+  return `${when} • ${outcome} @ ${ask}`;
 }
 
 function renderMetrics(data) {
@@ -135,6 +150,132 @@ function renderModelGate(model, gate, dataPlan, runbook, acceptance) {
   byId("promotionGapStats").textContent = liveGate.total_checks
     ? `${fmt.format(paperGate.passed_checks || 0)}/${fmt.format(paperGate.total_checks || 0)} paper checks, ${fmt.format(liveGate.passed_checks || 0)}/${fmt.format(liveGate.total_checks || 0)} live checks; need ${fmt.format(gap.missing_model_ready_markets || 0)} clean markets${planText}${acceptanceText}${runbookText}`
     : "Waiting for promotion gate data";
+}
+
+function renderSignalSelect(universe) {
+  const select = byId("signalMarketSelect");
+  const signals = universe?.signals || [];
+  select.innerHTML = [
+    `<option value="all">All rule-signal markets</option>`,
+    ...signals.map((row) => {
+      const filled = row.is_filled ? "filled" : "not filled";
+      const evidence = row.is_selected_reference ? "selected" : "diagnostic";
+      return `<option value="${row.condition_id}">${signalLabel(row)} • ${filled} • ${evidence}</option>`;
+    }),
+  ].join("");
+  if (state.signalMarket !== "all" && !signals.some((row) => row.condition_id === state.signalMarket)) {
+    state.signalMarket = "all";
+  }
+  select.value = state.signalMarket;
+}
+
+function filteredSignals(universe) {
+  const signals = universe?.signals || [];
+  if (state.signalMarket === "all") return signals;
+  return signals.filter((row) => row.condition_id === state.signalMarket);
+}
+
+function renderSignalUniverse(universe) {
+  const panel = byId("signalPanel");
+  if (!universe?.signals?.length) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+
+  const summary = universe.summary || {};
+  const all = summary.all_config_rule_signals || {};
+  const selected = summary.selected_reference_signals || {};
+  const diagnostic = summary.non_selected_clean_signals || {};
+  byId("ruleSignalCount").textContent = fmt.format(all.signals || universe.signals.length || 0);
+  byId("ruleFillRate").textContent = pct(all.fill_rate);
+  byId("ruleRoi").textContent = roiPct(all.roi_on_planned_cost);
+  byId("ruleScope").textContent = `${fmt.format(selected.signals || 0)} selected / ${fmt.format(diagnostic.signals || 0)} diagnostic`;
+
+  renderSignalSelect(universe);
+  renderSignalMap(universe);
+  renderSignalDetails(filteredSignals(universe));
+}
+
+function renderSignalMap(universe) {
+  const rows = filteredSignals(universe);
+  const el = byId("signalMap");
+  if (!rows.length) {
+    el.innerHTML = `<div class="empty">No clean rule signals for this market.</div>`;
+    return;
+  }
+
+  const view = { width: 920, height: 320, left: 64, right: 26, top: 24, bottom: 52 };
+  const plotWidth = view.width - view.left - view.right;
+  const plotHeight = view.height - view.top - view.bottom;
+  const minSeconds = 240;
+  const maxSeconds = 300;
+  const minAsk = 0.50;
+  const maxAsk = 0.75;
+  const xFor = (secondsLeft) => view.left + ((maxSeconds - Number(secondsLeft || maxSeconds)) / (maxSeconds - minSeconds)) * plotWidth;
+  const yFor = (ask) => view.top + ((maxAsk - Number(ask || minAsk)) / (maxAsk - minAsk)) * plotHeight;
+
+  const xTicks = [300, 285, 270, 255, 240];
+  const yTicks = [0.50, 0.55, 0.60, 0.65, 0.70, 0.75];
+  const grid = [
+    ...xTicks.map((tick) => {
+      const x = xFor(tick);
+      return `<line class="axis-grid" x1="${x}" y1="${view.top}" x2="${x}" y2="${view.top + plotHeight}"></line><text class="axis-label" x="${x}" y="${view.top + plotHeight + 24}" text-anchor="middle">${formatClock(tick)}</text>`;
+    }),
+    ...yTicks.map((tick) => {
+      const y = yFor(tick);
+      return `<line class="axis-grid" x1="${view.left}" y1="${y}" x2="${view.left + plotWidth}" y2="${y}"></line><text class="axis-label" x="${view.left - 10}" y="${y + 4}" text-anchor="end">${tick.toFixed(2)}</text>`;
+    }),
+  ].join("");
+
+  const points = rows
+    .slice()
+    .sort((a, b) => Number(a.is_selected_reference || 0) - Number(b.is_selected_reference || 0))
+    .map((row) => {
+      const evidence = row.is_selected_reference ? "selected" : "diagnostic";
+      const filled = row.is_filled ? "filled" : "unfilled";
+      const seconds = Number(row.signal_seconds_left || maxSeconds);
+      const ask = Number(row.signal_ask || 0);
+      const radius = state.signalMarket === "all" ? 5.5 : 9;
+      const title = `${signalLabel(row)} • ${filled} • ${roiPct(Number(row.pnl_dollars || 0) / 25, 1)} on $25`;
+      return `
+        <circle class="signal-point ${evidence} ${filled}" cx="${xFor(seconds)}" cy="${yFor(ask)}" r="${radius}">
+          <title>${title}</title>
+        </circle>`;
+    })
+    .join("");
+
+  el.innerHTML = `
+    <svg class="signal-svg" viewBox="0 0 ${view.width} ${view.height}" role="img" aria-label="Rule signals by entry time and ask price">
+      <rect class="plot-bg" x="${view.left}" y="${view.top}" width="${plotWidth}" height="${plotHeight}"></rect>
+      ${grid}
+      ${points}
+      <text class="axis-title" x="${view.left + plotWidth / 2}" y="${view.height - 12}" text-anchor="middle">Time left at signal</text>
+      <text class="axis-title" x="18" y="${view.top + plotHeight / 2}" text-anchor="middle" transform="rotate(-90 18 ${view.top + plotHeight / 2})">Signal ask</text>
+    </svg>`;
+}
+
+function renderSignalDetails(rows) {
+  const el = byId("signalDetailRows");
+  const visibleRows = rows.slice(0, state.signalMarket === "all" ? 5 : 1);
+  if (!visibleRows.length) {
+    el.innerHTML = `<div class="empty compact-empty">No signal selected.</div>`;
+    return;
+  }
+
+  el.innerHTML = visibleRows.map((row) => {
+    const pnl = Number(row.pnl_dollars || 0);
+    const evidence = row.is_selected_reference ? "Selected replay" : "Diagnostic clean";
+    const futureAsk = row.future_ask === null || row.future_ask === undefined ? "--" : Number(row.future_ask).toFixed(2);
+    const fillText = row.is_filled ? `Filled at ${futureAsk}` : `No full fill; future ask ${futureAsk}`;
+    return `
+      <div class="signal-row">
+        <strong>${signalLabel(row)}</strong>
+        <span>${evidence}</span>
+        <span>${fillText}</span>
+        <span>${pnl >= 0 ? "+" : ""}${money.format(pnl)}</span>
+      </div>`;
+  }).join("");
 }
 
 function renderMarketSelect(data) {
@@ -275,13 +416,14 @@ function renderWallets(data) {
 }
 
 async function main() {
-  const [response, modelResponse, gateResponse, dataPlanResponse, runbookResponse, acceptanceResponse] = await Promise.all([
+  const [response, modelResponse, gateResponse, dataPlanResponse, runbookResponse, acceptanceResponse, signalResponse] = await Promise.all([
     fetch("data/summary.json", { cache: "no-store" }),
     fetch("data/model_diagnostics.json", { cache: "no-store" }).catch(() => null),
     fetch("data/model_promotion_gate.json", { cache: "no-store" }).catch(() => null),
     fetch("data/promotion_data_plan.json", { cache: "no-store" }).catch(() => null),
     fetch("data/promotion_backfill_runbook.json", { cache: "no-store" }).catch(() => null),
     fetch("data/promotion_backfill_acceptance.json", { cache: "no-store" }).catch(() => null),
+    fetch("data/config_signal_universe.json", { cache: "no-store" }).catch(() => null),
   ]);
   state.data = await response.json();
   state.model = modelResponse?.ok ? await modelResponse.json() : null;
@@ -289,8 +431,10 @@ async function main() {
   state.dataPlan = dataPlanResponse?.ok ? await dataPlanResponse.json() : null;
   state.runbook = runbookResponse?.ok ? await runbookResponse.json() : null;
   state.acceptance = acceptanceResponse?.ok ? await acceptanceResponse.json() : null;
+  state.signalUniverse = signalResponse?.ok ? await signalResponse.json() : null;
   renderMetrics(state.data);
   renderModelGate(state.model, state.gate, state.dataPlan, state.runbook, state.acceptance);
+  renderSignalUniverse(state.signalUniverse);
   renderMarketSelect(state.data);
   renderEntryMap(state.data);
   renderWallets(state.data);
@@ -303,6 +447,12 @@ async function main() {
   byId("roleSelect").addEventListener("change", (event) => {
     state.role = event.target.value;
     renderEntryMap(state.data);
+  });
+
+  byId("signalMarketSelect").addEventListener("change", (event) => {
+    state.signalMarket = event.target.value;
+    renderSignalMap(state.signalUniverse);
+    renderSignalDetails(filteredSignals(state.signalUniverse));
   });
 }
 

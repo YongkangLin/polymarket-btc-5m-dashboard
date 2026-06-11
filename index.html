@@ -75,6 +75,43 @@
         </div>
       </section>
 
+      <section class="panel signal-panel" id="signalPanel" hidden>
+        <div class="panel-head">
+          <div>
+            <h2>Rule Signal Map</h2>
+            <p>Paper config entries across clean completed 5-minute markets.</p>
+          </div>
+          <select id="signalMarketSelect" aria-label="Rule signal market filter">
+            <option value="all">All rule-signal markets</option>
+          </select>
+        </div>
+        <div class="signal-summary" aria-label="Rule signal summary">
+          <div>
+            <span>Signals</span>
+            <strong id="ruleSignalCount">--</strong>
+          </div>
+          <div>
+            <span>Simulated Fills</span>
+            <strong id="ruleFillRate">--</strong>
+          </div>
+          <div>
+            <span>Planned ROI</span>
+            <strong id="ruleRoi">--</strong>
+          </div>
+          <div>
+            <span>Evidence Split</span>
+            <strong id="ruleScope">--</strong>
+          </div>
+        </div>
+        <div class="signal-layout">
+          <div id="signalMap" class="signal-map"></div>
+          <aside class="signal-detail">
+            <h3>Selected Signal</h3>
+            <div id="signalDetailRows" class="signal-detail-rows"></div>
+          </aside>
+        </div>
+      </section>
+
       <section class="panel">
         <div class="panel-head">
           <div>
@@ -127,6 +164,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=20260610-15"></script>
+    <script src="app.js?v=20260610-16"></script>
   </body>
 </html>

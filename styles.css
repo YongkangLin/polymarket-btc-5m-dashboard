@@ -202,8 +202,123 @@ select {
   overflow-wrap: anywhere;
 }
 
+.signal-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: 1px solid var(--line);
+}
+
+.signal-summary div {
+  min-height: 88px;
+  padding: 14px 16px;
+  border-right: 1px solid var(--line);
+}
+
+.signal-summary div:last-child {
+  border-right: 0;
+}
+
+.signal-summary span,
+.signal-summary strong {
+  display: block;
+}
+
+.signal-summary span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.signal-summary strong {
+  margin-top: 10px;
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+.signal-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 290px;
+  min-width: 0;
+}
+
+.signal-map {
+  min-height: 286px;
+  min-width: 0;
+  padding: 14px;
+  overflow: auto;
+}
+
+.signal-svg {
+  display: block;
+  min-width: 760px;
+  width: 100%;
+  height: auto;
+}
+
+.signal-point {
+  fill-opacity: 0.76;
+  stroke-width: 1.6;
+}
+
+.signal-point.selected {
+  fill: var(--blue);
+}
+
+.signal-point.diagnostic {
+  fill: var(--gold);
+}
+
+.signal-point.filled {
+  stroke: #ffffff;
+}
+
+.signal-point.unfilled {
+  stroke: var(--red);
+}
+
+.signal-detail {
+  padding: 16px;
+  border-left: 1px solid var(--line);
+}
+
+.signal-detail-rows {
+  display: grid;
+  gap: 10px;
+}
+
+.signal-row {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.signal-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.signal-row strong,
+.signal-row span {
+  overflow-wrap: anywhere;
+}
+
+.signal-row span {
+  color: var(--muted);
+}
+
 #marketSelect {
   min-width: min(360px, 42vw);
+}
+
+#signalMarketSelect {
+  min-width: min(390px, 42vw);
 }
 
 .entry-layout {
@@ -383,6 +498,27 @@ td code {
 
   .entry-layout {
     grid-template-columns: 1fr;
+  }
+
+  .signal-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .signal-summary div:nth-child(2) {
+    border-right: 0;
+  }
+
+  .signal-summary div:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .signal-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .signal-detail {
+    border-left: 0;
+    border-top: 1px solid var(--line);
   }
 
   .gate-grid {
