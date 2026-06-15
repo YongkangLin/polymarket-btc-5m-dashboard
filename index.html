@@ -24,19 +24,16 @@
 
       <section class="panel is-active" id="backtestPanel" data-panel="backtest">
         <div class="toolbar">
-          <label>
-            <span>Show</span>
-            <select id="backtestFilter">
-              <option value="all">All markets</option>
-              <option value="bought">Bought</option>
-              <option value="no_action">No action</option>
-            </select>
+          <label class="filter-label">
+            <span>Market Filter</span>
+            <select id="marketFilter"></select>
           </label>
           <label class="market-label">
             <span>Market</span>
             <select id="backtestMarket"></select>
           </label>
         </div>
+        <div class="decision-strip" id="backtestSummary"></div>
         <div class="chart" id="backtestChart"></div>
       </section>
 
@@ -49,6 +46,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=20260615-17"></script>
+    <script src="app.js?v=20260615-19"></script>
   </body>
 </html>

@@ -119,6 +119,10 @@ label {
   min-width: min(560px, 100%);
 }
 
+.filter-label {
+  flex: 0 0 220px;
+}
+
 label span {
   color: var(--muted);
   font-size: 12px;
@@ -142,6 +146,80 @@ select {
   min-height: 480px;
   overflow-x: auto;
   padding: 16px;
+}
+
+.decision-strip {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(280px, 1.1fr) minmax(320px, 1.35fr);
+  border-bottom: 1px solid var(--line);
+  background: #fbfcfd;
+}
+
+.decision-block {
+  min-width: 0;
+  padding: 14px 16px;
+  border-right: 1px solid var(--line);
+}
+
+.decision-block:last-child {
+  border-right: 0;
+}
+
+.decision-main,
+.decision-rule {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+}
+
+.decision-kicker {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.decision-block strong {
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.decision-block span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.decision-signals {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px 14px;
+}
+
+.signal-cell {
+  min-width: 0;
+}
+
+.signal-cell span,
+.signal-cell strong {
+  display: block;
+}
+
+.signal-cell span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.signal-cell strong {
+  margin-top: 3px;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.2;
 }
 
 svg {
@@ -307,5 +385,26 @@ svg {
 
   label {
     width: 100%;
+  }
+
+  .filter-label {
+    flex-basis: 100%;
+  }
+
+  .decision-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .decision-block {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .decision-block:last-child {
+    border-bottom: 0;
+  }
+
+  .decision-signals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

@@ -7,7 +7,7 @@ const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
 const state = {
   workflow: null,
   activeTab: "backtest",
-  backtestFilter: "all",
+  marketFilter: "all",
   backtestMarket: "",
   liveGate: "paper_to_live",
 };
@@ -149,6 +149,13 @@ function formatCents(value) {
   return `${sign}${(number * 100).toFixed(1)}c`;
 }
 
+function formatSignedMoney(value) {
+  const number = metricNumber(value);
+  if (number === null) return "--";
+  const sign = number > 0 ? "+" : "";
+  return `${sign}${moneyCents.format(number)}`;
+}
+
 function formatSignedPercent(value) {
   const number = metricNumber(value);
   if (number === null) return "--";
@@ -258,6 +265,13 @@ function rangeText(min, max, suffix = "") {
   return "--";
 }
 
+function percentText(value) {
+  const number = metricNumber(value);
+  if (number === null) return "--";
+  const sign = number > 0 ? "+" : "";
+  return `${sign}${(number * 100).toFixed(0)}%`;
+}
+
 function decisionOutcome(row) {
   if (row?.intended_outcome === "Up" || row?.intended_outcome === "Down") return row.intended_outcome;
   return Number(row?.distance_bps || 0) >= 0 ? "Up" : "Down";
@@ -283,17 +297,17 @@ function renderBacktestSelects() {
   const allMarkets = marketRows();
   const boughtCount = allMarkets.filter((market) => market.has_signal).length;
   const noActionCount = allMarkets.length - boughtCount;
-  const filteredMarkets = allMarkets.filter((market) => {
-    if (state.backtestFilter === "bought") return Boolean(market.has_signal);
-    if (state.backtestFilter === "no_action") return !market.has_signal;
-    return true;
-  });
-  byId("backtestFilter").innerHTML = [
-    `<option value="all">All markets (${fmt.format(allMarkets.length)})</option>`,
-    `<option value="bought">Bought (${fmt.format(boughtCount)})</option>`,
-    `<option value="no_action">No action (${fmt.format(noActionCount)})</option>`,
-  ].join("");
-  byId("backtestFilter").value = state.backtestFilter;
+  const filteredMarkets = state.marketFilter === "bought"
+    ? allMarkets.filter((market) => market.has_signal)
+    : state.marketFilter === "no_action"
+      ? allMarkets.filter((market) => !market.has_signal)
+      : allMarkets;
+  byId("marketFilter").innerHTML = [
+    ["all", `All markets (${fmt.format(allMarkets.length)})`],
+    ["bought", `Bought (${fmt.format(boughtCount)})`],
+    ["no_action", `No action (${fmt.format(noActionCount)})`],
+  ].map(([value, label]) => `<option value="${value}">${escapeHtml(label)}</option>`).join("");
+  byId("marketFilter").value = state.marketFilter;
   const allowed = new Set(filteredMarkets.map((market) => market.condition_id));
   if (!allowed.has(state.backtestMarket)) {
     const preferred = filteredMarkets.find((market) => market.has_signal) || filteredMarkets[0];
@@ -310,6 +324,89 @@ function renderBacktestSelects() {
     return `<option value="${escapeHtml(market.condition_id)}">${escapeHtml(`${when} | ${status} | ${market.slug}`)}</option>`;
   }).join("");
   byId("backtestMarket").value = state.backtestMarket;
+}
+
+function ruleLine() {
+  const rule = activeRule();
+  const pieces = [
+    `${rangeText(rule.min_seconds_left, rule.max_seconds_left, "s")} left`,
+    `ask ${rangeText(rule.min_ask, rule.max_ask)}`,
+    `BTC move ${rangeText(rule.min_abs_distance_bps, rule.max_abs_distance_bps, " bps")}`,
+    `depth >= ${money.format(rule.min_top5_capacity_dollars || 0)}`,
+  ];
+  if (rule.min_fair_edge_vs_bid !== null && rule.min_fair_edge_vs_bid !== undefined) {
+    pieces.push(`fair edge >= ${formatCents(rule.min_fair_edge_vs_bid)}`);
+  }
+  if (rule.min_signal_depth_imbalance !== null && rule.min_signal_depth_imbalance !== undefined) {
+    pieces.push(`book lean >= ${percentText(rule.min_signal_depth_imbalance)}`);
+  }
+  if (rule.max_complement_ask_sum !== null && rule.max_complement_ask_sum !== undefined) {
+    pieces.push(`both asks <= ${formatPrice(rule.max_complement_ask_sum)}`);
+  }
+  if (rule.min_trade_flow_edge_dollars !== null && rule.min_trade_flow_edge_dollars !== undefined) {
+    pieces.push(`flow >= ${money.format(rule.min_trade_flow_edge_dollars)}`);
+  }
+  return pieces.join(" | ");
+}
+
+function marketDecisionSummary(row, market, isSignal) {
+  const outcome = decisionOutcome(row);
+  const selectedSide = sideKey(outcome);
+  const oppositeSide = oppositeSideKey(outcome);
+  const selectedAsk = sideField(row, selectedSide, "ask") ?? metricNumber(row.signal_ask);
+  const selectedBid = sideField(row, selectedSide, "bid") ?? metricNumber(row.signal_bid);
+  const selectedDepth = sideField(row, selectedSide, "ask_depth_5") ?? metricNumber(row.signal_ask_depth_5);
+  const selectedFlow = metricNumber(row[`${selectedSide}_signed_trade_notional_15s`]);
+  const oppositeFlow = metricNumber(row[`${oppositeSide}_signed_trade_notional_15s`]);
+  const flowEdge = metricNumber(row.trade_flow_edge_15s);
+  const pnl = metricNumber(row.pnl_after_slippage_haircut);
+  const headline = isSignal
+    ? `Bought ${outcome} at ${formatPrice(selectedAsk)} with ${row.seconds_left}s left`
+    : `No action with ${row.seconds_left}s left`;
+  const result = isSignal
+    ? `${row.winner} won | settlement ${row.outcome_win ? "1.00" : "0.00"} | ${formatSignedMoney(pnl)} PnL after safety cost`
+    : `Stopped: ${rejectReasonLabel(row.reason)} | winner ${market.winner || row.winner || "--"}`;
+  const reason = isSignal
+    ? `Matched rule: ${ruleLine()}`
+    : `Nearest decision row: ${ruleLine()}`;
+  return {
+    headline,
+    result,
+    reason,
+    signals: [
+      ["BTC move", formatBps(row.distance_bps)],
+      ["Fair value", formatPrice(row.fair_probability)],
+      ["Fair edge", formatCents(row.fair_edge_vs_signal_bid)],
+      ["Bid/ask", `${formatPrice(selectedBid)} / ${formatPrice(selectedAsk)}`],
+      ["Top-5 depth", money.format(selectedDepth || 0)],
+      ["Book lean", percentText(row.signal_depth_imbalance ?? row[`${selectedSide}_depth_imbalance`])],
+      ["15s flow edge", flowEdge === null ? `${money.format(selectedFlow || 0)} vs ${money.format(oppositeFlow || 0)}` : money.format(flowEdge)],
+      ["Both asks", formatPrice(row.complement_ask_sum)],
+    ],
+  };
+}
+
+function renderBacktestSummary(market, row, isSignal) {
+  const summary = marketDecisionSummary(row, market, isSignal);
+  const signalItems = summary.signals.map(([label, value]) => `
+    <div class="signal-cell">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+    </div>`).join("");
+  byId("backtestSummary").innerHTML = `
+    <div class="decision-block decision-main">
+      <span class="decision-kicker">${escapeHtml(shortDate(market.window_start))} | ${escapeHtml(market.slug || market.condition_id)}</span>
+      <strong>${escapeHtml(summary.headline)}</strong>
+      <span>${escapeHtml(summary.result)}</span>
+    </div>
+    <div class="decision-block decision-rule">
+      <span class="decision-kicker">Algorithm Reason</span>
+      <strong>${escapeHtml(isSignal ? "Rule matched" : rejectReasonLabel(row.reason))}</strong>
+      <span>${escapeHtml(summary.reason)}</span>
+    </div>
+    <div class="decision-block decision-signals">
+      ${signalItems}
+    </div>`;
 }
 
 function tradeTitle(row) {
@@ -393,7 +490,7 @@ function renderSignalDecisionChart(signal, options = {}) {
   };
   const yPrice = (value) => {
     const number = Number(value);
-    return Number.isFinite(number) && number > 0 ? book.top + ((1 - Math.max(0, Math.min(1, number))) * book.height) : Number.NaN;
+    return Number.isFinite(number) && number >= 0 ? book.top + ((1 - Math.max(0, Math.min(1, number))) * book.height) : Number.NaN;
   };
   const selectedOutcome = decisionOutcome(signal);
   const selectedSide = sideKey(selectedOutcome);
@@ -664,19 +761,23 @@ function renderProfileSkewChart(profileKey = "profile_skew") {
 function renderBacktestChart() {
   const market = marketRows().find((row) => row.condition_id === state.backtestMarket);
   if (!market) {
+    byId("backtestSummary").innerHTML = "";
     byId("backtestChart").innerHTML = svgEmpty("No market selected.");
     return;
   }
   const signal = signalForMarket(market.condition_id);
   if (signal) {
+    renderBacktestSummary(market, signal, true);
     renderSignalDecisionChart(signal, { isSignal: true, market });
     return;
   }
   const decision = noActionDecisionRow(market);
   if (!decision) {
+    byId("backtestSummary").innerHTML = "";
     byId("backtestChart").innerHTML = svgEmpty("No decision rows for this market.");
     return;
   }
+  renderBacktestSummary(market, decision, false);
   renderSignalDecisionChart(decision, { isSignal: false, market });
 }
 
@@ -1040,8 +1141,8 @@ async function main() {
     state.backtestMarket = event.target.value;
     renderBacktestChart();
   });
-  byId("backtestFilter").addEventListener("change", (event) => {
-    state.backtestFilter = event.target.value;
+  byId("marketFilter").addEventListener("change", (event) => {
+    state.marketFilter = event.target.value;
     renderBacktestSelects();
     renderBacktestChart();
   });
