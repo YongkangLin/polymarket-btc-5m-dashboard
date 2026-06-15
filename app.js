@@ -349,6 +349,46 @@ function ruleLine() {
   return pieces.join(" | ");
 }
 
+function ruleSummaryText() {
+  const rule = activeRule();
+  return [
+    `Buy the dominant side only ${rangeText(rule.min_seconds_left, rule.max_seconds_left, "s")} before close`,
+    `BTC move ${rangeText(rule.min_abs_distance_bps, rule.max_abs_distance_bps, " bps")}`,
+    `ask ${rangeText(rule.min_ask, rule.max_ask)}`,
+    `top-5 depth >= ${money.format(rule.min_top5_capacity_dollars || 0)}`,
+    `fair edge >= ${formatCents(rule.min_fair_edge_vs_bid)}`,
+  ].join(" | ");
+}
+
+function strategyCell(title, body) {
+  return `
+    <div class="strategy-cell">
+      <span>${escapeHtml(title)}</span>
+      <strong>${escapeHtml(body)}</strong>
+    </div>`;
+}
+
+function renderStrategyPanels() {
+  const paperSummary = state.workflow.paper_trade.summary || {};
+  const policy = state.workflow.live_trade.execution_policy || {};
+  const routeLabel = paperSummary.maker_route_label || policy.selected_route_label || "Maker join best bid for 15s";
+  byId("backtestStrategy").innerHTML = [
+    strategyCell("Backtest strategy", "Rule-based, not ML: late dominant-side fair-value quoting."),
+    strategyCell("Active signals", "BTC vs start, fair probability, Polymarket bid/ask, top-5 depth, book lean, both-asks sanity."),
+    strategyCell("Buy rule", ruleSummaryText()),
+  ].join("");
+  byId("paperStrategy").innerHTML = [
+    strategyCell("Paper strategy", "Same backtest signal, then no-money maker simulation."),
+    strategyCell("Maker route", `${routeLabel}: quote best bid, mark live edge every poll, cancel when edge decays.`),
+    strategyCell("Important gap", "External Binance/Coinbase order-book imbalance is planned for paper/live, not used in the historical backtest yet."),
+  ].join("");
+  byId("liveStrategy").innerHTML = [
+    strategyCell("Live strategy", "Disabled until paper proves fills are good, not just frequent."),
+    strategyCell("Order policy", "Post-only maker limits only; no taker entries, no market orders, cancel stale or negative-edge quotes."),
+    strategyCell("Promotion gate", "Needs positive post-fill edge, low toxic fills, clean start prices, healthy latency, and manual enable."),
+  ].join("");
+}
+
 function marketDecisionSummary(row, market, isSignal) {
   const outcome = decisionOutcome(row);
   const selectedSide = sideKey(outcome);
@@ -1012,6 +1052,18 @@ function paperStatusRows() {
       title: "Post-only shadow quotes opened by the selected maker route.",
     },
     {
+      label: "Quote marks",
+      value: Number(summary.maker_marks || 0),
+      detail: fmt.format(summary.maker_marks || 0),
+      title: "Per-poll checks of open maker quotes: fair value, live edge, and current book.",
+    },
+    {
+      label: "Edge cancels",
+      value: Number(summary.maker_edge_cancels || 0),
+      detail: fmt.format(summary.maker_edge_cancels || 0),
+      title: "Open maker quotes canceled because live fair edge fell below the configured threshold before fill inference.",
+    },
+    {
       label: "Maker fills",
       value: Number(summary.maker_fills || 0),
       detail: `${fmt.format(summary.maker_fills || 0)} filled`,
@@ -1034,6 +1086,12 @@ function paperStatusRows() {
       value: Math.abs(Number(summary.maker_avg_post_fill_edge || 0) * 100),
       detail: formatCents(summary.maker_avg_post_fill_edge),
       title: "Average fair-after-fill minus quote price. Positive is the core maker-quality metric.",
+    },
+    {
+      label: "Worst live edge",
+      value: Math.abs(Number(summary.maker_min_live_edge || 0) * 100),
+      detail: formatCents(summary.maker_min_live_edge),
+      title: "Worst marked live fair edge while a maker quote was open. This should stay above the cancel threshold.",
     },
     {
       label: "Settled buys",
@@ -1126,6 +1184,7 @@ function renderActiveTab() {
 async function main() {
   state.workflow = normalizeWorkflow(await loadJson("data/workflow.json"));
   renderStatus();
+  renderStrategyPanels();
   renderBacktestSelects();
   renderBacktestChart();
   renderPaperChart();
