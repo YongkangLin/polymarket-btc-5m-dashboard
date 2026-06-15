@@ -25,16 +25,16 @@
       <section class="panel is-active" id="backtestPanel" data-panel="backtest">
         <div class="toolbar">
           <label>
-            <span>Market</span>
+            <span>Signal</span>
             <select id="backtestMarket"></select>
           </label>
           <label>
-            <span>Metric</span>
+            <span>View</span>
             <select id="backtestMetric">
-              <option value="trade_pnl">Trade PnL</option>
-              <option value="distance_bps">BTC distance</option>
-              <option value="signal_ask">Dominant-side ask</option>
-              <option value="top5_capacity_dollars">Top-5 capacity</option>
+              <option value="trade_pnl">Profit</option>
+              <option value="buy_price">Buy Price</option>
+              <option value="btc_move">BTC Move</option>
+              <option value="available_size">Available Size</option>
             </select>
           </label>
         </div>
@@ -67,6 +67,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=20260615-03"></script>
+    <script src="app.js?v=20260615-04"></script>
   </body>
 </html>
