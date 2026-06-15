@@ -487,6 +487,19 @@ svg {
   font-weight: 800;
 }
 
+.paper-side-label {
+  fill: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.paper-side-value {
+  fill: var(--ink);
+  font-size: 30px;
+  font-weight: 900;
+}
+
 .paper-move-value.move-up,
 .bar-value.move-up {
   fill: var(--green);
