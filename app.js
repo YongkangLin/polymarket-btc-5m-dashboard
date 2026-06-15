@@ -912,7 +912,7 @@ function paperMarketLabel(market) {
 
 function paperStoredPointCount(market) {
   if (!market) return 0;
-  return paperChartPointsFor(market).length;
+  return mergePaperChartRows(paperPointsFor(market), liveTickPointsForMarket(market)).length;
 }
 
 function paperMarkerType(row) {
@@ -2276,19 +2276,22 @@ function pointTimestampMicro(point) {
 }
 
 function appendLiveBtcPoint(market, point) {
-  const key = paperGraphKey(market);
-  if (!key || !isBinanceLivePoint(point)) return;
+  const keys = paperStorageKeysForMarket(market);
+  if (!keys.length || !isBinanceLivePoint(point)) return;
   rememberLiveMarket(market);
-  const points = state.liveBtcTicksByMarket.get(key) || [];
-  const last = points[points.length - 1];
-  const lastTradeId = last?.point_id ?? last?.trade_id;
-  const tradeId = point.point_id ?? point.trade_id;
-  if (tradeId !== undefined && lastTradeId !== undefined && String(tradeId) === String(lastTradeId)) return;
-  points.push(point);
-  if (points.length > LIVE_TICK_STORE_MAX_POINTS_PER_MARKET) {
-    points.splice(0, points.length - LIVE_TICK_STORE_MAX_POINTS_PER_MARKET);
-  }
-  state.liveBtcTicksByMarket.set(key, points);
+  keys.forEach((key) => {
+    const points = state.liveBtcTicksByMarket.get(key) || [];
+    const pointKey = point.point_id || `${point.decision}:${pointTimestampMicro(point)}:${point.btc_price}`;
+    if (points.some((existing) => {
+      const existingKey = existing.point_id || `${existing.decision}:${pointTimestampMicro(existing)}:${existing.btc_price}`;
+      return String(existingKey) === String(pointKey);
+    })) return;
+    points.push(point);
+    if (points.length > LIVE_TICK_STORE_MAX_POINTS_PER_MARKET) {
+      points.splice(0, points.length - LIVE_TICK_STORE_MAX_POINTS_PER_MARKET);
+    }
+    state.liveBtcTicksByMarket.set(key, points);
+  });
   schedulePaperTickPersist();
 }
 
@@ -2519,21 +2522,22 @@ async function fetchBinanceWindowStartPrice(market) {
 }
 
 function recomputeLiveTickDistances(market) {
-  const key = paperGraphKey(market);
   const startPrice = verifiedBinanceStartPrice(market);
-  if (!key || startPrice === null) return;
+  if (startPrice === null) return;
   const startMeta = liveStartMetadata(market);
-  const points = state.liveBtcTicksByMarket.get(key) || [];
-  points.forEach((point) => {
-    const price = metricNumber(point.btc_price);
-    if (price === null || price <= 0) return;
-    const distanceBps = Math.log(price / startPrice) * 10000;
-    point.start_price = startPrice;
-    point.start_price_source = startMeta.start_price_source;
-    point.start_trade_time_ms = startMeta.start_trade_time_ms;
-    point.start_trade_delay_ms = startMeta.start_trade_delay_ms;
-    point.distance_bps = distanceBps;
-    point.side = distanceBps > 0 ? "Up" : (distanceBps < 0 ? "Down" : null);
+  paperStorageKeysForMarket(market).forEach((key) => {
+    const points = state.liveBtcTicksByMarket.get(key) || [];
+    points.forEach((point) => {
+      const price = metricNumber(point.btc_price);
+      if (price === null || price <= 0) return;
+      const distanceBps = Math.log(price / startPrice) * 10000;
+      point.start_price = startPrice;
+      point.start_price_source = startMeta.start_price_source;
+      point.start_trade_time_ms = startMeta.start_trade_time_ms;
+      point.start_trade_delay_ms = startMeta.start_trade_delay_ms;
+      point.distance_bps = distanceBps;
+      point.side = distanceBps > 0 ? "Up" : (distanceBps < 0 ? "Down" : null);
+    });
   });
 }
 
