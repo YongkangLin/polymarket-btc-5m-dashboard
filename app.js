@@ -410,6 +410,35 @@ function formatBps(value) {
   return `${sign}${number.toFixed(1)} bps`;
 }
 
+function formatBpsDeep(value) {
+  const number = metricNumber(value);
+  if (number === null) return "--";
+  const abs = Math.abs(number);
+  if (abs < 0.00005) return "0 bps";
+  const decimals = abs < 0.01 ? 4 : (abs < 0.1 ? 3 : (abs < 1 ? 2 : 1));
+  const sign = number > 0 ? "+" : "";
+  return `${sign}${number.toFixed(decimals)} bps`;
+}
+
+function paperDistanceDomain(samples) {
+  const values = samples
+    .map((point) => point.distanceBps)
+    .filter((value) => Number.isFinite(value));
+  let min = Math.min(0, ...values);
+  let max = Math.max(0, ...values);
+  const minSpan = 0.08;
+  if (max - min < minSpan) {
+    const center = (min + max) / 2;
+    min = center - minSpan / 2;
+    max = center + minSpan / 2;
+    if (min > 0) min = 0;
+    if (max < 0) max = 0;
+  }
+  const span = Math.max(max - min, minSpan);
+  const pad = Math.max(span * 0.12, 0.008);
+  return { min: min - pad, max: max + pad };
+}
+
 function sideKey(outcome) {
   return outcome === "Up" ? "up" : "down";
 }
@@ -2216,8 +2245,8 @@ function orderBookSummaryRows(market, rawPoints, latestRaw, latestQuote) {
     ["Order Book", "Local backend / live feed"],
     ["BTC bid / ask", pricePairText(bookBid, bookAsk)],
     ["BTC size", qtyPairText(bookBidQty, bookAskQty)],
-    ["BTC spread", bookSpread === null ? "--" : formatBps(bookSpread)],
-    ["BTC micro", bookMicro === null ? (externalMicroEdge === null ? "--" : formatBps(externalMicroEdge)) : formatPrice(bookMicro)],
+    ["BTC spread", bookSpread === null ? "--" : formatBpsDeep(bookSpread)],
+    ["BTC micro", bookMicro === null ? (externalMicroEdge === null ? "--" : formatBpsDeep(externalMicroEdge)) : formatPrice(bookMicro)],
     ["BTC imbalance", externalImbalance === null ? "--" : percentText(externalImbalance)],
     [`PM ${outcome} bid / ask`, pricePairText(selectedBid, selectedAsk)],
     [`PM ${outcome} depth`, selectedDepth === null ? "--" : money.format(selectedDepth)],
@@ -2236,7 +2265,7 @@ function paperMarkerTitle(row) {
   const btc = metricNumber(row.btc_price);
   if (btc !== null) pieces.push(`BTC ${formatPrice(btc)}`);
   const distance = paperDistanceBps(row);
-  if (distance !== null) pieces.push(formatBps(distance));
+  if (distance !== null) pieces.push(formatBpsDeep(distance));
   const support = metricNumber(row.external_book_support);
   if (support !== null) pieces.push(`BTC book ${percentText(support)}`);
   const quotePrice = metricNumber(row.maker_quote_price ?? row.quote_price ?? row.bid_price ?? row.price);
@@ -2283,16 +2312,15 @@ function renderPaperDecisionGraph() {
   }
 
   const view = { width: 980, height: 720 };
-  const plot = { left: 76, right: 306, top: 42, height: 362 };
+  const plot = { left: 76, right: 306, top: 42, height: 420 };
   const plotWidth = view.width - plot.left - plot.right;
   const plotBottom = plot.top + plot.height;
   const xForSeconds = (secondsLeft) => {
     const clamped = Math.max(0, Math.min(300, Number(secondsLeft)));
     return plot.left + ((300 - clamped) / 300) * plotWidth;
   };
-  const maxAbsDistance = Math.max(8, ...samples.map((point) => Math.abs(point.distanceBps))) * 1.18;
-  const tickAbs = Math.max(10, Math.ceil(maxAbsDistance / 10) * 10);
-  const yForDistance = (value) => plot.top + ((tickAbs - Number(value)) / (tickAbs * 2)) * plot.height;
+  const distanceDomain = paperDistanceDomain(samples);
+  const yForDistance = (value) => plot.top + ((distanceDomain.max - Number(value)) / (distanceDomain.max - distanceDomain.min)) * plot.height;
   const linePoints = samples.map((point) => ({
     x: xForSeconds(point.secondsLeft),
     y: yForDistance(point.distanceBps),
@@ -2306,9 +2334,9 @@ function renderPaperDecisionGraph() {
     const x = xForSeconds(tick);
     return `<line class="grid" x1="${x}" y1="${plot.top}" x2="${x}" y2="${plotBottom}"></line><text class="tick" x="${x}" y="${plotBottom + 24}" text-anchor="middle">${tick}s</text>`;
   }).join("");
-  const yTicks = [-tickAbs, 0, tickAbs].map((tick) => {
+  const yTicks = [distanceDomain.min, 0, distanceDomain.max].map((tick) => {
     const y = yForDistance(tick);
-    return `<line class="${tick === 0 ? "axis-zero" : "grid"}" x1="${plot.left}" y1="${y}" x2="${plot.left + plotWidth}" y2="${y}"></line><text class="tick" x="${plot.left - 10}" y="${y + 4}" text-anchor="end">${formatBps(tick)}</text>`;
+    return `<line class="${Math.abs(tick) < 1e-12 ? "axis-zero" : "grid"}" x1="${plot.left}" y1="${y}" x2="${plot.left + plotWidth}" y2="${y}"></line><text class="tick" x="${plot.left - 10}" y="${y + 4}" text-anchor="end">${formatBpsDeep(tick)}</text>`;
   }).join("");
 
   const nearestSample = (row) => {
@@ -2380,7 +2408,7 @@ function renderPaperDecisionGraph() {
     ["Market", compactNote(market.slug || market.question || paperGraphKey(market), 30)],
     ["Mode", compactNote(modeText, 30)],
     ["Zero line", compactNote(startSource, 30)],
-    ["Latest BTC", `${formatPrice(latest.btcPrice)} | ${formatBps(latest.distanceBps)}`],
+    ["Latest BTC", `${formatPrice(latest.btcPrice)} | ${formatBpsDeep(latest.distanceBps)}`],
     ["Tick time", compactNote(latestTradeTime, 30)],
     ["Feed", compactNote(`${backendLabel} | ${liveFeedLabel(latestRaw)}`, 30)],
     ["Seconds left", `${Math.round(latest.secondsLeft)}s`],
@@ -2395,15 +2423,15 @@ function renderPaperDecisionGraph() {
     ["PM depth / flow", `${depthImbalance === null ? "--" : percentText(depthImbalance)} | ${flowEdge === null ? "--" : moneyCents.format(flowEdge)}`],
     ["Result", compactNote(resultText, 30)],
   ].map(([label, value], index) => {
-    const y = 88 + index * 25;
+    const y = 84 + index * 22;
     return `
       <text class="bar-label" x="718" y="${y}">${escapeHtml(label)}</text>
-      <text class="bar-value" x="718" y="${y + 14}">${escapeHtml(String(value))}</text>`;
+      <text class="bar-value" x="718" y="${y + 13}">${escapeHtml(String(value))}</text>`;
   }).join("");
   const latestTitle = [
     `latest ${Math.round(latest.secondsLeft)}s left`,
     `BTC ${formatPrice(latest.btcPrice)}`,
-    formatBps(latest.distanceBps),
+    formatBpsDeep(latest.distanceBps),
     latestTradeTime,
     paperDecisionText(latestRaw),
   ].join(" | ");
