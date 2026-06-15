@@ -19,6 +19,7 @@ const LIVE_PAPER_X_SCROLL_STEP_SECONDS = 1;
 const LIVE_PAPER_Y_MIN_RADIUS = 8;
 const LIVE_PAPER_Y_EXPANSION_PAD = 1.24;
 const LIVE_PAPER_Y_BUCKET = 4;
+const LIVE_PAPER_RENDER_BUCKET_SECONDS = 0.075;
 const LOCAL_BACKEND_BASE = window.POLYMARKET_BACKEND_BASE || "http://127.0.0.1:8787";
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
 const BACKEND_WS_SNAPSHOT_LIMIT = 50000;
@@ -495,7 +496,7 @@ function paperLiveScaleKey(market) {
   return `${key}:${windowStart}`;
 }
 
-function livePaperXDomain(latestElapsed) {
+function livePaperXDomain(market, latestElapsed) {
   const latest = Math.max(0, Math.min(300, Number(latestElapsed) || 0));
   const windowSeconds = LIVE_PAPER_X_WINDOW_SECONDS;
   const leadSeconds = LIVE_PAPER_X_LEAD_SECONDS;
@@ -503,6 +504,10 @@ function livePaperXDomain(latestElapsed) {
   const step = LIVE_PAPER_X_SCROLL_STEP_SECONDS;
   let min = latest <= scrollAfter ? 0 : Math.floor((latest - scrollAfter) / step) * step;
   min = Math.max(0, Math.min(300 - windowSeconds, min));
+  const key = paperLiveScaleKey(market);
+  const cached = state.paperLiveChartScales.get(key) || {};
+  min = Math.max(cached.xMin || 0, min);
+  state.paperLiveChartScales.set(key, { ...cached, xMin: min, xMax: min + windowSeconds });
   return { min, max: min + windowSeconds };
 }
 
@@ -517,6 +522,23 @@ function livePaperDollarDomain(market, samples) {
   const radius = Math.max(cached.yRadius || 0, expandedRadius);
   state.paperLiveChartScales.set(key, { ...cached, yRadius: radius });
   return { min: -radius, max: radius };
+}
+
+function stableLiveLineSamples(samples) {
+  if (!Array.isArray(samples) || samples.length <= LIVE_TICK_RENDER_MAX_POINTS) return samples || [];
+  const buckets = new Map();
+  samples.forEach((sample) => {
+    if (!Number.isFinite(sample.elapsedSeconds)) return;
+    const bucket = Math.floor(sample.elapsedSeconds / LIVE_PAPER_RENDER_BUCKET_SECONDS);
+    const existing = buckets.get(bucket);
+    if (!existing || sample.elapsedSeconds >= existing.elapsedSeconds) buckets.set(bucket, sample);
+  });
+  const output = [...buckets.values()].sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
+  const first = samples[0];
+  const last = samples[samples.length - 1];
+  if (first && output[0] !== first) output.unshift(first);
+  if (last && output[output.length - 1] !== last) output.push(last);
+  return output;
 }
 
 function sideKey(outcome) {
@@ -2498,7 +2520,7 @@ function renderPaperDecisionGraph() {
 
   const startMeta = preferredPaperStartMetadata(market);
   const lineRows = selectedCurrent
-    ? downsamplePoints(liveTradePointsForMarket(market), LIVE_TICK_RENDER_MAX_POINTS)
+    ? liveTradePointsForMarket(market)
     : rawPoints.filter((row) => row.decision !== "live_book_tick");
   const allSamples = lineRows
     .map((row, index) => ({
@@ -2522,21 +2544,22 @@ function renderPaperDecisionGraph() {
   const plotBottom = plot.top + plot.height;
   const latest = allSamples[allSamples.length - 1];
   const latestElapsed = Number.isFinite(latest.elapsedSeconds) ? latest.elapsedSeconds : Math.max(0, 300 - latest.secondsLeft);
-  const xDomain = selectedCurrent ? livePaperXDomain(latestElapsed) : { min: 0, max: 300 };
+  const xDomain = selectedCurrent ? livePaperXDomain(market, latestElapsed) : { min: 0, max: 300 };
   if (xDomain.max - xDomain.min < 1) xDomain.max = xDomain.min + 1;
   const samples = allSamples.filter((point) => point.elapsedSeconds >= xDomain.min && point.elapsedSeconds <= xDomain.max);
   const visibleSamples = samples.length ? samples : allSamples.slice(-1);
+  const lineSamples = selectedCurrent ? stableLiveLineSamples(visibleSamples) : visibleSamples;
   const xForElapsed = (elapsedSeconds) => {
     const clamped = Math.max(xDomain.min, Math.min(xDomain.max, Number(elapsedSeconds)));
     return plot.left + ((clamped - xDomain.min) / (xDomain.max - xDomain.min)) * plotWidth;
   };
   const dollarDomain = selectedCurrent ? livePaperDollarDomain(market, allSamples) : paperDollarDomain(visibleSamples, 2);
   const yForDollarMove = (value) => plot.top + ((dollarDomain.max - Number(value)) / (dollarDomain.max - dollarDomain.min)) * plot.height;
-  const mappedLinePoints = visibleSamples.map((point) => ({
+  const mappedLinePoints = lineSamples.map((point) => ({
     x: xForElapsed(point.elapsedSeconds),
     y: yForDollarMove(point.dollarMove),
   }));
-  const linePoints = selectedCurrent ? mappedLinePoints : compressLinePoints(mappedLinePoints);
+  const linePoints = compressLinePoints(mappedLinePoints);
   const rule = activeRule();
   const bandRect = (startElapsed, endElapsed, className) => {
     const left = Math.max(xDomain.min, Math.min(startElapsed, endElapsed));
