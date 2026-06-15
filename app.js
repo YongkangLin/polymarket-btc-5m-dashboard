@@ -1,11 +1,13 @@
 const fmt = new Intl.NumberFormat("en-US");
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const moneyCents = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const ACTIVE_BACKTEST_KEY = "repricing_lag_fair_103";
+const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
 
 const state = {
   workflow: null,
   activeTab: "backtest",
-  backtestMarket: "all-signals",
+  backtestMarket: ACTIVE_BACKTEST_VALUE,
   liveGate: "paper_to_live",
 };
 
@@ -59,6 +61,15 @@ function candidateValue(strategy) {
 
 function candidateFromValue(value) {
   return candidateStrategies().find((strategy) => candidateValue(strategy) === value);
+}
+
+function activeCandidateStrategy() {
+  return candidateStrategies().find((strategy) => (strategy.key || strategy.strategy_id) === ACTIVE_BACKTEST_KEY);
+}
+
+function activeBacktestValue() {
+  const active = activeCandidateStrategy();
+  return active ? candidateValue(active) : "all-signals";
 }
 
 function selectedStrategyProfile(profileKey) {
@@ -206,6 +217,12 @@ function linePathFor(rows, valueFor, xFor, yFor) {
 function renderBacktestSelects() {
   const signals = signalRows();
   const candidates = candidateStrategies();
+  const activeValue = activeBacktestValue();
+  const orderedCandidates = [...candidates].sort((left, right) => {
+    if (candidateValue(left) === activeValue) return -1;
+    if (candidateValue(right) === activeValue) return 1;
+    return 0;
+  });
   const profileSummary = state.workflow?.profile_skew?.summary || {};
   const cheapPairSummary = state.workflow?.profile_cheap_pair?.summary || {};
   const hasProfile = Number(profileSummary.clean_markets_scanned || 0) > 0;
@@ -217,27 +234,27 @@ function renderBacktestSelects() {
     ...(hasProfile ? ["profile-skew"] : []),
     ...signals.map((row) => row.condition_id),
   ]);
-  if (!allowed.has(state.backtestMarket)) state.backtestMarket = "all-signals";
+  if (!allowed.has(state.backtestMarket)) state.backtestMarket = activeValue;
   const summary = state.workflow?.backtest?.summary || {};
   const buySeconds = Number(summary.qualifying_buy_seconds || signals.length);
   const allLabel = buySeconds > signals.length
-    ? `Strict Backtest (${signals.length} buy markets, ${fmt.format(buySeconds)} buy seconds)`
-    : `Strict Backtest (${signals.length} buy markets)`;
+    ? `Legacy strict rule (${signals.length} buy markets, ${fmt.format(buySeconds)} buy seconds)`
+    : `Legacy strict rule (${signals.length} buy markets)`;
   const profileOption = hasProfile
     ? [`<option value="profile-skew">Late Skew (${fmt.format(profileSummary.traded_markets || 0)} markets, ${formatPercent(profileSummary.roi_on_filled_cost)} ROI)</option>`]
     : [];
   const cheapPairOption = hasCheapPair
     ? [`<option value="profile-cheap-pair">Cheap Pair (${fmt.format(cheapPairSummary.traded_markets || 0)} markets, ${formatPercent(cheapPairSummary.roi_on_filled_cost)} ROI)</option>`]
     : [];
-  const candidateOptions = candidates.map((strategy) => {
+  const candidateOptions = orderedCandidates.map((strategy) => {
     const summary = strategy.summary || {};
     const makerRoi = metricNumber(summary.maker_test_roi_on_planned_cost);
     const makerText = makerRoi === null ? "" : `, ${formatPercent(makerRoi)} maker test`;
     return `<option value="${escapeHtml(candidateValue(strategy))}">${escapeHtml(strategy.strategy_name || strategy.strategy_id)} (${fmt.format(summary.traded_markets || 0)} buys, ${formatPercent(summary.roi_on_filled_cost)} ROI${makerText})</option>`;
   });
   byId("backtestMarket").innerHTML = [
-    `<option value="all-signals">${allLabel}</option>`,
     ...candidateOptions,
+    `<option value="all-signals">${allLabel}</option>`,
     ...cheapPairOption,
     ...profileOption,
     ...signals.map((row, index) => `<option value="${row.condition_id}">${signalLabel(row, index)}</option>`),
@@ -896,7 +913,12 @@ function renderPaperChart() {
 function renderStatus() {
   const q = state.workflow.data_quality || {};
   const b = state.workflow.backtest.summary || {};
-  const buySeconds = Number(b.qualifying_buy_seconds || b.signals || 0);
+  const active = activeCandidateStrategy();
+  const activeSummary = active?.summary || {};
+  const activeBuys = Number(activeSummary.traded_markets || activeSummary.quoted_markets || b.signals || 0);
+  const activeRoi = metricNumber(activeSummary.roi_on_filled_cost ?? b.roi_after_slippage_haircut);
+  const makerRoi = metricNumber(activeSummary.maker_test_roi_on_planned_cost);
+  const makerText = makerRoi === null ? "" : ` | maker test ${formatPercent(makerRoi)}`;
   const generated = state.workflow.generated_at
     ? new Date(state.workflow.generated_at).toLocaleString("en-US", {
         month: "short",
@@ -906,7 +928,7 @@ function renderStatus() {
         timeZoneName: "short",
       })
     : "unknown build";
-  byId("statusText").textContent = `Loaded ${generated} | strict backtest: ${fmt.format(b.signals || 0)} buys / ${fmt.format(buySeconds)} buy seconds | ${fmt.format(q.clean_markets || 0)} clean windows`;
+  byId("statusText").textContent = `Loaded ${generated} | active backtest: ${fmt.format(activeBuys)} buys | ROI ${formatPercent(activeRoi)}${makerText} | ${fmt.format(q.clean_markets || 0)} clean windows`;
 }
 
 function renderActiveTab() {
