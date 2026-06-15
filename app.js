@@ -55,20 +55,14 @@ function signalLabel(row, index) {
   return `Signal ${index + 1}: ${when} | ${row.intended_outcome} | ${moneyCents.format(pnl)}`;
 }
 
-function metricLabel(metric) {
-  if (metric === "trade_pnl") return "Profit";
-  if (metric === "buy_price") return "Buy price";
-  if (metric === "btc_move") return "BTC move";
-  if (metric === "available_size") return "Available size";
-  return "Value";
+function formatPrice(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "--";
+  return Number(value).toFixed(2);
 }
 
-function formatValue(value, metric) {
+function formatPnl(value) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "--";
-  if (metric === "trade_pnl") return moneyCents.format(value);
-  if (metric === "buy_price") return Number(value).toFixed(2);
-  if (metric === "available_size") return money.format(value);
-  return `${Number(value) > 0 ? "+" : ""}${Number(value).toFixed(1)} bps`;
+  return moneyCents.format(value);
 }
 
 function formatActual(value) {
@@ -89,17 +83,13 @@ function pathFrom(points) {
   return points.map((point, index) => `${index === 0 ? "M" : "L"}${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ");
 }
 
-function niceDomain(values, metric) {
+function profitDomain(values) {
   const finite = values.filter((value) => Number.isFinite(value));
   if (!finite.length) return [0, 1];
   let min = Math.min(...finite);
   let max = Math.max(...finite);
-  if (metric === "buy_price") return [Math.max(0, min - 0.02), Math.min(1, max + 0.02)];
-  if (metric === "available_size") return [0, max * 1.12 || 1];
-  if (metric === "trade_pnl") {
-    min = Math.min(0, min);
-    max = Math.max(0, max);
-  }
+  min = Math.min(0, min);
+  max = Math.max(0, max);
   if (min === max) {
     const pad = Math.abs(min || 1) * 0.1;
     return [min - pad, max + pad];
@@ -130,7 +120,7 @@ function tradeTitle(row) {
     `Held to settlement: ${row.winner} won, exit ${exit.toFixed(2)}`,
     `Profit: ${moneyCents.format(pnl)} after 2c safety cost (${moneyCents.format(rawPnl)} raw)`,
     `Why: final minute, BTC moved ${Number(row.abs_distance_bps).toFixed(1)} bps, buy price was 0.70-0.98, available size was ${money.format(row.top5_capacity_dollars || 0)}`,
-    `Book then: ${row.intended_outcome} bid/ask ${formatValue(row.signal_bid, "buy_price")}/${formatValue(entry, "buy_price")}; other side ask ${formatValue(oppositeAsk, "buy_price")}`,
+    `Book then: ${row.intended_outcome} bid/ask ${formatPrice(row.signal_bid)}/${formatPrice(entry)}; other side ask ${formatPrice(oppositeAsk)}`,
   ].join(" | ");
 }
 
@@ -145,7 +135,7 @@ function renderTradePnlChart(signals) {
   const pnlValues = signals.map((row) => Number(row.pnl_after_slippage_haircut || 0));
   const cumulativeValues = signals.map((row) => Number(row.cumulative_pnl_after_haircut || 0));
   const values = [0, ...pnlValues, ...cumulativeValues];
-  const [minY, maxY] = niceDomain(values, "trade_pnl");
+  const [minY, maxY] = profitDomain(values);
   const xFor = (index) => view.left + ((index + 0.5) / signals.length) * plotWidth;
   const yFor = (value) => view.top + ((maxY - value) / Math.max(maxY - minY, 1)) * plotHeight;
   const barWidth = Math.min(54, Math.max(14, plotWidth / signals.length * 0.42));
@@ -154,7 +144,7 @@ function renderTradePnlChart(signals) {
     .filter((value, index, array) => array.findIndex((other) => Math.abs(other - value) < 0.001) === index);
   const grid = yTicks.map((tick) => {
     const y = yFor(tick);
-    return `<line class="${Math.abs(tick) < 0.001 ? "axis-zero" : "grid"}" x1="${view.left}" y1="${y}" x2="${view.left + plotWidth}" y2="${y}"></line><text class="tick" x="${view.left - 10}" y="${y + 4}" text-anchor="end">${formatValue(tick, "trade_pnl")}</text>`;
+    return `<line class="${Math.abs(tick) < 0.001 ? "axis-zero" : "grid"}" x1="${view.left}" y1="${y}" x2="${view.left + plotWidth}" y2="${y}"></line><text class="tick" x="${view.left - 10}" y="${y + 4}" text-anchor="end">${formatPnl(tick)}</text>`;
   }).join("");
   const bars = signals.map((row, index) => {
     const pnl = Number(row.pnl_after_slippage_haircut || 0);
