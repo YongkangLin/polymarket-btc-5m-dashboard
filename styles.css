@@ -111,7 +111,12 @@ h1 {
 label {
   display: grid;
   gap: 5px;
-  min-width: min(360px, 100%);
+  min-width: min(180px, 100%);
+}
+
+.market-label {
+  flex: 1 1 560px;
+  min-width: min(560px, 100%);
 }
 
 label span {
