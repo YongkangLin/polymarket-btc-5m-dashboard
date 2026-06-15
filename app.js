@@ -1761,7 +1761,7 @@ function renderPaperDecisionGraph() {
     return;
   }
 
-  const view = { width: 980, height: 640 };
+  const view = { width: 980, height: 720 };
   const plot = { left: 76, right: 306, top: 42, height: 362 };
   const plotWidth = view.width - plot.left - plot.right;
   const plotBottom = plot.top + plot.height;
@@ -1846,6 +1846,14 @@ function renderPaperDecisionGraph() {
     : (latestRaw.time_unix ? formatMicroTimestamp(Number(latestRaw.time_unix) * 1_000_000) : "--");
   const latency = metricNumber(latestRaw.ws_latency_ms);
   const latencyText = latency === null ? "--" : `${latency.toFixed(1)} ms`;
+  const fairProbability = metricNumber(latestRaw.fair_probability);
+  const fairEdge = metricNumber(latestRaw.fair_edge);
+  const depthImbalance = metricNumber(latestRaw.side_depth_imbalance);
+  const flowEdge = metricNumber(latestRaw.trade_flow_edge_15s);
+  const complementAskSum = metricNumber(latestRaw.complement_ask_sum);
+  const externalImbalance = metricNumber(latestRaw.external_book_imbalance);
+  const externalSpread = metricNumber(latestRaw.external_book_spread_bps);
+  const externalMicro = metricNumber(latestRaw.external_book_microprice_edge_bps);
   const infoRows = [
     ["Market", compactNote(market.slug || market.question || paperGraphKey(market), 30)],
     ["Mode", compactNote(modeText, 30)],
@@ -1856,7 +1864,13 @@ function renderPaperDecisionGraph() {
     ["Seconds left", `${Math.round(latest.secondsLeft)}s`],
     ["Decision", compactNote(paperDecisionText(latestRaw), 30)],
     ["Paper quote", compactNote(paperQuoteText(latestQuote), 30)],
+    ["Fair / edge", `${formatPercent(fairProbability)} | ${formatCents(fairEdge)}`],
+    ["PM depth / flow", `${depthImbalance === null ? "--" : percentText(depthImbalance)} | ${flowEdge === null ? "--" : moneyCents.format(flowEdge)}`],
+    ["Pair ask sum", complementAskSum === null ? "--" : complementAskSum.toFixed(2)],
     ["BTC book", latestSupport === null ? "--" : percentText(latestSupport)],
+    ["BTC imbalance", externalImbalance === null ? "--" : percentText(externalImbalance)],
+    ["BTC spread", externalSpread === null ? "--" : formatBps(externalSpread)],
+    ["BTC micro", externalMicro === null ? "--" : formatBps(externalMicro)],
     ["Result", compactNote(resultText, 30)],
   ].map(([label, value], index) => {
     const y = 90 + index * 33;
@@ -1889,13 +1903,13 @@ function renderPaperDecisionGraph() {
       <text class="axis" x="${plot.left + plotWidth / 2}" y="${plot.top - 16}" text-anchor="middle">BTC move from this market start</text>
       <text class="axis" x="${plot.left + plotWidth / 2}" y="${plotBottom + 54}" text-anchor="middle">Seconds left in the market</text>
       <text class="axis" x="22" y="${plot.top + plot.height / 2}" text-anchor="middle" transform="rotate(-90 22 ${plot.top + plot.height / 2})">Move from start</text>
-      <rect class="note-box" x="696" y="42" width="266" height="424" rx="6"></rect>
+      <rect class="note-box" x="696" y="42" width="266" height="554" rx="6"></rect>
       <text class="axis" x="718" y="68">Paper Trade</text>
       ${infoRows}
-      <text class="legend bid" x="718" y="500">BTC move</text>
-      <text class="legend ask" x="718" y="526">signal/fill</text>
-      <text class="legend other" x="794" y="526">quote/cancel</text>
-      <text class="tick" x="718" y="554">${escapeHtml(`${fmt.format(markerRows.length)} paper events shown | ${fmt.format(rawPoints.length)} collected points`)}</text>
+      <text class="legend bid" x="718" y="626">BTC move</text>
+      <text class="legend ask" x="718" y="652">signal/fill</text>
+      <text class="legend other" x="794" y="652">quote/cancel</text>
+      <text class="tick" x="718" y="680">${escapeHtml(`${fmt.format(markerRows.length)} paper events shown | ${fmt.format(rawPoints.length)} collected points`)}</text>
     </svg>`;
 }
 
