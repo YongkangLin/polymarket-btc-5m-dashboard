@@ -4,6 +4,7 @@ const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD
 const state = {
   data: null,
   engineStatus: null,
+  edgeCards: null,
   role: "both",
   market: "all",
   signalMarket: "all",
@@ -170,6 +171,29 @@ function renderLiveEngine(status) {
   byId("engineSdkStats").textContent = sdk.version
     ? `${sdk.version}; ${sdk.status || "adapter pending"}`
     : "Adapter pending";
+}
+
+function renderEdgeCards(data) {
+  const panel = byId("edgePanel");
+  if (!data?.cards?.length) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+
+  const selectedId = data.recommended_next_edge?.edge_id || data.top_edge?.edge_id;
+  const card = data.cards.find((row) => row.edge_id === selectedId) || data.cards[0];
+  const metrics = card.metrics || {};
+  const sentences = card.three_sentence_edge || [];
+  const status = String(card.status || "review").replaceAll("_", " ");
+
+  byId("edgeStatus").textContent = status;
+  byId("edgeName").textContent = card.name || "No selected table";
+  byId("edgeWhere").textContent = sentences[0] || "No location sentence available.";
+  byId("edgeEvidence").textContent = `${fmt.format(metrics.signals || 0)} markets, ${fmt.format(metrics.days || 0)} days`;
+  byId("edgeStats").textContent = `${pct(metrics.win_prob)} wins, ${roiPct(metrics.roi_on_planned_cost)} ROI, ${pct(metrics.positive_day_share)} positive days`;
+  byId("edgeAction").textContent = data.recommended_next_edge?.next_step || "Review exact table";
+  byId("edgeActionStats").textContent = card.execution_note || sentences[2] || "";
 }
 
 function renderModelGate(model, gate, dataPlan, runbook, acceptance) {
@@ -509,6 +533,7 @@ async function main() {
   const [
     summary,
     engineStatus,
+    edgeCards,
     model,
     gate,
     dataPlan,
@@ -520,6 +545,7 @@ async function main() {
   ] = await Promise.all([
     loadJson("data/summary.json"),
     loadJson("data/live_engine_status.json", true),
+    loadJson("data/polymarket_btc_5m_edge_cards.json", true),
     loadJson("data/model_diagnostics.json", true),
     loadJson("data/model_promotion_gate.json", true),
     loadJson("data/promotion_data_plan.json", true),
@@ -531,6 +557,7 @@ async function main() {
   ]);
   state.data = summary;
   state.engineStatus = engineStatus;
+  state.edgeCards = edgeCards;
   state.model = model;
   state.gate = gate;
   state.dataPlan = dataPlan;
@@ -542,6 +569,7 @@ async function main() {
   state.signalRiskIndex = new Map((state.signalRiskUniverse?.signals || []).map((row) => [row.condition_id, row]));
   renderMetrics(state.data);
   renderLiveEngine(state.engineStatus);
+  renderEdgeCards(state.edgeCards);
   renderModelGate(state.model, state.gate, state.dataPlan, state.runbook, state.acceptance);
   renderSignalUniverse(state.signalUniverse);
   renderMarketSelect(state.data);
