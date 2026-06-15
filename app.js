@@ -1,11 +1,12 @@
 const fmt = new Intl.NumberFormat("en-US");
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+const moneyCents = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const state = {
   workflow: null,
   activeTab: "backtest",
   backtestMarket: "all-signals",
-  backtestMetric: "distance_bps",
+  backtestMetric: "trade_pnl",
   paperGate: "backtest_to_paper",
   liveGate: "paper_to_live",
 };
@@ -48,6 +49,7 @@ function marketLabel(row) {
 }
 
 function metricLabel(metric) {
+  if (metric === "trade_pnl") return "Trade PnL";
   if (metric === "signal_ask") return "Dominant-side ask";
   if (metric === "top5_capacity_dollars") return "Top-5 capacity";
   return "BTC distance";
@@ -55,6 +57,7 @@ function metricLabel(metric) {
 
 function formatValue(value, metric) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "--";
+  if (metric === "trade_pnl") return money.format(value);
   if (metric === "signal_ask") return Number(value).toFixed(2);
   if (metric === "top5_capacity_dollars") return money.format(value);
   return `${Number(value) > 0 ? "+" : ""}${Number(value).toFixed(1)} bps`;
@@ -106,6 +109,77 @@ function renderBacktestSelects() {
   byId("backtestMetric").value = state.backtestMetric;
 }
 
+function tradeTitle(row) {
+  const entry = Number(row.signal_ask);
+  const exit = Number(row.settlement_exit_price);
+  const pnl = Number(row.pnl_after_slippage_haircut);
+  const rawPnl = Number(row.pnl_dollars);
+  const bookText = `${row.intended_outcome} bid ${formatValue(row.signal_bid, "signal_ask")} / ask ${formatValue(entry, "signal_ask")} | top-5 ask ${money.format(row.top5_capacity_dollars || 0)}`;
+  const bothBooks = `Up ${formatValue(row.up_bid, "signal_ask")}/${formatValue(row.up_ask, "signal_ask")} depth ${money.format((row.up_ask || 0) * (row.up_ask_depth_5 || 0))}; Down ${formatValue(row.down_bid, "signal_ask")}/${formatValue(row.down_ask, "signal_ask")} depth ${money.format((row.down_ask || 0) * (row.down_ask_depth_5 || 0))}`;
+  return [
+    `Buy ${row.intended_outcome} @ ${entry.toFixed(2)} with ${row.seconds_left}s left`,
+    `Exit: ${row.exit_type} @ ${exit.toFixed(2)}; winner ${row.winner}`,
+    `PnL: ${moneyCents.format(pnl)} after haircut (${moneyCents.format(rawPnl)} raw)`,
+    `Order book: ${bookText}`,
+    bothBooks,
+  ].join(" | ");
+}
+
+function renderTradePnlChart(signals) {
+  if (!signals.length) {
+    byId("backtestChart").innerHTML = svgEmpty("No backtest trades for this selection.");
+    return;
+  }
+  const view = { width: 980, height: 470, left: 76, right: 28, top: 32, bottom: 64 };
+  const plotWidth = view.width - view.left - view.right;
+  const plotHeight = view.height - view.top - view.bottom;
+  const pnlValues = signals.map((row) => Number(row.pnl_after_slippage_haircut || 0));
+  const cumulativeValues = signals.map((row) => Number(row.cumulative_pnl_after_haircut || 0));
+  const values = [0, ...pnlValues, ...cumulativeValues];
+  const [minY, maxY] = niceDomain(values, "trade_pnl");
+  const xFor = (index) => view.left + ((index + 0.5) / signals.length) * plotWidth;
+  const yFor = (value) => view.top + ((maxY - value) / Math.max(maxY - minY, 1)) * plotHeight;
+  const barWidth = Math.min(54, Math.max(14, plotWidth / signals.length * 0.42));
+  const yZero = yFor(0);
+  const yTicks = [minY, 0, (minY + maxY) / 2, maxY]
+    .filter((value, index, array) => array.findIndex((other) => Math.abs(other - value) < 0.001) === index);
+  const grid = yTicks.map((tick) => {
+    const y = yFor(tick);
+    return `<line class="${Math.abs(tick) < 0.001 ? "axis-zero" : "grid"}" x1="${view.left}" y1="${y}" x2="${view.left + plotWidth}" y2="${y}"></line><text class="tick" x="${view.left - 10}" y="${y + 4}" text-anchor="end">${money.format(tick)}</text>`;
+  }).join("");
+  const bars = signals.map((row, index) => {
+    const pnl = Number(row.pnl_after_slippage_haircut || 0);
+    const x = xFor(index) - barWidth / 2;
+    const y = yFor(Math.max(pnl, 0));
+    const height = Math.max(2, Math.abs(yFor(pnl) - yZero));
+    return `
+      <rect class="pnl-bar ${pnl >= 0 ? "pass" : "fail"}" x="${x}" y="${y}" width="${barWidth}" height="${height}" rx="4">
+        <title>${tradeTitle(row)}</title>
+      </rect>
+      <text class="tick" x="${xFor(index)}" y="${view.top + plotHeight + 26}" text-anchor="middle">${index + 1}</text>`;
+  }).join("");
+  const linePoints = signals.map((row, index) => ({
+    row,
+    x: xFor(index),
+    y: yFor(Number(row.cumulative_pnl_after_haircut || 0)),
+  }));
+  const dots = linePoints.map(({ row, x, y }) => `
+    <circle class="dot ${row.outcome_win ? "pass" : "fail"}" cx="${x}" cy="${y}" r="5">
+      <title>${tradeTitle(row)} | Cumulative ${moneyCents.format(row.cumulative_pnl_after_haircut || 0)}</title>
+    </circle>`).join("");
+
+  byId("backtestChart").innerHTML = `
+    <svg viewBox="0 0 ${view.width} ${view.height}" role="img" aria-label="Backtest trade PnL">
+      <rect class="plot" x="${view.left}" y="${view.top}" width="${plotWidth}" height="${plotHeight}"></rect>
+      ${grid}
+      ${bars}
+      <path class="line" d="${pathFrom(linePoints)}"></path>
+      ${dots}
+      <text class="axis" x="${view.left + plotWidth / 2}" y="${view.height - 18}" text-anchor="middle">Historical trades: bar = trade PnL, line = cumulative PnL</text>
+      <text class="axis" x="20" y="${view.top + plotHeight / 2}" text-anchor="middle" transform="rotate(-90 20 ${view.top + plotHeight / 2})">PnL after 2c haircut</text>
+    </svg>`;
+}
+
 function renderBacktestChart() {
   const workflow = state.workflow;
   const signals = workflow.backtest.signals || [];
@@ -118,6 +192,10 @@ function renderBacktestChart() {
   if (state.backtestMarket === "all-signals") {
     if (!signals.length) {
       byId("backtestChart").innerHTML = svgEmpty("No backtest signals.");
+      return;
+    }
+    if (metric === "trade_pnl") {
+      renderTradePnlChart(signals);
       return;
     }
     const values = signals.map((row) => Number(row.cumulative_pnl_after_haircut || 0));
@@ -145,6 +223,11 @@ function renderBacktestChart() {
         <text class="axis" x="${view.left + plotWidth / 2}" y="${view.height - 18}" text-anchor="middle">Historical signals</text>
         <text class="axis" x="20" y="${view.top + plotHeight / 2}" text-anchor="middle" transform="rotate(-90 20 ${view.top + plotHeight / 2})">Cumulative PnL after haircut</text>
       </svg>`;
+    return;
+  }
+
+  if (metric === "trade_pnl") {
+    renderTradePnlChart(signals.filter((row) => row.condition_id === state.backtestMarket));
     return;
   }
 

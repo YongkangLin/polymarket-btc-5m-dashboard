@@ -156,6 +156,11 @@ svg {
   stroke-width: 1;
 }
 
+.axis-zero {
+  stroke: #9aa7af;
+  stroke-width: 1.4;
+}
+
 .line {
   fill: none;
   stroke: var(--blue);
@@ -178,6 +183,18 @@ svg {
 
 .dot.fail,
 .bar.fail {
+  fill: var(--red);
+}
+
+.pnl-bar {
+  opacity: 0.86;
+}
+
+.pnl-bar.pass {
+  fill: var(--green);
+}
+
+.pnl-bar.fail {
   fill: var(--red);
 }
 
