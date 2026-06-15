@@ -75,6 +75,41 @@ function formatActual(value) {
   return String(value);
 }
 
+function metricNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function formatPercent(value) {
+  const number = metricNumber(value);
+  return number === null ? "--" : `${(number * 100).toFixed(1)}%`;
+}
+
+function formatSignedPercent(value) {
+  const number = metricNumber(value);
+  if (number === null) return "--";
+  const sign = number > 0 ? "+" : "";
+  return `${sign}${(number * 100).toFixed(1)} pts`;
+}
+
+function humanReason(value) {
+  const labels = {
+    passes_test_fill_and_roi_gates: "Passes held-out fill and profit checks",
+    best_positive_train_maker_route: "Best positive maker route on training data",
+    needs_more_maker_fill_evidence: "Needs more maker-fill evidence",
+    insufficient_train_maker_evidence: "Needs more training evidence",
+  };
+  return labels[value] || String(value || "");
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
 function svgEmpty(message) {
   return `<div class="empty">${message}</div>`;
 }
@@ -204,7 +239,68 @@ function checksFor(tab) {
   if (tab === "paper") {
     return (state.workflow.paper_trade.checks || []).filter((row) => row.group === "live_paper");
   }
-  return (state.workflow.live_trade.checks || []).filter((row) => row.group === state.liveGate);
+  return liveStatusRows();
+}
+
+function gateRow(id, label, actual, target, passed, detail, title) {
+  let progress = 0;
+  if (typeof actual === "boolean") {
+    progress = actual ? 1 : 0;
+  } else if (metricNumber(actual) !== null && metricNumber(target) !== null && metricNumber(target) !== 0) {
+    progress = Math.min(Math.max(metricNumber(actual) / metricNumber(target), 0), 1);
+  } else {
+    progress = passed ? 1 : 0;
+  }
+  return { id, label, actual, target, progress, passed: Boolean(passed), detail, title };
+}
+
+function liveStatusRows() {
+  const policy = state.workflow.live_trade.execution_policy || {};
+  const liveChecks = (state.workflow.live_trade.checks || [])
+    .filter((row) => row.group === state.liveGate && row.id !== "maker_route")
+    .map((row) => ({ ...row, detail: `${formatActual(row.actual)} / ${formatActual(row.target)}` }));
+  const fillRate = metricNumber(policy.test_fill_rate);
+  const makerRoi = metricNumber(policy.test_roi_on_planned_cost);
+  const lift = metricNumber(policy.roi_lift_vs_always_taker);
+  return [
+    gateRow(
+      "maker_route",
+      "Maker route",
+      Boolean(policy.maker_route_ready),
+      true,
+      Boolean(policy.maker_route_ready),
+      policy.selected_route_label || "No route selected",
+      `${policy.selected_route_label || "No route selected"} | ${humanReason(policy.maker_route_ready_reason || policy.selection_reason)}`
+    ),
+    gateRow(
+      "maker_fill_rate",
+      "Maker fills",
+      fillRate,
+      0.1,
+      fillRate !== null && fillRate >= 0.1,
+      `${fmt.format(policy.test_fills || 0)} of ${fmt.format(policy.test_signals || 0)} test signals`,
+      `Proxy fill test uses same-outcome sell flow after the signal. Average quote ${formatPrice(policy.test_avg_quote_price)} vs ask ${formatPrice(policy.test_avg_signal_ask)}.`
+    ),
+    gateRow(
+      "maker_profit",
+      "Maker profit",
+      makerRoi,
+      0.03,
+      makerRoi !== null && makerRoi >= 0.03,
+      `${moneyCents.format(policy.test_pnl_dollars || 0)} | ${formatPercent(makerRoi)}`,
+      `Held-out maker proxy PnL on planned quote cost. Fill-level ROI: ${formatPercent(policy.test_roi_on_filled_cost)}.`
+    ),
+    gateRow(
+      "maker_lift",
+      "Versus taking",
+      lift,
+      0.01,
+      lift !== null && lift >= 0.01,
+      `${formatSignedPercent(lift)} vs taker`,
+      `Taker test ROI: ${formatPercent(policy.always_taker_test_roi_on_planned_cost)}. Maker route ROI: ${formatPercent(policy.test_roi_on_planned_cost)}.`
+    ),
+    ...liveChecks,
+  ];
 }
 
 function plainCheckLabel(row) {
@@ -223,7 +319,10 @@ function plainCheckLabel(row) {
     no_missed_start_captures: "No missed starts",
     paper_signals: "Paper buys found",
     paper_days: "Paper buy days",
-    maker_route: "Maker route proven",
+    maker_route: "Maker route",
+    maker_fill_rate: "Maker fills",
+    maker_profit: "Maker profit",
+    maker_lift: "Versus taking",
     paper_start_source: "Start price verified",
     manual_live_enable: "Manual live enable",
   };
@@ -248,12 +347,13 @@ function renderGateChart(tab) {
   const bars = rows.map((row, index) => {
     const y = view.top + index * (barHeight + gap);
     const width = Math.max(0, Math.min(1, Number(row.progress || 0))) * plotWidth;
-    const detail = `${formatActual(row.actual)} / ${formatActual(row.target)}`;
+    const detail = row.detail || `${formatActual(row.actual)} / ${formatActual(row.target)}`;
+    const title = row.title ? `<title>${escapeHtml(row.title)}</title>` : "";
     return `
       <text class="bar-label" x="${view.left - 14}" y="${y + barHeight * 0.65}" text-anchor="end">${plainCheckLabel(row)}</text>
       <rect class="bar-bg" x="${view.left}" y="${y}" width="${plotWidth}" height="${barHeight}" rx="4"></rect>
-      <rect class="bar ${row.passed ? "pass" : "fail"}" x="${view.left}" y="${y}" width="${width}" height="${barHeight}" rx="4"></rect>
-      <text class="bar-value" x="${view.left + Math.max(width, 82) - 10}" y="${y + barHeight * 0.64}" text-anchor="end">${detail}</text>`;
+      <rect class="bar ${row.passed ? "pass" : "fail"}" x="${view.left}" y="${y}" width="${width}" height="${barHeight}" rx="4">${title}</rect>
+      <text class="bar-value" x="${view.left + Math.max(width, 220) - 10}" y="${y + barHeight * 0.64}" text-anchor="end">${escapeHtml(detail)}</text>`;
   }).join("");
 
   el.innerHTML = `
