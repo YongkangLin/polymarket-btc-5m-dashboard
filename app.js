@@ -5,31 +5,40 @@ const ACTIVE_BACKTEST_KEY = "late_depth_fair_clean";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_REFRESH_MS = 5000;
-const LIVE_TICK_RENDER_THROTTLE_MS = 250;
+const LIVE_TICK_RENDER_THROTTLE_MS = 16;
 const LIVE_TICK_STALE_MS = 10000;
 const LIVE_TICK_RECONNECT_MS = 2000;
-const LIVE_TICK_MAX_POINTS = 3000;
-const BINANCE_TRADE_STREAMS = [
-  "wss://data-stream.binance.vision/stream?streams=btcusdt@trade&timeUnit=MICROSECOND",
-  "wss://stream.binance.com:9443/stream?streams=btcusdt@trade&timeUnit=MICROSECOND",
-  "wss://stream.binance.com:443/stream?streams=btcusdt@trade&timeUnit=MICROSECOND",
+const LIVE_SOCKET_CONNECT_TIMEOUT_MS = 3500;
+const LIVE_TICK_RENDER_MAX_POINTS = 1200;
+const LIVE_TICK_PERSIST_MS = 1000;
+const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 50000;
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v2";
+const BINANCE_API_BASES = [
+  "https://data-api.binance.vision",
+  "https://api.binance.com",
+  "https://api1.binance.com",
+  "https://api2.binance.com",
+  "https://api3.binance.com",
 ];
-const LIVE_BTC_SOURCES = [
-  {
-    venue: "binance",
-    url: "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT",
-    parse: (payload) => Number(payload?.price),
-  },
-  {
-    venue: "coinbase",
-    url: "https://api.coinbase.com/v2/prices/BTC-USD/spot",
-    parse: (payload) => Number(payload?.data?.amount),
-  },
-  {
-    venue: "kraken",
-    url: "https://api.kraken.com/0/public/Ticker?pair=XBTUSD",
-    parse: (payload) => Number(Object.values(payload?.result || {})[0]?.c?.[0]),
-  },
+const BINANCE_START_LOOKAHEAD_MS = 30000;
+const BINANCE_START_FETCH_TIMEOUT_MS = 3500;
+const BINANCE_WS_API_URLS = [
+  "wss://ws-api.binance.com:443/ws-api/v3",
+  "wss://ws-api.binance.com/ws-api/v3",
+];
+const BINANCE_STREAM_GROUPS = [
+  [
+    "wss://data-stream.binance.vision/ws/btcusdt@trade?timeUnit=MICROSECOND",
+    "wss://data-stream.binance.vision/ws/btcusdt@bookTicker?timeUnit=MICROSECOND",
+  ],
+  [
+    "wss://stream.binance.com:9443/ws/btcusdt@trade?timeUnit=MICROSECOND",
+    "wss://stream.binance.com:9443/ws/btcusdt@bookTicker?timeUnit=MICROSECOND",
+  ],
+  [
+    "wss://stream.binance.com:443/ws/btcusdt@trade?timeUnit=MICROSECOND",
+    "wss://stream.binance.com:443/ws/btcusdt@bookTicker?timeUnit=MICROSECOND",
+  ],
 ];
 
 const state = {
@@ -38,9 +47,13 @@ const state = {
   marketFilter: "all",
   backtestMarket: "",
   paperGraph: PAPER_CURRENT_VALUE,
-  liveBtcPoint: null,
   liveBtcTicksByMarket: new Map(),
-  liveSyntheticMarket: null,
+  livePersistedMarkets: new Map(),
+  paperObservedMarkets: new Map(),
+  paperObservedPointsByMarket: new Map(),
+  paperObservedMarkersByMarket: new Map(),
+  liveBrowserMarket: null,
+  liveStartPriceRequests: new Map(),
   liveTickStatus: {
     state: "idle",
     venue: "binance_ws",
@@ -52,10 +65,11 @@ const state = {
 };
 
 let workflowRefreshInFlight = false;
-let liveBtcRefreshInFlight = false;
-let liveTickSocket = null;
+let liveTickSockets = [];
 let liveTickReconnectTimer = null;
-let liveTickRenderTimer = null;
+let liveTickRenderFrame = null;
+let liveTickLastRenderAt = 0;
+let liveTickPersistTimer = null;
 let liveTickSourceIndex = 0;
 
 function byId(id) {
@@ -163,6 +177,9 @@ function normalizeWorkflow(workflow) {
       return Number(right.seconds_left ?? 0) - Number(left.seconds_left ?? 0);
     });
   });
+  paperTrade._paperPointsByMarket = workflow._paperPointsByMarket;
+  paperTrade._paperMarkersByMarket = workflow._paperMarkersByMarket;
+  rememberWorkflowPaperRows(paperTrade);
   return workflow;
 }
 
@@ -240,7 +257,7 @@ function formatMicroTimestamp(value) {
 
 function liveFeedLabel(row) {
   if (row?.decision === "live_tick") return "Binance WS trade";
-  if (row?.decision === "live_price") return "HTTP spot fallback";
+  if (row?.decision === "live_book_tick") return "Binance WS book";
   return row?.btc_price_venue || row?.reason || "--";
 }
 
@@ -340,6 +357,18 @@ function pathFrom(points) {
   return points.map((point, index) => `${index === 0 ? "M" : "L"}${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ");
 }
 
+function downsamplePoints(points, maxPoints) {
+  if (!Array.isArray(points) || points.length <= maxPoints) return points || [];
+  if (maxPoints <= 2) return points.slice(-Math.max(1, maxPoints));
+  const output = [points[0]];
+  const step = (points.length - 2) / (maxPoints - 2);
+  for (let index = 1; index < maxPoints - 1; index += 1) {
+    output.push(points[Math.round(index * step)]);
+  }
+  output.push(points[points.length - 1]);
+  return output;
+}
+
 function profitDomain(values) {
   const finite = values.filter((value) => Number.isFinite(value));
   if (!finite.length) return [0, 1];
@@ -398,6 +427,56 @@ function paperGraphMarkets() {
   return state.workflow?.paper_trade?._graphMarkets || (Array.isArray(paperGraphs()) ? paperGraphs() : paperGraphs().markets || []);
 }
 
+function marketWindowStartUnix(market) {
+  const explicit = metricNumber(market?.window_start_unix);
+  if (explicit !== null) return Math.floor(explicit);
+  const parsed = Date.parse(market?.window_start || "");
+  return Number.isFinite(parsed) ? Math.floor(parsed / 1000) : null;
+}
+
+function marketWindowEndUnix(market) {
+  const explicit = metricNumber(market?.window_end_unix);
+  if (explicit !== null) return Math.floor(explicit);
+  const parsed = Date.parse(market?.window_end || "");
+  return Number.isFinite(parsed) ? Math.floor(parsed / 1000) : null;
+}
+
+function browserWindowKeyForMarket(market) {
+  const start = marketWindowStartUnix(market);
+  return start === null ? "" : `browser-live-btc-5m-${start}`;
+}
+
+function paperStorageKeysForMarket(market) {
+  return [paperGraphKey(market), browserWindowKeyForMarket(market)].filter(Boolean);
+}
+
+function samePaperWindow(left, right) {
+  const leftStart = marketWindowStartUnix(left);
+  const rightStart = marketWindowStartUnix(right);
+  if (leftStart === null || rightStart === null || leftStart !== rightStart) return false;
+  const leftEnd = marketWindowEndUnix(left);
+  const rightEnd = marketWindowEndUnix(right);
+  return leftEnd === null || rightEnd === null || leftEnd === rightEnd;
+}
+
+function browserLiveMarkets() {
+  return [...state.livePersistedMarkets.values()].sort((left, right) => {
+    const leftStart = metricNumber(left.window_start_unix) || 0;
+    const rightStart = metricNumber(right.window_start_unix) || 0;
+    return rightStart - leftStart;
+  });
+}
+
+function allPaperMarkets() {
+  const seen = new Set();
+  return [...paperGraphMarkets(), ...browserLiveMarkets()].filter((market) => {
+    const key = paperGraphKey(market);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function latestPaperPointFor(market) {
   const points = paperPointsFor(market);
   return points[points.length - 1] || null;
@@ -451,31 +530,193 @@ function currentFiveMinuteWindow(nowMs = Date.now()) {
   return { start, end: start + 300 };
 }
 
-function syntheticPaperMarket() {
-  const { start, end } = currentFiveMinuteWindow();
+function browserLiveMarketFromWindow(start, end, existing = {}) {
   const key = `browser-live-btc-5m-${start}`;
-  if (!state.liveSyntheticMarket || state.liveSyntheticMarket.market_key !== key) {
-    state.liveSyntheticMarket = {
+  return {
+    ...existing,
+    market_key: key,
+    condition_id: key,
+    slug: `browser-live-btc-5m-${start}`,
+    question: "Browser live BTC 5-minute window",
+    window_start_unix: start,
+    window_end_unix: end,
+    window_start: new Date(start * 1000).toISOString(),
+    window_end: new Date(end * 1000).toISOString(),
+    is_current: Date.now() / 1000 >= start && Date.now() / 1000 < end,
+    is_open: Date.now() / 1000 >= start && Date.now() / 1000 < end,
+    is_browser_live: true,
+    status: Date.now() / 1000 >= start && Date.now() / 1000 < end ? "browser_live" : "browser_past",
+    markers: existing.markers || [],
+    points: [],
+  };
+}
+
+function rememberLiveMarket(market) {
+  const key = paperGraphKey(market);
+  if (!key) return market;
+  const existing = state.livePersistedMarkets.get(key) || {};
+  const windowKey = browserWindowKeyForMarket(market);
+  const stored = {
+    ...existing,
+    ...market,
+    market_key: key,
+    points: [],
+    markers: market.markers || existing.markers || [],
+  };
+  delete stored[["is", "synthetic", "live"].join("_")];
+  state.livePersistedMarkets.set(key, stored);
+  if (windowKey && windowKey !== key) {
+    state.livePersistedMarkets.set(windowKey, {
+      ...(state.livePersistedMarkets.get(windowKey) || {}),
+      ...stored,
+      market_key: windowKey,
+      condition_id: windowKey,
+      slug: stored.slug || windowKey,
+      points: [],
+      markers: stored.markers || [],
+    });
+  }
+  return stored;
+}
+
+function rememberObservedPaperMarket(market, points = [], markers = []) {
+  const keys = paperStorageKeysForMarket(market);
+  if (!keys.length) return;
+  keys.forEach((key) => {
+    const existingMarket = state.paperObservedMarkets.get(key) || {};
+    state.paperObservedMarkets.set(key, {
+      ...existingMarket,
+      ...market,
       market_key: key,
-      condition_id: key,
-      slug: `browser-live-btc-5m-${start}`,
-      question: "Browser live BTC 5-minute window",
-      window_start_unix: start,
-      window_end_unix: end,
-      window_start: new Date(start * 1000).toISOString(),
-      window_end: new Date(end * 1000).toISOString(),
-      start_price: null,
-      latest_btc_price: null,
-      latest_generated_at: null,
-      is_current: true,
-      is_open: true,
-      is_synthetic_live: true,
-      status: "browser_live",
       points: [],
       markers: [],
-    };
+    });
+    if (Array.isArray(points) && points.length) {
+      const existingPoints = state.paperObservedPointsByMarket.get(key) || [];
+      state.paperObservedPointsByMarket.set(
+        key,
+        mergePaperChartRows(existingPoints, points).slice(-LIVE_TICK_STORE_MAX_POINTS_PER_MARKET),
+      );
+    }
+    if (Array.isArray(markers) && markers.length) {
+      const existingMarkers = state.paperObservedMarkersByMarket.get(key) || [];
+      state.paperObservedMarkersByMarket.set(
+        key,
+        mergePaperChartRows(existingMarkers, markers).slice(-2000),
+      );
+    }
+  });
+}
+
+function rememberWorkflowPaperRows(paperTrade) {
+  const markets = paperTrade?._graphMarkets || [];
+  const marketByKey = new Map(markets.map((market) => [paperGraphKey(market), market]));
+  if (paperTrade?._paperPointsByMarket) {
+    paperTrade._paperPointsByMarket.forEach((points, key) => {
+      rememberObservedPaperMarket(
+        marketByKey.get(key) || points[0] || { market_key: key },
+        points || [],
+        paperTrade._paperMarkersByMarket?.get(key) || [],
+      );
+    });
+    return;
   }
-  return state.liveSyntheticMarket;
+  if (Array.isArray(paperTrade?.graphs)) {
+    paperTrade.graphs.forEach((graph) => {
+      const key = paperGraphKey(graph);
+      if (!key) return;
+      rememberObservedPaperMarket(
+        marketByKey.get(key) || graph,
+        graph.points || [],
+        graph.markers || [],
+      );
+    });
+    return;
+  }
+  markets.forEach((market) => {
+    const key = paperGraphKey(market);
+    if (!key) return;
+    rememberObservedPaperMarket(market, market.points || [], market.markers || []);
+  });
+}
+
+function loadPersistedPaperTicks() {
+  try {
+    const raw = window.localStorage?.getItem(LIVE_TICK_STORE_KEY);
+    if (!raw) return;
+    const payload = JSON.parse(raw);
+    (payload.markets || []).forEach((entry) => {
+      const market = entry.market || entry;
+      const key = paperGraphKey(market);
+      if (!key) return;
+      const start = metricNumber(market.window_start_unix);
+      const end = metricNumber(market.window_end_unix);
+      const restoredMarket = start !== null && end !== null
+        ? browserLiveMarketFromWindow(start, end, market)
+        : { ...market, points: [], markers: market.markers || [] };
+      rememberLiveMarket(restoredMarket);
+      const points = (Array.isArray(entry.points) ? entry.points : [])
+        .filter(isBinanceLivePoint)
+        .sort((left, right) => (pointTimestampMicro(left) || 0) - (pointTimestampMicro(right) || 0));
+      state.liveBtcTicksByMarket.set(key, points.slice(-LIVE_TICK_STORE_MAX_POINTS_PER_MARKET));
+      rememberObservedPaperMarket(restoredMarket, entry.paper_points || [], entry.paper_markers || []);
+    });
+  } catch (error) {
+    console.warn("paper tick restore failed", error);
+  }
+}
+
+function persistPaperTicksNow() {
+  if (!window.localStorage) return;
+  const marketByKey = new Map();
+  [...state.livePersistedMarkets.values(), ...state.paperObservedMarkets.values()].forEach((market) => {
+    paperStorageKeysForMarket(market).forEach((key) => {
+      marketByKey.set(key, { ...(marketByKey.get(key) || {}), ...market, market_key: key });
+    });
+  });
+  const markets = [...marketByKey.values()].map((market) => {
+    const key = paperGraphKey(market);
+    return {
+      market: {
+        ...market,
+        points: [],
+        markers: market.markers || [],
+      },
+      points: (state.liveBtcTicksByMarket.get(key) || [])
+        .filter(isBinanceLivePoint)
+        .slice(-LIVE_TICK_STORE_MAX_POINTS_PER_MARKET),
+      paper_points: (state.paperObservedPointsByMarket.get(key) || []).slice(-LIVE_TICK_STORE_MAX_POINTS_PER_MARKET),
+      paper_markers: (state.paperObservedMarkersByMarket.get(key) || []).slice(-2000),
+    };
+  });
+  try {
+    window.localStorage.setItem(
+      LIVE_TICK_STORE_KEY,
+      JSON.stringify({ version: 2, saved_at: new Date().toISOString(), markets }),
+    );
+  } catch (error) {
+    console.warn("paper tick persist failed", error);
+  }
+}
+
+function schedulePaperTickPersist() {
+  if (liveTickPersistTimer) return;
+  liveTickPersistTimer = window.setTimeout(() => {
+    liveTickPersistTimer = null;
+    persistPaperTicksNow();
+  }, LIVE_TICK_PERSIST_MS);
+}
+
+function browserPaperMarket() {
+  const { start, end } = currentFiveMinuteWindow();
+  const key = `browser-live-btc-5m-${start}`;
+  if (!state.liveBrowserMarket || state.liveBrowserMarket.market_key !== key) {
+    state.liveBrowserMarket = rememberLiveMarket(
+      browserLiveMarketFromWindow(start, end, state.livePersistedMarkets.get(key) || {}),
+    );
+  }
+  requestLiveStartPrice(state.liveBrowserMarket);
+  return state.liveBrowserMarket;
 }
 
 function isCurrentPaperMarket(market) {
@@ -501,18 +742,41 @@ function isCurrentPaperMarket(market) {
 }
 
 function currentPaperMarket() {
-  const markets = paperGraphMarkets();
+  const markets = allPaperMarkets();
   return markets.find(isCurrentPaperMarket) || null;
 }
 
 function currentDisplayPaperMarket() {
-  return currentPaperMarket() || syntheticPaperMarket();
+  return currentPaperMarket() || browserPaperMarket();
+}
+
+function isBinanceLivePoint(point) {
+  return (
+    ["live_tick", "live_book_tick"].includes(point?.decision) &&
+    String(point?.btc_price_venue || "").startsWith("binance_ws")
+  );
 }
 
 function liveTickPointsForMarket(market) {
-  const key = paperGraphKey(market);
-  if (!key || !market || !isCurrentPaperMarket(market)) return [];
-  return state.liveBtcTicksByMarket.get(key) || [];
+  if (!market) return [];
+  const keys = new Set(paperStorageKeysForMarket(market));
+  if (!keys.size) return [];
+  [...paperGraphMarkets(), ...state.livePersistedMarkets.values()].forEach((candidate) => {
+    const candidateKey = paperGraphKey(candidate);
+    if (candidateKey && samePaperWindow(market, candidate)) keys.add(candidateKey);
+  });
+  const seen = new Set();
+  const rows = [];
+  keys.forEach((tickKey) => {
+    (state.liveBtcTicksByMarket.get(tickKey) || []).forEach((point) => {
+      if (!isBinanceLivePoint(point)) return;
+      const pointKey = point.point_id || `${point.decision}:${pointTimestampMicro(point)}:${point.btc_price}`;
+      if (seen.has(pointKey)) return;
+      seen.add(pointKey);
+      rows.push(point);
+    });
+  });
+  return rows.sort((left, right) => (pointTimestampMicro(left) || 0) - (pointTimestampMicro(right) || 0));
 }
 
 function latestLiveTickForMarket(market) {
@@ -521,10 +785,10 @@ function latestLiveTickForMarket(market) {
 }
 
 function historicalPaperMarkets() {
-  const current = currentPaperMarket();
+  const current = currentDisplayPaperMarket();
   const currentKey = current ? paperGraphKey(current) : "";
-  return paperGraphMarkets()
-    .filter((market) => !currentKey || paperGraphKey(market) !== currentKey)
+  return allPaperMarkets()
+    .filter((market) => !currentKey || (paperGraphKey(market) !== currentKey && !samePaperWindow(market, current)))
     .sort((left, right) => {
       const leftTime = Date.parse(left.window_start || left.latest_generated_at || "");
       const rightTime = Date.parse(right.window_start || right.latest_generated_at || "");
@@ -534,52 +798,68 @@ function historicalPaperMarkets() {
 }
 
 function paperPointsFor(market) {
-  const key = paperGraphKey(market);
-  return state.workflow?._paperPointsByMarket?.get(key) || market?.points || [];
+  const rows = [];
+  paperStorageKeysForMarket(market).forEach((key) => {
+    rows.push(...(state.workflow?._paperPointsByMarket?.get(key) || []));
+    rows.push(...(state.paperObservedPointsByMarket.get(key) || []));
+  });
+  if (!rows.length && Array.isArray(market?.points)) rows.push(...market.points);
+  return mergePaperChartRows(rows, []);
 }
 
-function pointTimeUnix(row) {
-  const explicit = metricNumber(row?.time_unix);
+function paperRowTimeMicro(row, fallbackIndex = 0) {
+  const explicit = pointTimestampMicro(row);
   if (explicit !== null) return explicit;
   const parsed = Date.parse(row?.generated_at || row?.ts || "");
-  return Number.isFinite(parsed) ? parsed / 1000 : null;
+  if (Number.isFinite(parsed)) return parsed * 1000;
+  const start = metricNumber(row?.window_start_unix);
+  const elapsed = metricNumber(row?.elapsed_seconds);
+  if (start !== null && elapsed !== null) return (start + elapsed) * 1_000_000;
+  const secondsLeft = metricNumber(row?.seconds_left);
+  if (start !== null && secondsLeft !== null) return (start + Math.max(0, 300 - secondsLeft)) * 1_000_000;
+  return fallbackIndex;
 }
 
-function livePointForMarket(market) {
-  if (market?.is_synthetic_live) return null;
-  const live = state.liveBtcPoint;
-  if (!live || !market || live.market_key !== paperGraphKey(market)) return null;
-  if (!isCurrentPaperMarket(market)) return null;
-  const latest = latestPaperPointFor(market);
-  const latestTime = pointTimeUnix(latest);
-  const liveTime = pointTimeUnix(live);
-  if (latestTime !== null && liveTime !== null && liveTime <= latestTime) return null;
-  return live;
+function mergePaperChartRows(baseRows, liveRows) {
+  const seen = new Set();
+  return [...(baseRows || []), ...(liveRows || [])]
+    .filter((row, index) => {
+      const key = row.point_id || row.event_id || row.quote_id || `${row.decision || row.event_type || "row"}:${paperRowTimeMicro(row, index)}:${row.btc_price ?? ""}:${row.distance_bps ?? ""}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((left, right) => paperRowTimeMicro(left) - paperRowTimeMicro(right));
 }
 
 function paperChartPointsFor(market) {
   const points = paperPointsFor(market);
-  const ticks = liveTickPointsForMarket(market);
-  const live = livePointForMarket(market);
-  const merged = ticks.length ? [...points, ...ticks] : points;
-  return live ? [...merged, live] : merged;
+  const ticks = downsamplePoints(liveTickPointsForMarket(market), LIVE_TICK_RENDER_MAX_POINTS);
+  const merged = ticks.length ? mergePaperChartRows(points, ticks) : points;
+  if (isCurrentPaperMarket(market) && merged.length > LIVE_TICK_RENDER_MAX_POINTS) {
+    return merged.slice(-LIVE_TICK_RENDER_MAX_POINTS);
+  }
+  return merged;
 }
 
 function paperDisplayUpdatedAt(market) {
   const latestTick = latestLiveTickForMarket(market);
   if (latestTick?.generated_at) return new Date(latestTick.generated_at);
-  const live = livePointForMarket(market);
-  if (live?.generated_at) return new Date(live.generated_at);
   return paperMarketLastUpdatedAt(market);
 }
 
 function paperMarkersFor(market) {
-  const key = paperGraphKey(market);
-  return state.workflow?._paperMarkersByMarket?.get(key) || market?.markers || [];
+  const rows = [];
+  paperStorageKeysForMarket(market).forEach((key) => {
+    rows.push(...(state.workflow?._paperMarkersByMarket?.get(key) || []));
+    rows.push(...(state.paperObservedMarkersByMarket.get(key) || []));
+  });
+  if (!rows.length && Array.isArray(market?.markers)) rows.push(...market.markers);
+  return mergePaperChartRows(rows, []);
 }
 
 function selectedPaperMarket() {
-  const markets = paperGraphMarkets();
+  const markets = allPaperMarkets();
   if (!state.paperGraph || state.paperGraph === PAPER_CURRENT_VALUE) return currentDisplayPaperMarket();
   if (!markets.length) return null;
   return markets.find((market) => paperGraphKey(market) === state.paperGraph) || null;
@@ -628,6 +908,11 @@ function paperMarketLabel(market) {
     ? ` | PnL ${formatSignedMoney(market.pnl_dollars ?? market.maker_pnl_dollars)}`
     : "";
   return `${status} | ${paperMarketTimeLabel(market)} | ${action}${result}`;
+}
+
+function paperStoredPointCount(market) {
+  if (!market) return 0;
+  return paperChartPointsFor(market).length;
 }
 
 function paperMarkerType(row) {
@@ -1645,13 +1930,13 @@ function renderPaperSelects() {
   const select = byId("paperGraphSelect");
   const meta = byId("paperGraphMeta");
   if (!select) return;
-  const markets = paperGraphMarkets();
+  const markets = allPaperMarkets();
   const realCurrent = currentPaperMarket();
-  const current = realCurrent || syntheticPaperMarket();
+  const current = realCurrent || browserPaperMarket();
   select.disabled = false;
   const historical = historicalPaperMarkets();
   const currentLabel = current
-    ? `${current.is_synthetic_live ? "Current live BTC window" : "Current live market"} | ${paperMarketTimeLabel(current)} | ${fmt.format(paperChartPointsFor(current).length)} points`
+    ? `Current live Binance window | ${paperMarketTimeLabel(current)} | ${fmt.format(paperStoredPointCount(current))} ticks`
     : `Current live market | waiting for workflow.json`;
   const marketOptions = historical.map((market) => {
     const key = paperGraphKey(market);
@@ -1674,8 +1959,17 @@ function renderPaperSelects() {
     const market = selectedPaperMarket();
     const selectedCurrent = (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE;
     const points = market ? paperChartPointsFor(market) : [];
-    if (selectedCurrent && market?.is_synthetic_live && !points.length) {
-      meta.innerHTML = `<span class="live-chip is-waiting">Waiting</span> Connecting to Binance microsecond trade ticks. HTTP spot fallback checks every ${Math.round(PAPER_REFRESH_MS / 1000)}s.`;
+    if (selectedCurrent && market && !points.length && !verifiedBinanceStartPrice(market)) {
+      const startStatus = market.start_price_status || liveStartMetadata(market).start_price_status || "loading";
+      const startError = market.start_price_error || liveStartMetadata(market).start_price_error || "";
+      const message = startStatus === "error"
+        ? `Binance start-price anchor failed${startError ? `: ${startError}` : ""}. Live ticks are not drawn without a real Binance start.`
+        : `Fetching Binance trade at the 5-minute window start. Stream: ${state.liveTickStatus.state}. Live ticks are ignored until this anchor is verified.`;
+      meta.innerHTML = `<span class="live-chip is-waiting">${escapeHtml(startStatus === "error" ? "Blocked" : "Waiting")}</span> ${escapeHtml(message)}`;
+      return;
+    }
+    if (selectedCurrent && market && !points.length) {
+      meta.innerHTML = `<span class="live-chip is-waiting">Waiting</span> Binance stream ${escapeHtml(state.liveTickStatus.state)}. Trades use microsecond exchange timestamps.`;
       return;
     }
     const updatedAt = market ? paperDisplayUpdatedAt(market) : null;
@@ -1683,12 +1977,13 @@ function renderPaperSelects() {
     const statusText = selectedCurrent ? "Live" : "Past";
     const tickCount = market ? liveTickPointsForMarket(market).length : 0;
     const tickStatus = state.liveTickStatus.state === "open"
-      ? `${fmt.format(tickCount)} Binance WS microsecond ticks`
+      ? `${fmt.format(tickCount)} Binance WS trade/book ticks`
       : `Binance WS ${state.liveTickStatus.state}`;
     const refreshText = selectedCurrent
-      ? `${tickStatus}; HTTP fallback every ${Math.round(PAPER_REFRESH_MS / 1000)}s`
+      ? `${tickStatus}; Binance-only live line`
       : "Historical snapshot";
-    meta.innerHTML = `<span class="live-chip ${statusClass}">${escapeHtml(statusText)}</span> ${fmt.format(points.length)} price points | updated ${escapeHtml(ageText(updatedAt))} | ${escapeHtml(refreshText)}`;
+    const storedCount = market ? paperStoredPointCount(market) : 0;
+    meta.innerHTML = `<span class="live-chip ${statusClass}">${escapeHtml(statusText)}</span> ${fmt.format(points.length)} shown / ${fmt.format(storedCount)} stored ticks | updated ${escapeHtml(ageText(updatedAt))} | ${escapeHtml(refreshText)}`;
   }
 }
 
@@ -1696,7 +1991,7 @@ function paperDecisionText(row) {
   if (!row) return "--";
   const side = row.side || row.intended_outcome || row.outcome || "";
   if (row.decision === "live_tick") return "Live BTC tick";
-  if (row.decision === "live_price") return "Live BTC update";
+  if (row.decision === "live_book_tick") return "Live BTC book tick";
   if (row.decision === "paper_signal") return `Signal ${side || "matched"}`;
   if (row.event_type === "maker_paper_quote") return `Quote ${side || ""}`.trim();
   if (row.event_type === "maker_paper_fill") return `Fill ${side || ""}`.trim();
@@ -1739,7 +2034,15 @@ function renderPaperDecisionGraph() {
   const chart = byId("paperChart");
   if (!market || !rawPoints.length) {
     if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) {
-      chart.innerHTML = svgEmpty(`Waiting for the first live BTC tick. This tab checks spot price every ${Math.round(PAPER_REFRESH_MS / 1000)}s while it is open.`);
+      if (market && !verifiedBinanceStartPrice(market)) {
+        const startStatus = market.start_price_status || liveStartMetadata(market).start_price_status || "loading";
+        const startError = market.start_price_error || liveStartMetadata(market).start_price_error || "";
+        chart.innerHTML = svgEmpty(startStatus === "error"
+          ? `Binance start-price anchor failed${startError ? `: ${startError}` : ""}.`
+          : "Fetching Binance window-start trade. The live line will not draw until the zero anchor is verified.");
+        return;
+      }
+      chart.innerHTML = svgEmpty("Waiting for the first Binance trade/book tick.");
       return;
     }
     chart.innerHTML = svgEmpty("No paper price path for this historical market yet.");
@@ -1854,10 +2157,16 @@ function renderPaperDecisionGraph() {
   const externalImbalance = metricNumber(latestRaw.external_book_imbalance);
   const externalSpread = metricNumber(latestRaw.external_book_spread_bps);
   const externalMicro = metricNumber(latestRaw.external_book_microprice_edge_bps);
+  const startMeta = liveStartMetadata(market);
+  const startDelay = metricNumber(startMeta.start_trade_delay_ms ?? latestRaw.start_trade_delay_ms);
+  const startSource = verifiedBinanceStartPrice(market) === null
+    ? (startMeta.start_price_status || "loading")
+    : `Binance start +${startDelay === null ? "?" : startDelay.toFixed(0)}ms`;
   const infoRows = [
     ["Market", compactNote(market.slug || market.question || paperGraphKey(market), 30)],
     ["Mode", compactNote(modeText, 30)],
     ["Window", paperMarketTimeLabel(market)],
+    ["Zero line", compactNote(startSource, 30)],
     ["Latest BTC", `${formatPrice(latest.btcPrice)} | ${formatBps(latest.distanceBps)}`],
     ["Tick time", compactNote(latestTradeTime, 30)],
     ["Feed", compactNote(`${liveFeedLabel(latestRaw)} | ${latencyText}`, 30)],
@@ -1873,7 +2182,7 @@ function renderPaperDecisionGraph() {
     ["BTC micro", externalMicro === null ? "--" : formatBps(externalMicro)],
     ["Result", compactNote(resultText, 30)],
   ].map(([label, value], index) => {
-    const y = 90 + index * 33;
+    const y = 90 + index * 29;
     return `
       <text class="bar-label" x="718" y="${y}">${escapeHtml(label)}</text>
       <text class="bar-value" x="718" y="${y + 17}">${escapeHtml(String(value))}</text>`;
@@ -1903,19 +2212,19 @@ function renderPaperDecisionGraph() {
       <text class="axis" x="${plot.left + plotWidth / 2}" y="${plot.top - 16}" text-anchor="middle">BTC move from this market start</text>
       <text class="axis" x="${plot.left + plotWidth / 2}" y="${plotBottom + 54}" text-anchor="middle">Seconds left in the market</text>
       <text class="axis" x="22" y="${plot.top + plot.height / 2}" text-anchor="middle" transform="rotate(-90 22 ${plot.top + plot.height / 2})">Move from start</text>
-      <rect class="note-box" x="696" y="42" width="266" height="554" rx="6"></rect>
+      <rect class="note-box" x="696" y="42" width="266" height="584" rx="6"></rect>
       <text class="axis" x="718" y="68">Paper Trade</text>
       ${infoRows}
-      <text class="legend bid" x="718" y="626">BTC move</text>
-      <text class="legend ask" x="718" y="652">signal/fill</text>
-      <text class="legend other" x="794" y="652">quote/cancel</text>
-      <text class="tick" x="718" y="680">${escapeHtml(`${fmt.format(markerRows.length)} paper events shown | ${fmt.format(rawPoints.length)} collected points`)}</text>
+      <text class="legend bid" x="718" y="646">BTC move</text>
+      <text class="legend ask" x="718" y="672">signal/fill</text>
+      <text class="legend other" x="794" y="672">quote/cancel</text>
+      <text class="tick" x="718" y="704">${escapeHtml(`${fmt.format(markerRows.length)} paper events shown | ${fmt.format(rawPoints.length)} Binance ticks shown`)}</text>
     </svg>`;
 }
 
 function renderPaperChart() {
   renderPaperSelects();
-  if (paperGraphMarkets().length || selectedPaperMarket()) {
+  if (allPaperMarkets().length || selectedPaperMarket()) {
     renderPaperDecisionGraph();
     return;
   }
@@ -1954,34 +2263,324 @@ function currentPaperViewSelected() {
 
 function liveMarketForTicks() {
   if (state.activeTab !== "paper" || !currentPaperViewSelected()) return null;
-  return currentPaperMarket() || syntheticPaperMarket();
+  const market = currentPaperMarket() || browserPaperMarket();
+  requestLiveStartPrice(market);
+  return market;
+}
+
+function pointTimestampMicro(point) {
+  const explicit = metricNumber(point?.trade_time_micro ?? point?.event_time_micro ?? point?.receive_time_micro);
+  if (explicit !== null) return explicit;
+  const seconds = metricNumber(point?.time_unix);
+  return seconds === null ? null : seconds * 1_000_000;
 }
 
 function appendLiveBtcPoint(market, point) {
   const key = paperGraphKey(market);
-  if (!key) return;
+  if (!key || !isBinanceLivePoint(point)) return;
+  rememberLiveMarket(market);
   const points = state.liveBtcTicksByMarket.get(key) || [];
   const last = points[points.length - 1];
-  const lastTradeId = last?.trade_id;
-  const tradeId = point.trade_id;
-  const lastTime = metricNumber(last?.trade_time_micro ?? last?.time_unix);
-  const pointTime = metricNumber(point.trade_time_micro ?? point.time_unix);
+  const lastTradeId = last?.point_id ?? last?.trade_id;
+  const tradeId = point.point_id ?? point.trade_id;
   if (tradeId !== undefined && lastTradeId !== undefined && String(tradeId) === String(lastTradeId)) return;
-  if (lastTime !== null && pointTime !== null && pointTime < lastTime) return;
   points.push(point);
-  if (points.length > LIVE_TICK_MAX_POINTS) {
-    points.splice(0, points.length - LIVE_TICK_MAX_POINTS);
+  if (points.length > LIVE_TICK_STORE_MAX_POINTS_PER_MARKET) {
+    points.splice(0, points.length - LIVE_TICK_STORE_MAX_POINTS_PER_MARKET);
   }
   state.liveBtcTicksByMarket.set(key, points);
+  schedulePaperTickPersist();
 }
 
-function liveStartPriceForMarket(market, btcPrice) {
-  let startPrice = metricNumber(market?.start_price ?? latestPaperPointFor(market)?.start_price);
-  if ((startPrice === null || startPrice <= 0) && market) {
-    startPrice = btcPrice;
-    market.start_price = btcPrice;
+function verifiedBinanceStartPrice(market) {
+  const readStart = (source) => {
+    const binanceStart = metricNumber(source?.binance_start_price);
+    if (binanceStart !== null && binanceStart > 0) return binanceStart;
+    const sourceLabel = String(source?.start_price_source || "");
+    const startPrice = metricNumber(source?.start_price);
+    if (sourceLabel.startsWith("binance_") && startPrice !== null && startPrice > 0) return startPrice;
+    return null;
+  };
+  const direct = readStart(market);
+  if (direct !== null) return direct;
+  for (const key of paperStorageKeysForMarket(market)) {
+    const stored = state.livePersistedMarkets.get(key);
+    const storedStart = readStart(stored);
+    if (storedStart !== null) return storedStart;
+    const pointStart = (state.liveBtcTicksByMarket.get(key) || [])
+      .map(readStart)
+      .find((value) => value !== null);
+    if (pointStart !== null && pointStart !== undefined) return pointStart;
   }
-  return startPrice;
+  return null;
+}
+
+function liveStartMetadata(market) {
+  const stored = paperStorageKeysForMarket(market)
+    .map((key) => state.livePersistedMarkets.get(key))
+    .find((candidate) => metricNumber(candidate?.binance_start_price ?? candidate?.start_price) !== null);
+  const storedPoint = paperStorageKeysForMarket(market)
+    .flatMap((key) => state.liveBtcTicksByMarket.get(key) || [])
+    .find((point) => verifiedBinanceStartPrice(point) !== null);
+  return {
+    ...(stored || {}),
+    ...(storedPoint || {}),
+    ...(market || {}),
+    ...(verifiedBinanceStartPrice(market) !== null ? (storedPoint || stored || {}) : {}),
+  };
+}
+
+function applyLiveStartMetadata(target, anchor) {
+  if (!target || !anchor) return;
+  target.start_price = anchor.price;
+  target.binance_start_price = anchor.price;
+  target.start_price_source = anchor.source;
+  target.start_trade_time_ms = anchor.tradeTimeMs;
+  target.start_trade_delay_ms = anchor.delayMs;
+  target.start_price_status = "verified";
+  target.start_price_error = "";
+}
+
+function rememberLiveStartAnchor(market, anchor) {
+  applyLiveStartMetadata(market, anchor);
+  paperStorageKeysForMarket(market).forEach((key) => {
+    const stored = {
+      ...(state.livePersistedMarkets.get(key) || {}),
+      ...market,
+      market_key: key,
+      points: [],
+      markers: market.markers || [],
+    };
+    applyLiveStartMetadata(stored, anchor);
+    state.livePersistedMarkets.set(key, stored);
+  });
+}
+
+function maybeAnchorStartFromWsTrade(market, price, tradeTimeMicro) {
+  if (!market || verifiedBinanceStartPrice(market) !== null) return;
+  const start = marketWindowStartUnix(market);
+  if (start === null || tradeTimeMicro === null) return;
+  const startMs = start * 1000;
+  const tradeMs = Math.floor(tradeTimeMicro / 1000);
+  if (tradeMs < startMs || tradeMs > startMs + BINANCE_START_LOOKAHEAD_MS) return;
+  rememberLiveStartAnchor(market, {
+    price,
+    tradeTimeMs: tradeMs,
+    delayMs: Math.max(0, tradeMs - startMs),
+    source: "binance_ws_trade_at_window_start",
+  });
+  schedulePaperTickPersist();
+}
+
+function liveStartPriceForMarket(market) {
+  const startPrice = verifiedBinanceStartPrice(market);
+  if (startPrice !== null) return startPrice;
+  requestLiveStartPrice(market);
+  return null;
+}
+
+function binanceStartQueryUrl(baseUrl, startMs, lookaheadMs = BINANCE_START_LOOKAHEAD_MS) {
+  const params = new URLSearchParams({
+    symbol: "BTCUSDT",
+    startTime: String(startMs),
+    endTime: String(startMs + lookaheadMs),
+    limit: "1",
+    _: String(Date.now()),
+  });
+  return `${baseUrl}/api/v3/aggTrades?${params.toString()}`;
+}
+
+async function fetchJsonWithTimeout(url, timeoutMs) {
+  let timeoutId = null;
+  try {
+    const response = await Promise.race([
+      fetch(url, { cache: "no-store" }),
+      new Promise((_, reject) => {
+        timeoutId = window.setTimeout(() => reject(new Error("timeout")), timeoutMs);
+      }),
+    ]);
+    if (!response.ok) throw new Error(`${response.status}`);
+    return response.json();
+  } finally {
+    if (timeoutId !== null) window.clearTimeout(timeoutId);
+  }
+}
+
+function parseBinanceStartTrade(trade, startMs, source, extra = {}) {
+  const price = metricNumber(trade?.p);
+  const tradeTimeMs = metricNumber(trade?.T);
+  if (price === null || price <= 0) return null;
+  return {
+    price,
+    tradeTimeMs,
+    delayMs: tradeTimeMs === null ? null : Math.max(0, tradeTimeMs - startMs),
+    source,
+    ...extra,
+  };
+}
+
+function fetchBinanceWindowStartPriceWsApi(url, startMs) {
+  return new Promise((resolve, reject) => {
+    const socket = new WebSocket(url);
+    const requestId = `start-${startMs}-${Math.random().toString(36).slice(2)}`;
+    const timeout = window.setTimeout(() => {
+      socket.onopen = null;
+      socket.onmessage = null;
+      socket.onerror = null;
+      socket.onclose = null;
+      try {
+        socket.close();
+      } catch (error) {
+        // ignored
+      }
+      reject(new Error("timeout"));
+    }, BINANCE_START_FETCH_TIMEOUT_MS);
+    const finish = (callback) => {
+      window.clearTimeout(timeout);
+      socket.onopen = null;
+      socket.onmessage = null;
+      socket.onerror = null;
+      socket.onclose = null;
+      try {
+        socket.close();
+      } catch (error) {
+        // ignored
+      }
+      callback();
+    };
+    socket.onopen = () => {
+      socket.send(JSON.stringify({
+        id: requestId,
+        method: "trades.aggregate",
+        params: {
+          symbol: "BTCUSDT",
+          startTime: startMs,
+          endTime: startMs + BINANCE_START_LOOKAHEAD_MS,
+          limit: 1,
+        },
+      }));
+    };
+    socket.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.status && payload.status !== 200) {
+          finish(() => reject(new Error(`status ${payload.status}`)));
+          return;
+        }
+        const trade = Array.isArray(payload.result) ? payload.result[0] : null;
+        finish(() => resolve(parseBinanceStartTrade(
+          trade,
+          startMs,
+          "binance_ws_api_agg_trade_at_window_start",
+          { wsApiUrl: url },
+        )));
+      } catch (error) {
+        finish(() => reject(error));
+      }
+    };
+    socket.onerror = () => finish(() => reject(new Error("websocket_error")));
+    socket.onclose = () => finish(() => reject(new Error("websocket_closed")));
+  });
+}
+
+async function fetchBinanceWindowStartPrice(market) {
+  const start = marketWindowStartUnix(market);
+  if (start === null) return null;
+  const startMs = Math.floor(start * 1000);
+  let lastError = null;
+  for (const wsUrl of BINANCE_WS_API_URLS) {
+    try {
+      const anchor = await fetchBinanceWindowStartPriceWsApi(wsUrl, startMs);
+      if (anchor) return anchor;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  for (const baseUrl of BINANCE_API_BASES) {
+    try {
+      const payload = await fetchJsonWithTimeout(
+        binanceStartQueryUrl(baseUrl, startMs),
+        BINANCE_START_FETCH_TIMEOUT_MS,
+      );
+      const trade = Array.isArray(payload) ? payload[0] : null;
+      const anchor = parseBinanceStartTrade(
+        trade,
+        startMs,
+        "binance_rest_agg_trade_at_window_start",
+        { baseUrl },
+      );
+      if (anchor) return anchor;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  if (lastError) throw new Error(`Binance aggTrades start fetch failed: ${lastError.message}`);
+  return null;
+}
+
+function recomputeLiveTickDistances(market) {
+  const key = paperGraphKey(market);
+  const startPrice = verifiedBinanceStartPrice(market);
+  if (!key || startPrice === null) return;
+  const startMeta = liveStartMetadata(market);
+  const points = state.liveBtcTicksByMarket.get(key) || [];
+  points.forEach((point) => {
+    const price = metricNumber(point.btc_price);
+    if (price === null || price <= 0) return;
+    const distanceBps = Math.log(price / startPrice) * 10000;
+    point.start_price = startPrice;
+    point.start_price_source = startMeta.start_price_source;
+    point.start_trade_time_ms = startMeta.start_trade_time_ms;
+    point.start_trade_delay_ms = startMeta.start_trade_delay_ms;
+    point.distance_bps = distanceBps;
+    point.side = distanceBps > 0 ? "Up" : (distanceBps < 0 ? "Down" : null);
+  });
+}
+
+function requestLiveStartPrice(market) {
+  const key = paperGraphKey(market);
+  if (!key || verifiedBinanceStartPrice(market) !== null) return;
+  const start = marketWindowStartUnix(market);
+  const end = marketWindowEndUnix(market);
+  if (start === null || end === null) return;
+  if (state.liveStartPriceRequests.has(key)) return;
+  market.start_price_status = "loading";
+  market.start_price_source = "binance_agg_trade_loading";
+  rememberLiveMarket(market);
+  const request = fetchBinanceWindowStartPrice(market)
+    .then((anchor) => {
+      const stored = state.livePersistedMarkets.get(key) || market;
+      if (!anchor) {
+        market.start_price_status = "missing";
+        market.start_price_source = "binance_agg_trade_missing";
+        stored.start_price_status = "missing";
+        stored.start_price_source = "binance_agg_trade_missing";
+        return null;
+      }
+      rememberLiveStartAnchor(market, anchor);
+      rememberLiveStartAnchor(stored, anchor);
+      recomputeLiveTickDistances(stored);
+      schedulePaperTickPersist();
+      if (state.activeTab === "paper" && currentPaperViewSelected()) renderPaperChart();
+      return anchor;
+    })
+    .catch((error) => {
+      const stored = state.livePersistedMarkets.get(key) || market;
+      market.start_price_status = "error";
+      market.start_price_source = "binance_agg_trade_error";
+      market.start_price_error = error.message;
+      stored.start_price_status = "error";
+      stored.start_price_source = "binance_agg_trade_error";
+      stored.start_price_error = error.message;
+      rememberLiveMarket(stored);
+      console.warn("Binance start-price fetch failed", error);
+      if (state.activeTab === "paper" && currentPaperViewSelected()) renderPaperChart();
+      return null;
+    })
+    .finally(() => {
+      state.liveStartPriceRequests.delete(key);
+    });
+  state.liveStartPriceRequests.set(key, request);
 }
 
 function normalizeBinanceMicroTime(value) {
@@ -1998,11 +2597,14 @@ function pointFromBinanceTrade(raw) {
   if (price === null || price <= 0) return null;
   const tradeTimeMicro = normalizeBinanceMicroTime(data.T ?? data.E);
   const eventTimeMicro = normalizeBinanceMicroTime(data.E ?? data.T);
-  const timeMicro = tradeTimeMicro || eventTimeMicro || Date.now() * 1000;
+  const receiveMicro = Date.now() * 1000;
+  const timeMicro = tradeTimeMicro || eventTimeMicro || receiveMicro;
   const secondsLeft = marketSecondsLeftNow(market);
   if (secondsLeft === null || secondsLeft <= 0 || secondsLeft > 300) return null;
-  const startPrice = liveStartPriceForMarket(market, price);
+  maybeAnchorStartFromWsTrade(market, price, tradeTimeMicro);
+  const startPrice = liveStartPriceForMarket(market);
   if (startPrice === null || startPrice <= 0) return null;
+  const startMeta = liveStartMetadata(market);
   const distanceBps = Math.log(price / startPrice) * 10000;
   market.latest_btc_price = price;
   market.latest_generated_at = new Date(Math.floor(timeMicro / 1000)).toISOString();
@@ -2015,29 +2617,103 @@ function pointFromBinanceTrade(raw) {
     time_unix: timeMicro / 1_000_000,
     event_time_micro: eventTimeMicro,
     trade_time_micro: tradeTimeMicro,
+    receive_time_micro: receiveMicro,
     seconds_left: secondsLeft,
     btc_price: price,
     start_price: startPrice,
+    start_price_source: startMeta.start_price_source,
+    start_trade_time_ms: startMeta.start_trade_time_ms,
+    start_trade_delay_ms: startMeta.start_trade_delay_ms,
     distance_bps: distanceBps,
     decision: "live_tick",
     reason: "binance_ws_trade_microsecond",
     side: distanceBps > 0 ? "Up" : (distanceBps < 0 ? "Down" : null),
     btc_price_venue: "binance_ws",
+    point_id: `trade:${data.t}`,
     trade_id: data.t,
     trade_quantity: metricNumber(data.q),
     trade_notional: metricNumber(data.q) === null ? null : metricNumber(data.q) * price,
     trade_aggressor_side: data.m === true ? "sell" : "buy",
-    ws_latency_ms: eventTimeMicro ? Math.max(0, Date.now() - eventTimeMicro / 1000) : null,
+    ws_latency_ms: eventTimeMicro ? Math.max(0, receiveMicro / 1000 - eventTimeMicro / 1000) : null,
   };
+}
+
+function pointFromBinanceBookTicker(raw) {
+  const data = raw?.data || raw;
+  const market = liveMarketForTicks();
+  if (!market || !data) return null;
+  const bid = metricNumber(data.b);
+  const ask = metricNumber(data.a);
+  if (bid === null || ask === null || bid <= 0 || ask <= 0) return null;
+  const bidQty = metricNumber(data.B);
+  const askQty = metricNumber(data.A);
+  const mid = (bid + ask) / 2.0;
+  const qtySum = (bidQty || 0) + (askQty || 0);
+  const microprice = qtySum > 0 ? ((ask * (bidQty || 0)) + (bid * (askQty || 0))) / qtySum : mid;
+  const price = microprice || mid;
+  const receiveMicro = Date.now() * 1000;
+  const secondsLeft = marketSecondsLeftNow(market);
+  if (secondsLeft === null || secondsLeft <= 0 || secondsLeft > 300) return null;
+  const startPrice = liveStartPriceForMarket(market);
+  if (startPrice === null || startPrice <= 0) return null;
+  const startMeta = liveStartMetadata(market);
+  const distanceBps = Math.log(price / startPrice) * 10000;
+  const spreadBps = mid > 0 ? ((ask - bid) / mid) * 10000 : null;
+  market.latest_btc_price = price;
+  market.latest_generated_at = new Date(Math.floor(receiveMicro / 1000)).toISOString();
+  return {
+    market_key: paperGraphKey(market),
+    condition_id: market.condition_id,
+    slug: market.slug,
+    question: market.question,
+    generated_at: market.latest_generated_at,
+    time_unix: receiveMicro / 1_000_000,
+    receive_time_micro: receiveMicro,
+    seconds_left: secondsLeft,
+    btc_price: price,
+    start_price: startPrice,
+    start_price_source: startMeta.start_price_source,
+    start_trade_time_ms: startMeta.start_trade_time_ms,
+    start_trade_delay_ms: startMeta.start_trade_delay_ms,
+    distance_bps: distanceBps,
+    decision: "live_book_tick",
+    reason: "binance_ws_bookticker_mid_microprice",
+    side: distanceBps > 0 ? "Up" : (distanceBps < 0 ? "Down" : null),
+    btc_price_venue: "binance_ws_book",
+    point_id: `book:${data.u || receiveMicro}`,
+    book_update_id: data.u,
+    book_bid: bid,
+    book_ask: ask,
+    book_bid_qty: bidQty,
+    book_ask_qty: askQty,
+    book_mid: mid,
+    book_microprice: microprice,
+    book_spread_bps: spreadBps,
+    ws_latency_ms: null,
+  };
+}
+
+function pointFromBinanceStream(raw) {
+  const stream = String(raw?.stream || "");
+  const data = raw?.data || raw;
+  if (stream.includes("bookTicker") || (data?.b !== undefined && data?.a !== undefined)) {
+    return pointFromBinanceBookTicker(raw);
+  }
+  return pointFromBinanceTrade(raw);
 }
 
 function scheduleLiveTickRender() {
   if (state.activeTab !== "paper" || !currentPaperViewSelected()) return;
-  if (liveTickRenderTimer) return;
-  liveTickRenderTimer = window.setTimeout(() => {
-    liveTickRenderTimer = null;
+  if (liveTickRenderFrame) return;
+  liveTickRenderFrame = window.requestAnimationFrame((timestamp) => {
+    liveTickRenderFrame = null;
+    if (timestamp - liveTickLastRenderAt < LIVE_TICK_RENDER_THROTTLE_MS) {
+      scheduleLiveTickRender();
+      return;
+    }
+    liveTickLastRenderAt = timestamp;
     if (state.activeTab === "paper" && currentPaperViewSelected()) renderPaperChart();
-  }, LIVE_TICK_RENDER_THROTTLE_MS);
+  });
 }
 
 function clearLiveTickReconnect() {
@@ -2049,13 +2725,18 @@ function clearLiveTickReconnect() {
 
 function closeLiveTickStream() {
   clearLiveTickReconnect();
-  if (liveTickSocket) {
-    liveTickSocket.onopen = null;
-    liveTickSocket.onmessage = null;
-    liveTickSocket.onerror = null;
-    liveTickSocket.onclose = null;
-    liveTickSocket.close();
-    liveTickSocket = null;
+  liveTickSockets.forEach((socket) => {
+    if (socket._connectTimer) window.clearTimeout(socket._connectTimer);
+    socket.onopen = null;
+    socket.onmessage = null;
+    socket.onerror = null;
+    socket.onclose = null;
+    socket.close();
+  });
+  liveTickSockets = [];
+  if (liveTickRenderFrame) {
+    window.cancelAnimationFrame(liveTickRenderFrame);
+    liveTickRenderFrame = null;
   }
   state.liveTickStatus.state = "idle";
 }
@@ -2065,128 +2746,100 @@ function ensureLiveTickStream() {
     closeLiveTickStream();
     return;
   }
-  if (liveTickSocket && [WebSocket.CONNECTING, WebSocket.OPEN].includes(liveTickSocket.readyState)) return;
+  if (liveTickSockets.some((socket) => [WebSocket.CONNECTING, WebSocket.OPEN].includes(socket.readyState))) return;
   if (liveTickReconnectTimer) return;
-  const url = BINANCE_TRADE_STREAMS[liveTickSourceIndex % BINANCE_TRADE_STREAMS.length];
+  const urls = BINANCE_STREAM_GROUPS[liveTickSourceIndex % BINANCE_STREAM_GROUPS.length];
   state.liveTickStatus = {
     ...state.liveTickStatus,
     state: "connecting",
-    url,
+    url: urls.join(" | "),
   };
-  const socket = new WebSocket(url);
-  liveTickSocket = socket;
-  socket.onopen = () => {
-    state.liveTickStatus = {
-      ...state.liveTickStatus,
-      state: "open",
-      url,
-      lastError: null,
-    };
-  };
-  socket.onmessage = (message) => {
-    try {
-      const payload = JSON.parse(message.data);
-      const point = pointFromBinanceTrade(payload);
-      if (!point) return;
-      appendLiveBtcPoint(liveMarketForTicks(), point);
+  liveTickSockets = urls.map((url) => new WebSocket(url));
+  liveTickSockets.forEach((socket) => {
+    socket._connectTimer = window.setTimeout(() => {
+      if (socket.readyState === WebSocket.CONNECTING) {
+        state.liveTickStatus = {
+          ...state.liveTickStatus,
+          state: "reconnecting",
+          lastError: "websocket_connect_timeout",
+        };
+        try {
+          socket.close();
+        } catch (error) {
+          // ignored
+        }
+      }
+    }, LIVE_SOCKET_CONNECT_TIMEOUT_MS);
+    socket.onopen = () => {
+      if (socket._connectTimer) {
+        window.clearTimeout(socket._connectTimer);
+        socket._connectTimer = null;
+      }
       state.liveTickStatus = {
         ...state.liveTickStatus,
         state: "open",
-        lastTickAt: new Date(Math.floor((point.event_time_micro || point.trade_time_micro || Date.now() * 1000) / 1000)),
+        url: urls.join(" | "),
         lastError: null,
       };
-      scheduleLiveTickRender();
-    } catch (error) {
-      console.warn("live BTC tick parse failed", error);
-    }
-  };
-  socket.onerror = () => {
-    state.liveTickStatus = {
-      ...state.liveTickStatus,
-      state: "error",
-      lastError: "websocket_error",
     };
-  };
-  socket.onclose = () => {
-    if (liveTickSocket === socket) liveTickSocket = null;
-    if (state.activeTab !== "paper" || !currentPaperViewSelected()) return;
-    state.liveTickStatus = {
-      ...state.liveTickStatus,
-      state: "reconnecting",
-      lastError: state.liveTickStatus.lastError || "websocket_closed",
-    };
-    liveTickSourceIndex += 1;
-    clearLiveTickReconnect();
-    liveTickReconnectTimer = window.setTimeout(() => {
-      liveTickReconnectTimer = null;
-      ensureLiveTickStream();
-    }, LIVE_TICK_RECONNECT_MS);
-  };
-}
-
-async function fetchLiveBtcPrice() {
-  for (const source of LIVE_BTC_SOURCES) {
-    try {
-      const response = await fetch(`${source.url}${source.url.includes("?") ? "&" : "?"}_=${Date.now()}`, {
-        cache: "no-store",
-      });
-      if (!response.ok) continue;
-      const payload = await response.json();
-      const price = source.parse(payload);
-      if (Number.isFinite(price) && price > 0) {
-        return { price, venue: source.venue };
+    socket.onmessage = (message) => {
+      try {
+        const payload = JSON.parse(message.data);
+        const point = pointFromBinanceStream(payload);
+        if (!point) return;
+        appendLiveBtcPoint(liveMarketForTicks(), point);
+        state.liveTickStatus = {
+          ...state.liveTickStatus,
+          state: "open",
+          lastTickAt: new Date(Math.floor((point.receive_time_micro || point.event_time_micro || point.trade_time_micro || Date.now() * 1000) / 1000)),
+          lastError: null,
+        };
+        scheduleLiveTickRender();
+      } catch (error) {
+        console.warn("live BTC tick parse failed", error);
       }
-    } catch (error) {
-      console.warn("live BTC price fetch failed", source.venue, error);
-    }
-  }
-  return null;
+    };
+    socket.onerror = () => {
+      if (socket._connectTimer) {
+        window.clearTimeout(socket._connectTimer);
+        socket._connectTimer = null;
+      }
+      state.liveTickStatus = {
+        ...state.liveTickStatus,
+        state: "error",
+        lastError: "websocket_error",
+      };
+    };
+    socket.onclose = () => {
+      if (socket._connectTimer) {
+        window.clearTimeout(socket._connectTimer);
+        socket._connectTimer = null;
+      }
+      liveTickSockets = liveTickSockets.filter((openSocket) => openSocket !== socket);
+      if (liveTickSockets.length > 0) return;
+      if (state.activeTab !== "paper" || !currentPaperViewSelected()) return;
+      state.liveTickStatus = {
+        ...state.liveTickStatus,
+        state: "reconnecting",
+        lastError: state.liveTickStatus.lastError || "websocket_closed",
+      };
+      liveTickSourceIndex += 1;
+      clearLiveTickReconnect();
+      liveTickReconnectTimer = window.setTimeout(() => {
+        liveTickReconnectTimer = null;
+        ensureLiveTickStream();
+      }, LIVE_TICK_RECONNECT_MS);
+    };
+  });
 }
 
-async function refreshLivePaperPrice() {
-  if (state.activeTab !== "paper" || liveBtcRefreshInFlight) return;
+function refreshLivePaperFeeds() {
+  if (state.activeTab !== "paper") return;
+  const market = liveMarketForTicks();
+  if (!market) return;
+  requestLiveStartPrice(market);
   ensureLiveTickStream();
-  const lastTickAt = state.liveTickStatus.lastTickAt instanceof Date ? state.liveTickStatus.lastTickAt.getTime() : null;
-  if (lastTickAt !== null && Date.now() - lastTickAt < LIVE_TICK_STALE_MS) return;
-  const market = currentPaperMarket() || syntheticPaperMarket();
-  const secondsLeft = marketSecondsLeftNow(market);
-  if (secondsLeft === null || secondsLeft <= 0 || secondsLeft > 300) {
-    state.liveBtcPoint = null;
-    return;
-  }
-
-  liveBtcRefreshInFlight = true;
-  try {
-    const live = await fetchLiveBtcPrice();
-    if (!live) return;
-    const startPrice = liveStartPriceForMarket(market, live.price);
-    if (startPrice === null || startPrice <= 0) return;
-    const now = new Date();
-    const distanceBps = Math.log(live.price / startPrice) * 10000;
-    const point = {
-      market_key: paperGraphKey(market),
-      condition_id: market.condition_id,
-      slug: market.slug,
-      question: market.question,
-      generated_at: now.toISOString(),
-      time_unix: now.getTime() / 1000,
-      seconds_left: secondsLeft,
-      btc_price: live.price,
-      start_price: startPrice,
-      distance_bps: distanceBps,
-      decision: "live_price",
-      reason: `browser_${live.venue}_price`,
-      side: distanceBps > 0 ? "Up" : (distanceBps < 0 ? "Down" : null),
-      btc_price_venue: live.venue,
-    };
-    market.latest_btc_price = live.price;
-    market.latest_generated_at = point.generated_at;
-    appendLiveBtcPoint(market, point);
-    state.liveBtcPoint = null;
-    if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) renderPaperChart();
-  } finally {
-    liveBtcRefreshInFlight = false;
-  }
+  if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) renderPaperChart();
 }
 
 async function refreshWorkflow() {
@@ -2223,6 +2876,7 @@ function renderActiveTab() {
 }
 
 async function main() {
+  loadPersistedPaperTicks();
   state.workflow = normalizeWorkflow(await loadJson("data/workflow.json"));
   renderStatus();
   renderStrategyPanels();
@@ -2237,7 +2891,7 @@ async function main() {
       renderActiveTab();
       if (state.activeTab === "paper") {
         refreshWorkflow();
-        refreshLivePaperPrice();
+        refreshLivePaperFeeds();
       }
     });
   });
@@ -2256,7 +2910,7 @@ async function main() {
     if (state.paperGraph === PAPER_CURRENT_VALUE) {
       ensureLiveTickStream();
       refreshWorkflow();
-      refreshLivePaperPrice();
+      refreshLivePaperFeeds();
     } else {
       closeLiveTickStream();
     }
@@ -2264,9 +2918,16 @@ async function main() {
   window.setInterval(() => {
     if (state.activeTab === "paper") {
       refreshWorkflow();
-      refreshLivePaperPrice();
+      refreshLivePaperFeeds();
     }
   }, PAPER_REFRESH_MS);
+  window.setInterval(() => {
+    if (state.activeTab === "paper" && currentPaperViewSelected()) refreshLivePaperFeeds();
+  }, 1000);
+  window.addEventListener("beforeunload", persistPaperTicksNow);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") persistPaperTicksNow();
+  });
 }
 
 main().catch((error) => {
