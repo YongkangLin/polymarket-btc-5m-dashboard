@@ -3,6 +3,7 @@ const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD
 
 const state = {
   data: null,
+  engineStatus: null,
   role: "both",
   market: "all",
   signalMarket: "all",
@@ -11,6 +12,37 @@ const state = {
 
 function byId(id) {
   return document.getElementById(id);
+}
+
+function cacheBust(path) {
+  return `${path}${path.includes("?") ? "&" : "?"}_=${Date.now()}`;
+}
+
+function loadJson(path, optional = false) {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open("GET", cacheBust(path), true);
+    request.responseType = "json";
+    request.onload = () => {
+      if (request.status >= 200 && request.status < 300) {
+        resolve(request.response ?? JSON.parse(request.responseText));
+        return;
+      }
+      if (optional) {
+        resolve(null);
+        return;
+      }
+      reject(new Error(`${path} returned ${request.status}`));
+    };
+    request.onerror = () => {
+      if (optional) {
+        resolve(null);
+        return;
+      }
+      reject(new Error(`${path} failed to load`));
+    };
+    request.send();
+  });
 }
 
 function shortDate(value) {
@@ -107,6 +139,37 @@ function renderMetrics(data) {
   byId("tradeStats").textContent = `${fmt.format(trades.markets || 0)} markets, ${money.format(trades.notional || 0)} notional`;
   byId("entryRows").textContent = fmt.format(fills.entry_rows || 0);
   byId("fillStats").textContent = `${money.format(fills.entry_notional || 0)} notional, ${fmt.format(fills.large_wallets || 0)} large wallets`;
+}
+
+function renderLiveEngine(status) {
+  const panel = byId("enginePanel");
+  if (!status) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+
+  const liveEnabled = Boolean(status.live_orders_enabled);
+  const sdk = status.official_sdk || {};
+  const stages = status.mvp_progress || [];
+  const currentStage = stages.find((row) => row.status === "scaffolded") || stages[0] || {};
+  const hardRules = status.hard_rules || [];
+  const nextStage = stages.find((row) => row.status === "next");
+
+  byId("engineStatus").textContent = liveEnabled ? "Live orders enabled" : "Live orders disabled";
+  byId("engineMode").textContent = String(status.mode || "unknown").replaceAll("_", " ");
+  byId("engineModeStats").textContent = nextStage
+    ? `${String(currentStage.stage || "recorder").replaceAll("_", " ")} ready; next ${String(nextStage.stage).replaceAll("_", " ")}`
+    : `${String(currentStage.stage || "recorder").replaceAll("_", " ")} status`;
+  byId("engineContract").textContent = status.runtime_contract?.post_only_only ? "Post-only maker" : "Review required";
+  byId("engineContractStats").textContent = hardRules
+    .slice(0, 5)
+    .map((rule) => String(rule).replaceAll("_", " "))
+    .join(", ");
+  byId("engineSdk").textContent = sdk.crate || "SDK not selected";
+  byId("engineSdkStats").textContent = sdk.version
+    ? `${sdk.version}; ${sdk.status || "adapter pending"}`
+    : "Adapter pending";
 }
 
 function renderModelGate(model, gate, dataPlan, runbook, acceptance) {
@@ -444,37 +507,41 @@ function renderWallets(data) {
 
 async function main() {
   const [
-    response,
-    modelResponse,
-    gateResponse,
-    dataPlanResponse,
-    runbookResponse,
-    acceptanceResponse,
-    signalResponse,
-    signalRiskResponse,
-    signalRiskGateResponse,
+    summary,
+    engineStatus,
+    model,
+    gate,
+    dataPlan,
+    runbook,
+    acceptance,
+    signalUniverse,
+    signalRiskUniverse,
+    signalRiskGateWalkforward,
   ] = await Promise.all([
-    fetch("data/summary.json", { cache: "no-store" }),
-    fetch("data/model_diagnostics.json", { cache: "no-store" }).catch(() => null),
-    fetch("data/model_promotion_gate.json", { cache: "no-store" }).catch(() => null),
-    fetch("data/promotion_data_plan.json", { cache: "no-store" }).catch(() => null),
-    fetch("data/promotion_backfill_runbook.json", { cache: "no-store" }).catch(() => null),
-    fetch("data/promotion_backfill_acceptance.json", { cache: "no-store" }).catch(() => null),
-    fetch("data/config_signal_universe.json", { cache: "no-store" }).catch(() => null),
-    fetch("data/config_signal_risk_universe.json", { cache: "no-store" }).catch(() => null),
-    fetch("data/config_signal_risk_gate_walkforward.json", { cache: "no-store" }).catch(() => null),
+    loadJson("data/summary.json"),
+    loadJson("data/live_engine_status.json", true),
+    loadJson("data/model_diagnostics.json", true),
+    loadJson("data/model_promotion_gate.json", true),
+    loadJson("data/promotion_data_plan.json", true),
+    loadJson("data/promotion_backfill_runbook.json", true),
+    loadJson("data/promotion_backfill_acceptance.json", true),
+    loadJson("data/config_signal_universe.json", true),
+    loadJson("data/config_signal_risk_universe.json", true),
+    loadJson("data/config_signal_risk_gate_walkforward.json", true),
   ]);
-  state.data = await response.json();
-  state.model = modelResponse?.ok ? await modelResponse.json() : null;
-  state.gate = gateResponse?.ok ? await gateResponse.json() : null;
-  state.dataPlan = dataPlanResponse?.ok ? await dataPlanResponse.json() : null;
-  state.runbook = runbookResponse?.ok ? await runbookResponse.json() : null;
-  state.acceptance = acceptanceResponse?.ok ? await acceptanceResponse.json() : null;
-  state.signalUniverse = signalResponse?.ok ? await signalResponse.json() : null;
-  state.signalRiskUniverse = signalRiskResponse?.ok ? await signalRiskResponse.json() : null;
-  state.signalRiskGateWalkforward = signalRiskGateResponse?.ok ? await signalRiskGateResponse.json() : null;
+  state.data = summary;
+  state.engineStatus = engineStatus;
+  state.model = model;
+  state.gate = gate;
+  state.dataPlan = dataPlan;
+  state.runbook = runbook;
+  state.acceptance = acceptance;
+  state.signalUniverse = signalUniverse;
+  state.signalRiskUniverse = signalRiskUniverse;
+  state.signalRiskGateWalkforward = signalRiskGateWalkforward;
   state.signalRiskIndex = new Map((state.signalRiskUniverse?.signals || []).map((row) => [row.condition_id, row]));
   renderMetrics(state.data);
+  renderLiveEngine(state.engineStatus);
   renderModelGate(state.model, state.gate, state.dataPlan, state.runbook, state.acceptance);
   renderSignalUniverse(state.signalUniverse);
   renderMarketSelect(state.data);

@@ -20,6 +20,33 @@
     <main>
       <section class="notice" id="availabilityNote"></section>
 
+      <section class="panel engine-panel" id="enginePanel" hidden>
+        <div class="panel-head">
+          <div>
+            <h2>Live Engine Pivot</h2>
+            <p>Rust post-only BTC/ETH Up/Down engine status.</p>
+          </div>
+          <strong id="engineStatus" class="gate-status">--</strong>
+        </div>
+        <div class="gate-grid engine-grid">
+          <div class="gate-row">
+            <span>Mode</span>
+            <strong id="engineMode">--</strong>
+            <small id="engineModeStats">--</small>
+          </div>
+          <div class="gate-row">
+            <span>Execution Contract</span>
+            <strong id="engineContract">--</strong>
+            <small id="engineContractStats">--</small>
+          </div>
+          <div class="gate-row">
+            <span>SDK Adapter</span>
+            <strong id="engineSdk">--</strong>
+            <small id="engineSdkStats">--</small>
+          </div>
+        </div>
+      </section>
+
       <section class="metric-grid" aria-label="Summary metrics">
         <article class="metric">
           <span>Complete 5m Markets</span>
@@ -164,6 +191,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=20260610-18"></script>
+    <script src="app.js?v=20260615-01"></script>
   </body>
 </html>
