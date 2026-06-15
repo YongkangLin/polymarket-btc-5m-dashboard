@@ -34,8 +34,6 @@ function normalizeWorkflow(workflow) {
   profileSkew.markets = inflateRows(profileSkew.market_columns, profileSkew.markets);
   const profileCheapPair = workflow.profile_cheap_pair || {};
   profileCheapPair.markets = inflateRows(profileCheapPair.market_columns, profileCheapPair.markets);
-  const profilePaperGate = workflow.profile_paper_gate || {};
-  profilePaperGate.markets = inflateRows(profilePaperGate.market_columns, profilePaperGate.markets);
   return workflow;
 }
 
@@ -189,15 +187,12 @@ function renderBacktestSelects() {
   const signals = signalRows();
   const profileSummary = state.workflow?.profile_skew?.summary || {};
   const cheapPairSummary = state.workflow?.profile_cheap_pair?.summary || {};
-  const paperGateSummary = state.workflow?.profile_paper_gate?.summary || {};
   const hasProfile = Number(profileSummary.clean_markets_scanned || 0) > 0;
   const hasCheapPair = Number(cheapPairSummary.clean_markets_scanned || 0) > 0;
-  const hasPaperGate = Number(paperGateSummary.clean_markets_scanned || 0) > 0;
   const allowed = new Set([
     "all-signals",
     ...(hasCheapPair ? ["profile-cheap-pair"] : []),
     ...(hasProfile ? ["profile-skew"] : []),
-    ...(hasPaperGate ? ["profile-paper-gate"] : []),
     ...signals.map((row) => row.condition_id),
   ]);
   if (!allowed.has(state.backtestMarket)) state.backtestMarket = "all-signals";
@@ -212,14 +207,10 @@ function renderBacktestSelects() {
   const cheapPairOption = hasCheapPair
     ? [`<option value="profile-cheap-pair">Cheap Pair (${fmt.format(cheapPairSummary.traded_markets || 0)} markets, ${formatPercent(cheapPairSummary.roi_on_filled_cost)} ROI)</option>`]
     : [];
-  const paperGateOption = hasPaperGate
-    ? [`<option value="profile-paper-gate">Paper Gate (${fmt.format(paperGateSummary.traded_markets || 0)} markets, ${formatPercent(paperGateSummary.roi_on_filled_cost)} ROI)</option>`]
-    : [];
   byId("backtestMarket").innerHTML = [
     `<option value="all-signals">${allLabel}</option>`,
     ...cheapPairOption,
     ...profileOption,
-    ...paperGateOption,
     ...signals.map((row, index) => `<option value="${row.condition_id}">${signalLabel(row, index)}</option>`),
   ].join("");
   byId("backtestMarket").value = state.backtestMarket;
@@ -428,7 +419,6 @@ function profileMarketTitle(row) {
 
 function profileChartTitle(profileKey, profile) {
   if (profileKey === "profile_cheap_pair") return "Cheap Pair";
-  if (profileKey === "profile_paper_gate") return "Paper Gate";
   if (profileKey === "profile_skew") return "Late Skew";
   return profile.strategy_name || "Profile Strategy";
 }
@@ -525,10 +515,6 @@ function renderBacktestChart() {
   }
   if (state.backtestMarket === "profile-skew") {
     renderProfileSkewChart("profile_skew");
-    return;
-  }
-  if (state.backtestMarket === "profile-paper-gate") {
-    renderProfileSkewChart("profile_paper_gate");
     return;
   }
   const signals = workflow.backtest.signals || [];
