@@ -256,8 +256,11 @@ function gateRow(id, label, actual, target, passed, detail, title) {
 
 function liveStatusRows() {
   const policy = state.workflow.live_trade.execution_policy || {};
-  const liveChecks = (state.workflow.live_trade.checks || [])
-    .filter((row) => row.group === state.liveGate && row.id !== "maker_route")
+  const paperChecks = (state.workflow.paper_trade.checks || [])
+    .filter((row) => row.group === "live_paper")
+    .map((row) => ({ ...row, detail: `${formatActual(row.actual)} / ${formatActual(row.target)}` }));
+  const manualChecks = (state.workflow.live_trade.checks || [])
+    .filter((row) => row.group === state.liveGate && row.id === "manual_live_enable")
     .map((row) => ({ ...row, detail: `${formatActual(row.actual)} / ${formatActual(row.target)}` }));
   const fillRate = metricNumber(policy.test_fill_rate);
   const makerRoi = metricNumber(policy.test_roi_on_planned_cost);
@@ -273,7 +276,7 @@ function liveStatusRows() {
       `${policy.selected_route_label || "No route selected"} | ${humanReason(policy.maker_route_ready_reason || policy.selection_reason)}`
     ),
     gateRow(
-      "maker_fill_rate",
+      "historical_maker_fill_rate",
       "Maker fills",
       fillRate,
       0.1,
@@ -299,7 +302,8 @@ function liveStatusRows() {
       `${formatSignedPercent(lift)} vs taker`,
       `Taker test ROI: ${formatPercent(policy.always_taker_test_roi_on_planned_cost)}. Maker route ROI: ${formatPercent(policy.test_roi_on_planned_cost)}.`
     ),
-    ...liveChecks,
+    ...paperChecks,
+    ...manualChecks,
   ];
 }
 
@@ -317,10 +321,16 @@ function plainCheckLabel(row) {
     worst_day_after_haircut: "Worst day",
     start_price_source_verified: "Start price verified",
     no_missed_start_captures: "No missed starts",
+    maker_fills: "Paper maker fills",
+    maker_fill_days: "Maker fill days",
+    maker_fill_rate: "Paper fill rate",
+    maker_win_rate: "Maker wins",
+    maker_roi_on_filled_cost: "Maker profit rate",
+    maker_worst_day: "Worst maker day",
     paper_signals: "Paper buys found",
     paper_days: "Paper buy days",
     maker_route: "Maker route",
-    maker_fill_rate: "Maker fills",
+    historical_maker_fill_rate: "Maker fills",
     maker_profit: "Maker profit",
     maker_lift: "Versus taking",
     paper_start_source: "Start price verified",
@@ -385,22 +395,34 @@ function paperStatusRows() {
       title: "Markets where the watcher captured the BTC start price near the window open.",
     },
     {
-      label: "Paper buys",
+      label: "Table matches",
       value: Number(summary.paper_signals || 0),
       detail: fmt.format(summary.paper_signals || 0),
-      title: "Live paper buys that matched the same rule as the backtest.",
+      title: "Live moments that matched the selected table before maker-route fill simulation.",
+    },
+    {
+      label: "Maker quotes",
+      value: Number(summary.maker_quotes || 0),
+      detail: fmt.format(summary.maker_quotes || 0),
+      title: "Post-only shadow quotes opened by the selected maker route.",
+    },
+    {
+      label: "Maker fills",
+      value: Number(summary.maker_fills || 0),
+      detail: `${fmt.format(summary.maker_fills || 0)} filled`,
+      title: "Shadow maker quotes inferred filled from live order-book movement.",
     },
     {
       label: "Settled buys",
-      value: Number(summary.settled_signals || 0),
-      detail: fmt.format(summary.settled_signals || 0),
-      title: "Paper buys with a completed win/loss result.",
+      value: Number(summary.maker_settled_fills || 0),
+      detail: fmt.format(summary.maker_settled_fills || 0),
+      title: "Maker paper fills with a completed win/loss result.",
     },
     {
-      label: "Paper profit",
-      value: Math.abs(Number(summary.pnl_after_slippage_haircut || 0)),
-      detail: moneyCents.format(summary.pnl_after_slippage_haircut || 0),
-      title: "Paper PnL after the same 2c safety cost used in backtest.",
+      label: "Maker profit",
+      value: Math.abs(Number(summary.maker_pnl_dollars || 0)),
+      detail: moneyCents.format(summary.maker_pnl_dollars || 0),
+      title: "Maker paper PnL from filled shadow quotes.",
     },
   ];
 }
