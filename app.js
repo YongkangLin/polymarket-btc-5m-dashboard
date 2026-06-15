@@ -185,6 +185,8 @@ function rejectReasonLabel(value) {
     depth_imbalance_too_low: "book lean too weak",
     distance_too_large: "too far from strike",
     edge_below_threshold: "fair edge too small",
+    external_book_missing: "BTC book missing",
+    external_book_support_too_low: "BTC book support too weak",
     missing_best_ask: "missing best ask",
     outside_time_window: "outside decision window",
     selected_table_match: "buy rule matched",
@@ -380,7 +382,7 @@ function renderStrategyPanels() {
   byId("paperStrategy").innerHTML = [
     strategyCell("Paper strategy", "Same backtest signal, then no-money maker simulation."),
     strategyCell("Maker route", `${routeLabel}: quote best bid, mark live edge every poll, cancel when edge decays.`),
-    strategyCell("Important gap", "External Binance/Coinbase order-book imbalance is planned for paper/live, not used in the historical backtest yet."),
+    strategyCell("Live-only signal", "Binance BTC depth must support the selected side in paper/live; historical backtest still excludes this feed."),
   ].join("");
   byId("liveStrategy").innerHTML = [
     strategyCell("Live strategy", "Disabled until paper proves fills are good, not just frequent."),
@@ -1044,6 +1046,30 @@ function paperStatusRows() {
       value: Number(summary.paper_signals || 0),
       detail: fmt.format(summary.paper_signals || 0),
       title: "Live moments that matched the selected table before maker-route fill simulation.",
+    },
+    {
+      label: "BTC book checks",
+      value: Number(summary.external_book_checks || 0),
+      detail: fmt.format(summary.external_book_checks || 0),
+      title: "Times the paper bot fetched Binance BTC depth after the Polymarket and fair-value gates passed.",
+    },
+    {
+      label: "BTC book support",
+      value: Math.max(0, Number(summary.external_book_support_rate || 0) * 100),
+      detail: formatPercent(summary.external_book_support_rate),
+      title: "Share of BTC depth checks where bid/ask imbalance supported the selected side.",
+    },
+    {
+      label: "Avg BTC support",
+      value: Math.abs(Number(summary.external_book_avg_support || 0) * 100),
+      detail: percentText(summary.external_book_avg_support),
+      title: "Average side-adjusted BTC order-book imbalance. Positive supports the quote; negative is adverse.",
+    },
+    {
+      label: "BTC book errors",
+      value: Object.values(summary.external_book_errors || {}).reduce((sum, count) => sum + Number(count || 0), 0),
+      detail: fmt.format(Object.values(summary.external_book_errors || {}).reduce((sum, count) => sum + Number(count || 0), 0)),
+      title: "External depth fetch failures. The paper bot should not quote when this feed is missing.",
     },
     {
       label: "Maker quotes",
