@@ -6,8 +6,6 @@ const state = {
   workflow: null,
   activeTab: "backtest",
   backtestMarket: "all-signals",
-  backtestMetric: "trade_pnl",
-  paperGate: "backtest_to_paper",
   liveGate: "paper_to_live",
 };
 
@@ -119,7 +117,6 @@ function renderBacktestSelects() {
     ...signals.map((row, index) => `<option value="${row.condition_id}">${signalLabel(row, index)}</option>`),
   ].join("");
   byId("backtestMarket").value = state.backtestMarket;
-  byId("backtestMetric").value = state.backtestMetric;
 }
 
 function tradeTitle(row) {
@@ -192,66 +189,9 @@ function renderTradePnlChart(signals) {
     </svg>`;
 }
 
-function signalMetricValue(row, metric) {
-  if (metric === "buy_price") return Number(row.signal_ask);
-  if (metric === "btc_move") return Number(row.abs_distance_bps);
-  if (metric === "available_size") return Number(row.top5_capacity_dollars);
-  return Number(row.pnl_after_slippage_haircut);
-}
-
-function metricHint(metric) {
-  if (metric === "buy_price") return "Rule: buy only when the likely winner is still priced between 0.70 and 0.98";
-  if (metric === "btc_move") return "Rule: BTC must already be at least 25 bps away from the start price";
-  if (metric === "available_size") return "Rule: at least $25 must be available near the buy price";
-  return "Rule: final minute, clear BTC move, acceptable buy price, enough available size";
-}
-
-function renderSignalMetricChart(signals, metric) {
-  const chartRows = signals.filter((row) => Number.isFinite(signalMetricValue(row, metric)));
-  if (!chartRows.length) {
-    byId("backtestChart").innerHTML = svgEmpty("No values for this signal view.");
-    return;
-  }
-  const view = { width: 980, height: 470, left: 82, right: 28, top: 32, bottom: 76 };
-  const plotWidth = view.width - view.left - view.right;
-  const plotHeight = view.height - view.top - view.bottom;
-  const values = chartRows.map((row) => signalMetricValue(row, metric));
-  const [minY, maxY] = niceDomain(values, metric);
-  const xFor = (index) => view.left + ((index + 0.5) / chartRows.length) * plotWidth;
-  const yFor = (value) => view.top + ((maxY - value) / Math.max(maxY - minY, 1)) * plotHeight;
-  const baseline = yFor(minY);
-  const barWidth = Math.min(58, Math.max(18, plotWidth / chartRows.length * 0.45));
-  const yTicks = [minY, (minY + maxY) / 2, maxY];
-  const grid = yTicks.map((tick) => {
-    const y = yFor(tick);
-    return `<line class="grid" x1="${view.left}" y1="${y}" x2="${view.left + plotWidth}" y2="${y}"></line><text class="tick" x="${view.left - 10}" y="${y + 4}" text-anchor="end">${formatValue(tick, metric)}</text>`;
-  }).join("");
-  const bars = chartRows.map((row, index) => {
-    const value = signalMetricValue(row, metric);
-    const x = xFor(index) - barWidth / 2;
-    const y = yFor(value);
-    return `
-      <rect class="pnl-bar pass" x="${x}" y="${y}" width="${barWidth}" height="${Math.max(2, baseline - y)}" rx="4">
-        <title>${metricLabel(metric)}: ${formatValue(value, metric)} | ${tradeTitle(row)}</title>
-      </rect>
-      <text class="tick" x="${xFor(index)}" y="${view.top + plotHeight + 26}" text-anchor="middle">${signalNumber(row)}</text>`;
-  }).join("");
-
-  byId("backtestChart").innerHTML = `
-    <svg viewBox="0 0 ${view.width} ${view.height}" role="img" aria-label="Backtest signal ${metricLabel(metric)}">
-      <rect class="plot" x="${view.left}" y="${view.top}" width="${plotWidth}" height="${plotHeight}"></rect>
-      ${grid}
-      ${bars}
-      <text class="axis" x="${view.left + plotWidth / 2}" y="${view.height - 34}" text-anchor="middle">${metricHint(metric)}</text>
-      <text class="axis" x="${view.left + plotWidth / 2}" y="${view.height - 14}" text-anchor="middle">Historical buy signals</text>
-      <text class="axis" x="20" y="${view.top + plotHeight / 2}" text-anchor="middle" transform="rotate(-90 20 ${view.top + plotHeight / 2})">${metricLabel(metric)}</text>
-    </svg>`;
-}
-
 function renderBacktestChart() {
   const workflow = state.workflow;
   const signals = workflow.backtest.signals || [];
-  const metric = state.backtestMetric;
   const selectedSignals = state.backtestMarket === "all-signals"
     ? signals
     : signals.filter((row) => row.condition_id === state.backtestMarket);
@@ -260,17 +200,12 @@ function renderBacktestChart() {
     byId("backtestChart").innerHTML = svgEmpty("No buy signals for this selection.");
     return;
   }
-
-  if (metric === "trade_pnl") {
-    renderTradePnlChart(selectedSignals);
-    return;
-  }
-  renderSignalMetricChart(selectedSignals, metric);
+  renderTradePnlChart(selectedSignals);
 }
 
 function checksFor(tab) {
   if (tab === "paper") {
-    return (state.workflow.paper_trade.checks || []).filter((row) => row.group === state.paperGate);
+    return (state.workflow.paper_trade.checks || []).filter((row) => row.group === "live_paper");
   }
   return (state.workflow.live_trade.checks || []).filter((row) => row.group === state.liveGate);
 }
@@ -330,6 +265,88 @@ function renderGateChart(tab) {
     </svg>`;
 }
 
+function paperStatusRows() {
+  const summary = state.workflow.paper_trade.summary || {};
+  return [
+    {
+      label: "Book checks",
+      value: Number(summary.evaluations || 0),
+      detail: `${fmt.format(summary.evaluations || 0)} live checks`,
+      title: "Each check pulls the live Polymarket Up/Down order books and BTC price.",
+    },
+    {
+      label: "Markets watched",
+      value: Number(summary.evaluated_markets || 0),
+      detail: fmt.format(summary.evaluated_markets || 0),
+      title: "Unique BTC 5-minute markets seen by the paper watcher.",
+    },
+    {
+      label: "Start prices",
+      value: Number(summary.start_prices_captured || 0),
+      detail: fmt.format(summary.start_prices_captured || 0),
+      title: "Markets where the watcher captured the BTC start price near the window open.",
+    },
+    {
+      label: "Paper buys",
+      value: Number(summary.paper_signals || 0),
+      detail: fmt.format(summary.paper_signals || 0),
+      title: "Live paper buys that matched the same rule as the backtest.",
+    },
+    {
+      label: "Settled buys",
+      value: Number(summary.settled_signals || 0),
+      detail: fmt.format(summary.settled_signals || 0),
+      title: "Paper buys with a completed win/loss result.",
+    },
+    {
+      label: "Paper profit",
+      value: Math.abs(Number(summary.pnl_after_slippage_haircut || 0)),
+      detail: moneyCents.format(summary.pnl_after_slippage_haircut || 0),
+      title: "Paper PnL after the same 2c safety cost used in backtest.",
+    },
+  ];
+}
+
+function renderValueBarChart(el, rows, emptyMessage, axisText) {
+  const chartRows = rows.filter((row) => Number.isFinite(row.value));
+  if (!chartRows.length) {
+    el.innerHTML = svgEmpty(emptyMessage);
+    return;
+  }
+  const view = { width: 980, height: 470, left: 230, right: 44, top: 32, bottom: 54 };
+  const plotWidth = view.width - view.left - view.right;
+  const maxValue = Math.max(...chartRows.map((row) => row.value), 1);
+  const barHeight = Math.min(42, (view.height - view.top - view.bottom) / chartRows.length - 10);
+  const gap = 10;
+  const ticks = [0, 0.25, 0.5, 0.75, 1];
+  const grid = ticks.map((tick) => {
+    const x = view.left + tick * plotWidth;
+    return `<line class="grid" x1="${x}" y1="${view.top - 8}" x2="${x}" y2="${view.height - view.bottom + 6}"></line>`;
+  }).join("");
+  const bars = chartRows.map((row, index) => {
+    const y = view.top + index * (barHeight + gap);
+    const width = Math.max(2, (Math.max(0, row.value) / maxValue) * plotWidth);
+    return `
+      <text class="bar-label" x="${view.left - 14}" y="${y + barHeight * 0.65}" text-anchor="end">${row.label}</text>
+      <rect class="bar-bg" x="${view.left}" y="${y}" width="${plotWidth}" height="${barHeight}" rx="4"></rect>
+      <rect class="bar pass" x="${view.left}" y="${y}" width="${width}" height="${barHeight}" rx="4">
+        <title>${row.title || `${row.label}: ${row.detail}`}</title>
+      </rect>
+      <text class="bar-value" x="${view.left + Math.max(width, 92) - 10}" y="${y + barHeight * 0.64}" text-anchor="end">${row.detail}</text>`;
+  }).join("");
+
+  el.innerHTML = `
+    <svg viewBox="0 0 ${view.width} ${view.height}" role="img" aria-label="${axisText}">
+      ${grid}
+      ${bars}
+      <text class="axis" x="${view.left + plotWidth / 2}" y="${view.height - 16}" text-anchor="middle">${axisText}</text>
+    </svg>`;
+}
+
+function renderPaperChart() {
+  renderValueBarChart(byId("paperChart"), paperStatusRows(), "No paper evidence yet.", "Live paper evidence so far");
+}
+
 function renderStatus() {
   const q = state.workflow.data_quality || {};
   const b = state.workflow.backtest.summary || {};
@@ -344,7 +361,7 @@ function renderActiveTab() {
     panel.classList.toggle("is-active", panel.dataset.panel === state.activeTab);
   });
   if (state.activeTab === "backtest") renderBacktestChart();
-  if (state.activeTab === "paper") renderGateChart("paper");
+  if (state.activeTab === "paper") renderPaperChart();
   if (state.activeTab === "live") renderGateChart("live");
 }
 
@@ -353,7 +370,7 @@ async function main() {
   renderStatus();
   renderBacktestSelects();
   renderBacktestChart();
-  renderGateChart("paper");
+  renderPaperChart();
   renderGateChart("live");
 
   document.querySelectorAll(".tab").forEach((button) => {
@@ -365,14 +382,6 @@ async function main() {
   byId("backtestMarket").addEventListener("change", (event) => {
     state.backtestMarket = event.target.value;
     renderBacktestChart();
-  });
-  byId("backtestMetric").addEventListener("change", (event) => {
-    state.backtestMetric = event.target.value;
-    renderBacktestChart();
-  });
-  byId("paperGate").addEventListener("change", (event) => {
-    state.paperGate = event.target.value;
-    renderGateChart("paper");
   });
 }
 

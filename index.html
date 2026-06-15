@@ -28,41 +28,15 @@
             <span>Signal</span>
             <select id="backtestMarket"></select>
           </label>
-          <label>
-            <span>View</span>
-            <select id="backtestMetric">
-              <option value="trade_pnl">Profit</option>
-              <option value="buy_price">Buy Price</option>
-              <option value="btc_move">BTC Move</option>
-              <option value="available_size">Available Size</option>
-            </select>
-          </label>
         </div>
         <div class="chart" id="backtestChart"></div>
       </section>
 
       <section class="panel" id="paperPanel" data-panel="paper">
-        <div class="toolbar">
-          <label>
-            <span>Gate</span>
-            <select id="paperGate">
-              <option value="backtest_to_paper">Backtest to paper</option>
-              <option value="live_paper">Live paper evidence</option>
-            </select>
-          </label>
-        </div>
         <div class="chart" id="paperChart"></div>
       </section>
 
       <section class="panel" id="livePanel" data-panel="live">
-        <div class="toolbar">
-          <label>
-            <span>Gate</span>
-            <select id="liveGate">
-              <option value="paper_to_live">Paper to live</option>
-            </select>
-          </label>
-        </div>
         <div class="chart" id="liveChart"></div>
       </section>
     </main>
