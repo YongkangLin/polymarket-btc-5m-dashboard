@@ -3,17 +3,33 @@ const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD
 const moneyCents = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const ACTIVE_BACKTEST_KEY = "late_depth_fair_clean";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
+const PAPER_CURRENT_VALUE = "__current__";
+const PAPER_REFRESH_MS = 5000;
+const LIVE_BTC_SOURCES = [
+  {
+    venue: "binance",
+    url: "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT",
+    parse: (payload) => Number(payload?.price),
+  },
+  {
+    venue: "coinbase",
+    url: "https://api.coinbase.com/v2/prices/BTC-USD/spot",
+    parse: (payload) => Number(payload?.data?.amount),
+  },
+];
 
 const state = {
   workflow: null,
   activeTab: "backtest",
   marketFilter: "all",
   backtestMarket: "",
-  paperGraph: "__current__",
+  paperGraph: PAPER_CURRENT_VALUE,
+  liveBtcPoint: null,
   liveGate: "paper_to_live",
 };
 
 let workflowRefreshInFlight = false;
+let liveBtcRefreshInFlight = false;
 
 function byId(id) {
   return document.getElementById(id);
@@ -332,26 +348,135 @@ function paperGraphs() {
   return state.workflow?.paper_trade?.graphs || {};
 }
 
+function paperGraphLimits() {
+  return state.workflow?.paper_trade?.graph_limits || {};
+}
+
 function paperGraphMarkets() {
   return state.workflow?.paper_trade?._graphMarkets || (Array.isArray(paperGraphs()) ? paperGraphs() : paperGraphs().markets || []);
 }
 
+function latestPaperPointFor(market) {
+  const points = paperPointsFor(market);
+  return points[points.length - 1] || null;
+}
+
+function paperMarketLastUpdatedAt(market) {
+  const latestPoint = latestPaperPointFor(market);
+  const candidates = [
+    latestPoint?.generated_at,
+    latestPoint?.ts,
+    market?.latest_generated_at,
+    market?.last_seen_at,
+    market?.generated_at,
+  ];
+  const parsed = candidates
+    .map((value) => Date.parse(value || ""))
+    .find((value) => Number.isFinite(value));
+  return Number.isFinite(parsed) ? new Date(parsed) : null;
+}
+
+function ageText(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "not updated";
+  const seconds = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
+  if (seconds < 10) return "just now";
+  if (seconds < 90) return `${seconds}s ago`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 90) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 36) return `${hours}h ago`;
+  return date.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function marketClockState(market) {
+  const start = metricNumber(market?.window_start_unix);
+  const end = metricNumber(market?.window_end_unix);
+  if (start === null || end === null) return null;
+  const now = Date.now() / 1000;
+  if (now < start) return "future";
+  if (now >= end) return "closed";
+  return "open";
+}
+
+function marketSecondsLeftNow(market) {
+  const end = metricNumber(market?.window_end_unix);
+  if (end === null) return null;
+  return Math.max(0, Math.round(end - Date.now() / 1000));
+}
+
 function isCurrentPaperMarket(market) {
+  const clockState = marketClockState(market);
+  if (clockState !== null) return clockState === "open";
+  const limits = paperGraphLimits();
+  const key = paperGraphKey(market);
+  if (limits.current_condition_id && market?.condition_id === limits.current_condition_id) return true;
+  if (limits.current_slug && market?.slug === limits.current_slug) return true;
+  if (limits.current_market_key && key === limits.current_market_key) return true;
   if (market?.is_current === true || market?.current === true) return true;
-  if (market?.status === "current" || market?.state === "current") return true;
+  const status = String(market?.status || market?.state || "").toLowerCase();
+  if (["current", "live", "open"].includes(status)) return true;
+  if (market?.is_open === true && market?.latest_observed_open !== false) {
+    const windowEnd = Date.parse(market?.window_end || "");
+    if (!Number.isFinite(windowEnd) || Date.now() <= windowEnd + 30000) return true;
+  }
   const lastSeconds = metricNumber(market?.last_seconds_left);
   const settled = Boolean(market?.settled || market?.has_settlement);
-  return !settled && lastSeconds !== null && lastSeconds > 0;
+  if (settled || lastSeconds === null || lastSeconds <= 0) return false;
+  const updatedAt = paperMarketLastUpdatedAt(market);
+  return !updatedAt || Date.now() - updatedAt.getTime() < 90000;
 }
 
 function currentPaperMarket() {
   const markets = paperGraphMarkets();
-  return markets.find(isCurrentPaperMarket) || markets[0] || null;
+  return markets.find(isCurrentPaperMarket) || null;
+}
+
+function historicalPaperMarkets() {
+  const current = currentPaperMarket();
+  const currentKey = current ? paperGraphKey(current) : "";
+  return paperGraphMarkets()
+    .filter((market) => !currentKey || paperGraphKey(market) !== currentKey)
+    .sort((left, right) => {
+      const leftTime = Date.parse(left.window_start || left.latest_generated_at || "");
+      const rightTime = Date.parse(right.window_start || right.latest_generated_at || "");
+      if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) return rightTime - leftTime;
+      return paperGraphKey(left).localeCompare(paperGraphKey(right));
+    });
 }
 
 function paperPointsFor(market) {
   const key = paperGraphKey(market);
   return state.workflow?._paperPointsByMarket?.get(key) || market?.points || [];
+}
+
+function pointTimeUnix(row) {
+  const explicit = metricNumber(row?.time_unix);
+  if (explicit !== null) return explicit;
+  const parsed = Date.parse(row?.generated_at || row?.ts || "");
+  return Number.isFinite(parsed) ? parsed / 1000 : null;
+}
+
+function livePointForMarket(market) {
+  const live = state.liveBtcPoint;
+  if (!live || !market || live.market_key !== paperGraphKey(market)) return null;
+  if (!isCurrentPaperMarket(market)) return null;
+  const latest = latestPaperPointFor(market);
+  const latestTime = pointTimeUnix(latest);
+  const liveTime = pointTimeUnix(live);
+  if (latestTime !== null && liveTime !== null && liveTime <= latestTime) return null;
+  return live;
+}
+
+function paperChartPointsFor(market) {
+  const points = paperPointsFor(market);
+  const live = livePointForMarket(market);
+  return live ? [...points, live] : points;
+}
+
+function paperDisplayUpdatedAt(market) {
+  const live = livePointForMarket(market);
+  if (live?.generated_at) return new Date(live.generated_at);
+  return paperMarketLastUpdatedAt(market);
 }
 
 function paperMarkersFor(market) {
@@ -362,8 +487,8 @@ function paperMarkersFor(market) {
 function selectedPaperMarket() {
   const markets = paperGraphMarkets();
   if (!markets.length) return null;
-  if (!state.paperGraph || state.paperGraph === "__current__") return currentPaperMarket();
-  return markets.find((market) => paperGraphKey(market) === state.paperGraph) || currentPaperMarket();
+  if (!state.paperGraph || state.paperGraph === PAPER_CURRENT_VALUE) return currentPaperMarket();
+  return markets.find((market) => paperGraphKey(market) === state.paperGraph) || null;
 }
 
 function paperDistanceBps(row) {
@@ -396,16 +521,19 @@ function paperMarketTimeLabel(market) {
 }
 
 function paperMarketLabel(market) {
-  const status = isCurrentPaperMarket(market) ? "Current" : "Past";
+  const status = isCurrentPaperMarket(market) ? "Live" : "Past";
   const points = paperPointsFor(market);
   const markers = paperMarkersFor(market);
   const signals = Number(market.paper_signals ?? market.signals ?? points.filter((row) => row.decision === "paper_signal").length);
   const quotes = Number(market.maker_quotes ?? market.quotes ?? markers.filter((row) => paperMarkerType(row) === "quote").length);
   const fills = Number(market.maker_fills ?? market.fills ?? markers.filter((row) => paperMarkerType(row) === "fill").length);
+  const action = signals || quotes || fills
+    ? `signals ${fmt.format(signals)} | quotes ${fmt.format(quotes)} | fills ${fmt.format(fills)}`
+    : "no paper buy";
   const result = market.pnl_dollars !== undefined || market.maker_pnl_dollars !== undefined
     ? ` | PnL ${formatSignedMoney(market.pnl_dollars ?? market.maker_pnl_dollars)}`
     : "";
-  return `${status} | ${paperMarketTimeLabel(market)} | signals ${fmt.format(signals)} | quotes ${fmt.format(quotes)} | fills ${fmt.format(fills)}${result}`;
+  return `${status} | ${paperMarketTimeLabel(market)} | ${action}${result}`;
 }
 
 function paperMarkerType(row) {
@@ -1427,40 +1555,57 @@ function renderPaperSelects() {
   if (!markets.length) {
     select.disabled = true;
     select.innerHTML = `<option value="">No paper graphs yet</option>`;
-    if (meta) meta.textContent = "Paper graph data has not been built yet.";
+    if (meta) {
+      meta.innerHTML = `<span class="live-chip is-waiting">Waiting</span> Paper graph data has not been built yet.`;
+    }
     return;
   }
 
   select.disabled = false;
   const current = currentPaperMarket();
+  const historical = historicalPaperMarkets();
   const currentLabel = current
-    ? `Current paper market | ${paperMarketTimeLabel(current)}`
-    : "Current paper market";
-  const marketOptions = markets.map((market) => {
+    ? `Current live market | ${paperMarketTimeLabel(current)} | ${fmt.format(paperChartPointsFor(current).length)} points`
+    : `Current live market | waiting for workflow.json`;
+  const marketOptions = historical.map((market) => {
     const key = paperGraphKey(market);
     return `<option value="${escapeHtml(key)}">${escapeHtml(paperMarketLabel(market))}</option>`;
   }).join("");
-  select.innerHTML = `<option value="__current__">${escapeHtml(currentLabel)}</option>${marketOptions}`;
-  if (state.paperGraph !== "__current__" && !markets.some((market) => paperGraphKey(market) === state.paperGraph)) {
-    state.paperGraph = "__current__";
+  const currentGroup = `
+    <optgroup label="Current / live">
+      <option value="${PAPER_CURRENT_VALUE}">${escapeHtml(currentLabel)}</option>
+    </optgroup>`;
+  const historicalGroup = marketOptions
+    ? `<optgroup label="Historical paper markets">${marketOptions}</optgroup>`
+    : `<optgroup label="Historical paper markets"><option value="" disabled>No past paper graphs yet</option></optgroup>`;
+  select.innerHTML = `${currentGroup}${historicalGroup}`;
+  if (state.paperGraph !== PAPER_CURRENT_VALUE && !markets.some((market) => paperGraphKey(market) === state.paperGraph)) {
+    state.paperGraph = PAPER_CURRENT_VALUE;
   }
-  select.value = state.paperGraph || "__current__";
+  select.value = state.paperGraph || PAPER_CURRENT_VALUE;
 
   if (meta) {
     const market = selectedPaperMarket();
-    const points = market ? paperPointsFor(market) : [];
-    const latest = points[points.length - 1];
-    const lastSeen = latest?.generated_at
-      ? new Date(latest.generated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" })
-      : "not live";
-    const status = market && isCurrentPaperMarket(market) ? "current" : "past";
-    meta.textContent = `${status} | ${fmt.format(points.length)} price points | latest ${lastSeen}`;
+    const selectedCurrent = (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE;
+    if (selectedCurrent && !market) {
+      meta.innerHTML = `<span class="live-chip is-waiting">Waiting</span> No current market in data yet. Auto-refreshing every ${Math.round(PAPER_REFRESH_MS / 1000)}s.`;
+      return;
+    }
+    const points = market ? paperChartPointsFor(market) : [];
+    const updatedAt = market ? paperDisplayUpdatedAt(market) : null;
+    const statusClass = selectedCurrent && market && isCurrentPaperMarket(market) ? "is-live" : "is-past";
+    const statusText = selectedCurrent ? "Live" : "Past";
+    const refreshText = selectedCurrent
+      ? `Auto-refreshing every ${Math.round(PAPER_REFRESH_MS / 1000)}s`
+      : "Historical snapshot";
+    meta.innerHTML = `<span class="live-chip ${statusClass}">${escapeHtml(statusText)}</span> ${fmt.format(points.length)} price points | updated ${escapeHtml(ageText(updatedAt))} | ${escapeHtml(refreshText)}`;
   }
 }
 
 function paperDecisionText(row) {
   if (!row) return "--";
   const side = row.side || row.intended_outcome || row.outcome || "";
+  if (row.decision === "live_price") return "Live BTC update";
   if (row.decision === "paper_signal") return `Signal ${side || "matched"}`;
   if (row.event_type === "maker_paper_quote") return `Quote ${side || ""}`.trim();
   if (row.event_type === "maker_paper_fill") return `Fill ${side || ""}`.trim();
@@ -1499,10 +1644,14 @@ function paperMarkerTitle(row) {
 
 function renderPaperDecisionGraph() {
   const market = selectedPaperMarket();
-  const rawPoints = market ? paperPointsFor(market) : [];
+  const rawPoints = market ? paperChartPointsFor(market) : [];
   const chart = byId("paperChart");
   if (!market || !rawPoints.length) {
-    chart.innerHTML = svgEmpty("No paper price path for this market yet.");
+    if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) {
+      chart.innerHTML = svgEmpty(`No current live paper market in workflow.json yet. This tab checks for updates every ${Math.round(PAPER_REFRESH_MS / 1000)}s while it is open.`);
+      return;
+    }
+    chart.innerHTML = svgEmpty("No paper price path for this historical market yet.");
     return;
   }
 
@@ -1594,18 +1743,25 @@ function renderPaperDecisionGraph() {
   const latestSupport = metricNumber(latestRaw.external_book_support ?? latestQuote?.external_book_support);
   const settlement = [...paperMarkersFor(market)].reverse().find((row) => paperMarkerType(row) === "settlement");
   const pnl = metricNumber(settlement?.pnl_dollars ?? market.pnl_dollars ?? market.maker_pnl_dollars);
+  const selectedCurrent = (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE && isCurrentPaperMarket(market);
+  const modeText = selectedCurrent
+    ? `live, updated ${ageText(paperDisplayUpdatedAt(market))}`
+    : `past, updated ${ageText(paperDisplayUpdatedAt(market))}`;
+  const resultText = settlement
+    ? `${paperDecisionText(settlement)} | ${pnl === null ? "--" : formatSignedMoney(pnl)}`
+    : (market.winner ? `${market.winner} won | ${pnl === null ? "--" : formatSignedMoney(pnl)}` : "--");
   const infoRows = [
     ["Market", compactNote(market.slug || market.question || paperGraphKey(market), 30)],
+    ["Mode", compactNote(modeText, 30)],
     ["Window", paperMarketTimeLabel(market)],
     ["Latest BTC", `${formatPrice(latest.btcPrice)} | ${formatBps(latest.distanceBps)}`],
     ["Seconds left", `${Math.round(latest.secondsLeft)}s`],
     ["Decision", compactNote(paperDecisionText(latestRaw), 30)],
     ["Paper quote", compactNote(paperQuoteText(latestQuote), 30)],
     ["BTC book", latestSupport === null ? "--" : percentText(latestSupport)],
-    ["Result", settlement ? compactNote(paperDecisionText(settlement), 30) : (market.winner ? `${market.winner} won` : "--")],
-    ["PnL", pnl === null ? "--" : formatSignedMoney(pnl)],
+    ["Result", compactNote(resultText, 30)],
   ].map(([label, value], index) => {
-    const y = 90 + index * 35;
+    const y = 90 + index * 33;
     return `
       <text class="bar-label" x="718" y="${y}">${escapeHtml(label)}</text>
       <text class="bar-value" x="718" y="${y + 17}">${escapeHtml(String(value))}</text>`;
@@ -1628,7 +1784,7 @@ function renderPaperDecisionGraph() {
       <path class="line line-distance" d="${pathFrom(linePoints)}"></path>
       ${eventDots}
       <line class="paper-latest-line" x1="${xForSeconds(latest.secondsLeft)}" y1="${plot.top}" x2="${xForSeconds(latest.secondsLeft)}" y2="${plotBottom}"></line>
-      <circle class="dot latest" cx="${xForSeconds(latest.secondsLeft)}" cy="${yForDistance(latest.distanceBps)}" r="6">
+      <circle class="dot latest ${selectedCurrent ? "live-now" : ""}" cx="${xForSeconds(latest.secondsLeft)}" cy="${yForDistance(latest.distanceBps)}" r="6">
         <title>${escapeHtml(latestTitle)}</title>
       </circle>
       <text class="axis" x="${plot.left + plotWidth / 2}" y="${plot.top - 16}" text-anchor="middle">BTC move from this market start</text>
@@ -1679,6 +1835,65 @@ function renderStatus() {
   byId("statusText").textContent = `Loaded ${generated} | active backtest: ${fmt.format(activeBuys)} ask-sim buys | ask-entry ROI ${formatPercent(activeRoi)}${makerText} | ${fmt.format(q.clean_markets || 0)} clean windows`;
 }
 
+async function fetchLiveBtcPrice() {
+  for (const source of LIVE_BTC_SOURCES) {
+    try {
+      const response = await fetch(`${source.url}${source.url.includes("?") ? "&" : "?"}_=${Date.now()}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) continue;
+      const payload = await response.json();
+      const price = source.parse(payload);
+      if (Number.isFinite(price) && price > 0) {
+        return { price, venue: source.venue };
+      }
+    } catch (error) {
+      console.warn("live BTC price fetch failed", source.venue, error);
+    }
+  }
+  return null;
+}
+
+async function refreshLivePaperPrice() {
+  if (state.activeTab !== "paper" || liveBtcRefreshInFlight) return;
+  const market = currentPaperMarket();
+  if (!market) {
+    state.liveBtcPoint = null;
+    return;
+  }
+  const startPrice = metricNumber(market.start_price ?? latestPaperPointFor(market)?.start_price);
+  if (startPrice === null || startPrice <= 0) return;
+  const secondsLeft = marketSecondsLeftNow(market);
+  if (secondsLeft === null || secondsLeft <= 0 || secondsLeft > 300) return;
+
+  liveBtcRefreshInFlight = true;
+  try {
+    const live = await fetchLiveBtcPrice();
+    if (!live) return;
+    const now = new Date();
+    const distanceBps = Math.log(live.price / startPrice) * 10000;
+    state.liveBtcPoint = {
+      market_key: paperGraphKey(market),
+      condition_id: market.condition_id,
+      slug: market.slug,
+      question: market.question,
+      generated_at: now.toISOString(),
+      time_unix: now.getTime() / 1000,
+      seconds_left: secondsLeft,
+      btc_price: live.price,
+      start_price: startPrice,
+      distance_bps: distanceBps,
+      decision: "live_price",
+      reason: `browser_${live.venue}_price`,
+      side: distanceBps > 0 ? "Up" : (distanceBps < 0 ? "Down" : null),
+      btc_price_venue: live.venue,
+    };
+    if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) renderPaperChart();
+  } finally {
+    liveBtcRefreshInFlight = false;
+  }
+}
+
 async function refreshWorkflow() {
   if (workflowRefreshInFlight) return;
   workflowRefreshInFlight = true;
@@ -1720,6 +1935,10 @@ async function main() {
     button.addEventListener("click", () => {
       state.activeTab = button.dataset.tab;
       renderActiveTab();
+      if (state.activeTab === "paper") {
+        refreshWorkflow();
+        refreshLivePaperPrice();
+      }
     });
   });
   byId("backtestMarket").addEventListener("change", (event) => {
@@ -1734,10 +1953,17 @@ async function main() {
   byId("paperGraphSelect").addEventListener("change", (event) => {
     state.paperGraph = event.target.value;
     renderPaperChart();
+    if (state.paperGraph === PAPER_CURRENT_VALUE) {
+      refreshWorkflow();
+      refreshLivePaperPrice();
+    }
   });
   window.setInterval(() => {
-    if (state.activeTab === "paper") refreshWorkflow();
-  }, 15000);
+    if (state.activeTab === "paper") {
+      refreshWorkflow();
+      refreshLivePaperPrice();
+    }
+  }, PAPER_REFRESH_MS);
 }
 
 main().catch((error) => {

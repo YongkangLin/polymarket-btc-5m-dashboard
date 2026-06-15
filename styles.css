@@ -150,6 +150,48 @@ select {
   text-align: right;
 }
 
+.live-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  margin-right: 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.live-chip::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.live-chip.is-live {
+  border-color: #b7d8ca;
+  color: var(--green);
+}
+
+.live-chip.is-live::before {
+  background: var(--green);
+  animation: livePulse 1.6s ease-in-out infinite;
+}
+
+.live-chip.is-past::before {
+  background: var(--amber);
+}
+
+.live-chip.is-waiting::before {
+  background: var(--muted);
+}
+
 .chart {
   min-height: 480px;
   overflow-x: auto;
@@ -372,6 +414,12 @@ svg {
   fill: var(--ink);
 }
 
+.dot.live-now {
+  animation: livePulse 1.6s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
 .dot.fail,
 .bar.fail {
   fill: var(--red);
@@ -448,6 +496,21 @@ svg {
   place-items: center;
   color: var(--muted);
   font-size: 14px;
+  padding: 24px;
+  text-align: center;
+}
+
+@keyframes livePulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.55;
+    transform: scale(1.35);
+  }
 }
 
 @media (max-width: 760px) {
