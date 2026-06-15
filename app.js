@@ -133,12 +133,50 @@ function profitDomain(values) {
   return [min - pad, max + pad];
 }
 
+function formatBps(value) {
+  const number = metricNumber(value);
+  if (number === null) return "--";
+  const sign = number > 0 ? "+" : "";
+  return `${sign}${number.toFixed(1)} bps`;
+}
+
+function sideKey(outcome) {
+  return outcome === "Up" ? "up" : "down";
+}
+
+function oppositeSideKey(outcome) {
+  return outcome === "Up" ? "down" : "up";
+}
+
+function sideField(row, side, field) {
+  return metricNumber(row?.[`${side}_${field}`]);
+}
+
+function marketSeriesRows(conditionId) {
+  return (state.workflow?.backtest?.series || [])
+    .filter((row) => row.condition_id === conditionId)
+    .sort((left, right) => Number(right.seconds_left || 0) - Number(left.seconds_left || 0));
+}
+
+function linePathFor(rows, valueFor, xFor, yFor) {
+  return pathFrom(
+    rows
+      .map((row) => ({ x: xFor(row), y: yFor(valueFor(row)) }))
+      .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y))
+  );
+}
+
 function renderBacktestSelects() {
   const signals = signalRows();
   const allowed = new Set(["all-signals", ...signals.map((row) => row.condition_id)]);
   if (!allowed.has(state.backtestMarket)) state.backtestMarket = "all-signals";
+  const summary = state.workflow?.backtest?.summary || {};
+  const buySeconds = Number(summary.qualifying_buy_seconds || signals.length);
+  const allLabel = buySeconds > signals.length
+    ? `All Planned Buys (${signals.length} markets, ${fmt.format(buySeconds)} buy seconds)`
+    : `All Planned Buys (${signals.length} markets)`;
   byId("backtestMarket").innerHTML = [
-    `<option value="all-signals">All Buy Signals (${signals.length})</option>`,
+    `<option value="all-signals">${allLabel}</option>`,
     ...signals.map((row, index) => `<option value="${row.condition_id}">${signalLabel(row, index)}</option>`),
   ].join("");
   byId("backtestMarket").value = state.backtestMarket;
@@ -157,6 +195,117 @@ function tradeTitle(row) {
     `Why: final minute, BTC moved ${Number(row.abs_distance_bps).toFixed(1)} bps, buy price was 0.70-0.98, available size was ${money.format(row.top5_capacity_dollars || 0)}`,
     `Book then: ${row.intended_outcome} bid/ask ${formatPrice(row.signal_bid)}/${formatPrice(entry)}; other side ask ${formatPrice(oppositeAsk)}`,
   ].join(" | ");
+}
+
+function renderSignalDecisionChart(signal) {
+  const rows = marketSeriesRows(signal.condition_id);
+  if (!rows.length) {
+    byId("backtestChart").innerHTML = svgEmpty("No market path for this selection.");
+    return;
+  }
+
+  const view = { width: 980, height: 540 };
+  const plot = { left: 74, right: 350, top: 34, height: 200 };
+  const book = { left: 74, right: 350, top: 286, height: 176 };
+  const plotWidth = view.width - plot.left - plot.right;
+  const seconds = rows.map((row) => Number(row.seconds_left)).filter(Number.isFinite);
+  const minSec = Math.min(...seconds);
+  const maxSec = Math.max(...seconds);
+  const spanSec = Math.max(1, maxSec - minSec);
+  const xFor = (row) => plot.left + ((maxSec - Number(row.seconds_left || minSec)) / spanSec) * plotWidth;
+  const distanceValues = rows.map((row) => Number(row.distance_bps)).filter(Number.isFinite);
+  const maxAbsDistance = Math.max(30, ...distanceValues.map((value) => Math.abs(value))) * 1.15;
+  const yDistance = (value) => {
+    const number = Number(value);
+    return Number.isFinite(number) ? plot.top + ((maxAbsDistance - number) / (maxAbsDistance * 2)) * plot.height : Number.NaN;
+  };
+  const yPrice = (value) => {
+    const number = Number(value);
+    return Number.isFinite(number) && number > 0 ? book.top + ((1 - Math.max(0, Math.min(1, number))) * book.height) : Number.NaN;
+  };
+  const selectedSide = sideKey(signal.intended_outcome);
+  const oppositeSide = oppositeSideKey(signal.intended_outcome);
+  const markerX = plot.left + ((maxSec - Number(signal.seconds_left || minSec)) / spanSec) * plotWidth;
+  const selectedAsk = sideField(signal, selectedSide, "ask");
+  const selectedBid = sideField(signal, selectedSide, "bid");
+  const oppositeAsk = sideField(signal, oppositeSide, "ask");
+  const selectedDepth = sideField(signal, selectedSide, "ask_depth_5");
+  const selectedFlow = metricNumber(signal[`${selectedSide}_signed_trade_notional_15s`]);
+  const oppositeFlow = metricNumber(signal[`${oppositeSide}_signed_trade_notional_15s`]);
+  const selectedImbalance = metricNumber(signal[`${selectedSide}_depth_imbalance`]);
+  const pnl = Number(signal.pnl_after_slippage_haircut || 0);
+  const gateRows = [
+    ["Time", `${signal.seconds_left}s left`, Number(signal.seconds_left) >= 181 && Number(signal.seconds_left) <= 240],
+    ["Move", `${formatBps(signal.abs_distance_bps)} from start`, Number(signal.abs_distance_bps) >= 30],
+    ["Entry ask", formatPrice(signal.signal_ask), Number(signal.signal_ask) >= 0.70 && Number(signal.signal_ask) <= 0.98],
+    ["Depth", money.format(signal.top5_capacity_dollars || 0), Number(signal.top5_capacity_dollars || 0) >= 25],
+    ["Result", `${signal.winner} won, ${moneyCents.format(pnl)}`, pnl > 0],
+  ];
+  const bookRows = [
+    [`${signal.intended_outcome} bid/ask`, `${formatPrice(selectedBid)} / ${formatPrice(selectedAsk)}`],
+    [`Other ask`, formatPrice(oppositeAsk)],
+    ["Top-5 depth", money.format(selectedDepth || 0)],
+    ["Book lean", selectedImbalance === null ? "--" : `${(selectedImbalance * 100).toFixed(0)}%`],
+    ["15s flow", `${money.format(selectedFlow || 0)} vs ${money.format(oppositeFlow || 0)}`],
+    ["Both asks", formatPrice(signal.complement_ask_sum)],
+  ];
+  const xTicks = [maxSec, Math.round((maxSec + minSec) / 2), minSec].map((tick) => {
+    const x = plot.left + ((maxSec - tick) / spanSec) * plotWidth;
+    return `<line class="grid" x1="${x}" y1="${plot.top}" x2="${x}" y2="${book.top + book.height}"></line><text class="tick" x="${x}" y="${book.top + book.height + 24}" text-anchor="middle">${tick}s</text>`;
+  }).join("");
+  const distanceTicks = [-30, 0, 30].map((tick) => {
+    const y = yDistance(tick);
+    return `<line class="${tick === 0 ? "axis-zero" : "grid"}" x1="${plot.left}" y1="${y}" x2="${plot.left + plotWidth}" y2="${y}"></line><text class="tick" x="${plot.left - 10}" y="${y + 4}" text-anchor="end">${formatBps(tick)}</text>`;
+  }).join("");
+  const priceTicks = [0, 0.5, 1].map((tick) => {
+    const y = yPrice(tick);
+    return `<line class="grid" x1="${book.left}" y1="${y}" x2="${book.left + plotWidth}" y2="${y}"></line><text class="tick" x="${book.left - 10}" y="${y + 4}" text-anchor="end">${tick.toFixed(2)}</text>`;
+  }).join("");
+  const selectedAskPath = linePathFor(rows, (row) => sideField(row, selectedSide, "ask"), xFor, yPrice);
+  const selectedBidPath = linePathFor(rows, (row) => sideField(row, selectedSide, "bid"), xFor, yPrice);
+  const oppositeAskPath = linePathFor(rows, (row) => sideField(row, oppositeSide, "ask"), xFor, yPrice);
+  const gateText = gateRows.map(([label, value, passed], index) => {
+    const y = 92 + index * 28;
+    return `
+      <text class="bar-label" x="708" y="${y}">${escapeHtml(label)}</text>
+      <text class="bar-value ${passed ? "pass-text" : "fail-text"}" x="948" y="${y}" text-anchor="end">${escapeHtml(value)}</text>`;
+  }).join("");
+  const bookText = bookRows.map(([label, value], index) => {
+    const y = 292 + index * 26;
+    return `
+      <text class="bar-label" x="708" y="${y}">${escapeHtml(label)}</text>
+      <text class="bar-value" x="948" y="${y}" text-anchor="end">${escapeHtml(value)}</text>`;
+  }).join("");
+  const title = tradeTitle(signal);
+
+  byId("backtestChart").innerHTML = `
+    <svg viewBox="0 0 ${view.width} ${view.height}" role="img" aria-label="Selected backtest decision context">
+      <title>${escapeHtml(title)}</title>
+      <rect class="plot" x="${plot.left}" y="${plot.top}" width="${plotWidth}" height="${plot.height}"></rect>
+      <rect class="plot" x="${book.left}" y="${book.top}" width="${plotWidth}" height="${book.height}"></rect>
+      ${xTicks}
+      ${distanceTicks}
+      ${priceTicks}
+      <path class="line line-distance" d="${linePathFor(rows, (row) => Number(row.distance_bps), xFor, yDistance)}"></path>
+      <line class="signal-marker" x1="${markerX}" y1="${plot.top}" x2="${markerX}" y2="${book.top + book.height}"></line>
+      <circle class="dot signal" cx="${markerX}" cy="${yDistance(Number(signal.distance_bps || 0))}" r="6"></circle>
+      <path class="line line-ask" d="${selectedAskPath}"></path>
+      <path class="line line-bid" d="${selectedBidPath}"></path>
+      <path class="line line-other" d="${oppositeAskPath}"></path>
+      <circle class="dot signal" cx="${markerX}" cy="${yPrice(Number(signal.signal_ask || selectedAsk || 0))}" r="6"></circle>
+      <text class="axis" x="${plot.left + plotWidth / 2}" y="${plot.top - 12}" text-anchor="middle">BTC move from start</text>
+      <text class="axis" x="${book.left + plotWidth / 2}" y="${book.top - 12}" text-anchor="middle">${signal.intended_outcome} book price at the decision</text>
+      <text class="legend ask" x="${book.left + 8}" y="${book.top + 20}">ask</text>
+      <text class="legend bid" x="${book.left + 52}" y="${book.top + 20}">bid</text>
+      <text class="legend other" x="${book.left + 92}" y="${book.top + 20}">other ask</text>
+      <text class="axis" x="${book.left + plotWidth / 2}" y="${view.height - 16}" text-anchor="middle">Seconds left in the market</text>
+      <rect class="note-box" x="686" y="36" width="274" height="188" rx="6"></rect>
+      <text class="axis" x="708" y="64">Trade rule and result</text>
+      ${gateText}
+      <rect class="note-box" x="686" y="244" width="274" height="184" rx="6"></rect>
+      <text class="axis" x="708" y="268">Book snapshot</text>
+      ${bookText}
+    </svg>`;
 }
 
 function renderTradePnlChart(signals) {
@@ -216,7 +365,7 @@ function renderTradePnlChart(signals) {
       ${bars}
       <path class="line" d="${pathFrom(linePoints)}"></path>
       ${dots}
-      <text class="axis" x="${view.left + plotWidth / 2}" y="${view.height - 18}" text-anchor="middle">${signals.length} buy signals: bar = each trade, line = total profit</text>
+      <text class="axis" x="${view.left + plotWidth / 2}" y="${view.height - 18}" text-anchor="middle">${signals.length} market buys: bar = each entry, line = total profit</text>
       <text class="axis" x="20" y="${view.top + plotHeight / 2}" text-anchor="middle" transform="rotate(-90 20 ${view.top + plotHeight / 2})">Profit after 2c safety cost</text>
     </svg>`;
 }
@@ -232,7 +381,11 @@ function renderBacktestChart() {
     byId("backtestChart").innerHTML = svgEmpty("No buy signals for this selection.");
     return;
   }
-  renderTradePnlChart(selectedSignals);
+  if (state.backtestMarket === "all-signals") {
+    renderTradePnlChart(selectedSignals);
+  } else {
+    renderSignalDecisionChart(selectedSignals[0]);
+  }
 }
 
 function checksFor(tab) {
@@ -470,7 +623,8 @@ function renderPaperChart() {
 function renderStatus() {
   const q = state.workflow.data_quality || {};
   const b = state.workflow.backtest.summary || {};
-  byId("statusText").textContent = `${fmt.format(q.clean_markets || 0)} clean windows scanned | ${fmt.format(b.signals || 0)} buys | ${moneyCents.format(b.pnl_after_slippage_haircut || 0)} test profit`;
+  const buySeconds = Number(b.qualifying_buy_seconds || b.signals || 0);
+  byId("statusText").textContent = `${fmt.format(q.clean_markets || 0)} clean windows scanned | ${fmt.format(b.signals || 0)} market buys / ${fmt.format(buySeconds)} buy seconds | ${moneyCents.format(b.pnl_after_slippage_haircut || 0)} test profit`;
 }
 
 function renderActiveTab() {

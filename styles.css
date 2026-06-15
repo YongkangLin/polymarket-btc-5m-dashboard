@@ -169,6 +169,29 @@ svg {
   stroke-width: 2.4;
 }
 
+.line-distance {
+  stroke: var(--blue);
+}
+
+.line-ask {
+  stroke: var(--green);
+}
+
+.line-bid {
+  stroke: var(--blue);
+}
+
+.line-other {
+  stroke: var(--amber);
+  stroke-dasharray: 5 5;
+}
+
+.signal-marker {
+  stroke: #1b252c;
+  stroke-dasharray: 4 5;
+  stroke-width: 1.4;
+}
+
 .dot {
   fill: var(--blue);
   stroke: #ffffff;
@@ -204,6 +227,33 @@ svg {
 
 .bar {
   opacity: 0.9;
+}
+
+.note-box {
+  fill: #fbfcfd;
+  stroke: var(--line);
+}
+
+.legend {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.legend.ask,
+.pass-text {
+  fill: var(--green);
+}
+
+.legend.bid {
+  fill: var(--blue);
+}
+
+.legend.other {
+  fill: var(--amber);
+}
+
+.fail-text {
+  fill: var(--red);
 }
 
 .tick,
