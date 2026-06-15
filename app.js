@@ -171,6 +171,8 @@ function compactNote(value, maxLength = 33) {
 function humanReason(value) {
   const labels = {
     passes_test_fill_and_roi_gates: "Passes held-out fill and profit checks",
+    passes_test_fill_roi_and_walkforward_gates: "Passes held-out and walk-forward maker checks",
+    walkforward_route_not_ready: "Fails rolling walk-forward maker checks",
     best_positive_train_maker_route: "Best positive maker route on training data",
     needs_more_maker_fill_evidence: "Needs more maker-fill evidence",
     insufficient_train_maker_evidence: "Needs more training evidence",
@@ -376,18 +378,21 @@ function renderStrategyPanels() {
   const paperSummary = state.workflow.paper_trade.summary || {};
   const policy = state.workflow.live_trade.execution_policy || {};
   const routeLabel = paperSummary.maker_route_label || policy.selected_route_label || "Maker join best bid for 15s";
+  const liveStatus = policy.maker_route_ready
+    ? "Disabled until paper fills prove post-fill edge and a human enables live orders."
+    : "Disabled. The maker route failed the rolling walk-forward gate, so it is not live-ready.";
   byId("backtestStrategy").innerHTML = [
-    strategyCell("Backtest rule", ruleSummaryText()),
-    strategyCell("Backtest data", "Historical BTC price plus Polymarket books: fair value, bid/ask, top-5 depth, side book lean, and both-asks sanity."),
-    strategyCell("Backtest execution", "Entry is modeled at the Polymarket ask, held to settlement, with a 2c safety haircut. It tests table quality, not maker fill quality."),
+    strategyCell("Backtest strategy", ruleSummaryText()),
+    strategyCell("Backtest signals", "Historical BTC price plus Polymarket books: fair value, bid/ask, top-5 depth, side book lean, and both-asks sanity."),
+    strategyCell("Backtest fill model", "$25 buy at the ask, hold to settlement, subtract 2c safety cost. This tests table quality; maker fills are checked separately."),
   ].join("");
   byId("paperStrategy").innerHTML = [
-    strategyCell("Paper rule", "Same table as backtest, then add live Binance BTC depth support before a shadow quote is allowed."),
-    strategyCell("Maker route", `${routeLabel}: post-only quote at best bid, mark live edge every poll, cancel when edge decays.`),
-    strategyCell("Paper goal", "Measure maker fill quality: post-fill edge and toxic fills. A winning settlement can still be a bad fill."),
+    strategyCell("Paper strategy", "Same table rule in live markets, then require live Binance BTC depth support before a shadow quote is allowed."),
+    strategyCell("Maker route", `${routeLabel}: post-only best-bid quote, never cross the spread, cancel when edge decays or data is stale.`),
+    strategyCell("Paper goal", "Prove post-fill edge and toxic-fill rate. A winning settlement can still be a bad maker fill."),
   ].join("");
   byId("liveStrategy").innerHTML = [
-    strategyCell("Live status", "Disabled. The Rust engine is for post-only quoting after paper proves the fills are good, not just frequent."),
+    strategyCell("Live status", liveStatus),
     strategyCell("Order policy", "Post-only maker limits only; no taker entries, no market orders, cancel stale or negative-edge quotes."),
     strategyCell("Promotion gate", "Needs positive post-fill edge, low toxic fills, clean start prices, healthy latency, and manual enable."),
   ].join("");
@@ -855,6 +860,10 @@ function liveStatusRows() {
   const fillRate = metricNumber(policy.test_fill_rate);
   const makerRoi = metricNumber(policy.test_roi_on_planned_cost);
   const lift = metricNumber(policy.roi_lift_vs_always_taker);
+  const walkforwardDays = metricNumber(policy.walkforward_test_days);
+  const walkforwardRoi = metricNumber(policy.walkforward_roi_on_planned_cost);
+  const walkforwardPositiveDayRate = metricNumber(policy.walkforward_positive_day_rate);
+  const walkforwardLift = metricNumber(policy.walkforward_roi_lift_vs_always_taker);
   return [
     gateRow(
       "maker_route",
@@ -892,6 +901,42 @@ function liveStatusRows() {
       `${formatSignedPercent(lift)} vs taker`,
       `Taker test ROI: ${formatPercent(policy.always_taker_test_roi_on_planned_cost)}. Maker route ROI: ${formatPercent(policy.test_roi_on_planned_cost)}.`
     ),
+    gateRow(
+      "maker_walkforward_days",
+      "Walk-forward days",
+      walkforwardDays,
+      metricNumber(policy.min_walkforward_test_days) || 5,
+      walkforwardDays !== null && walkforwardDays >= (metricNumber(policy.min_walkforward_test_days) || 5),
+      `${fmt.format(policy.walkforward_test_days || 0)} rolling days`,
+      "Each day selects the maker route from prior days only, then scores the next day."
+    ),
+    gateRow(
+      "maker_walkforward_profit",
+      "Walk-forward profit",
+      walkforwardRoi,
+      metricNumber(policy.min_walkforward_roi_on_planned_cost) || 0.03,
+      walkforwardRoi !== null && walkforwardRoi >= (metricNumber(policy.min_walkforward_roi_on_planned_cost) || 0.03),
+      `${moneyCents.format(policy.walkforward_pnl_dollars || 0)} | ${formatPercent(walkforwardRoi)}`,
+      `Rolling maker route PnL on planned quote cost. Fill-level ROI: ${formatPercent(policy.walkforward_roi_on_filled_cost)}.`
+    ),
+    gateRow(
+      "maker_walkforward_days_green",
+      "Winning days",
+      walkforwardPositiveDayRate,
+      metricNumber(policy.min_walkforward_positive_day_rate) || 0.55,
+      walkforwardPositiveDayRate !== null && walkforwardPositiveDayRate >= (metricNumber(policy.min_walkforward_positive_day_rate) || 0.55),
+      `${formatPercent(walkforwardPositiveDayRate)} positive days`,
+      `${fmt.format(policy.walkforward_positive_days || 0)} of ${fmt.format(policy.walkforward_test_days || 0)} rolling test days were profitable.`
+    ),
+    gateRow(
+      "maker_walkforward_lift",
+      "WF vs taking",
+      walkforwardLift,
+      0.01,
+      walkforwardLift !== null && walkforwardLift >= 0.01,
+      `${formatSignedPercent(walkforwardLift)} vs taker`,
+      `Rolling taker ROI: ${formatPercent(policy.walkforward_always_taker_roi_on_planned_cost)}. Rolling maker ROI: ${formatPercent(policy.walkforward_roi_on_planned_cost)}.`
+    ),
     ...paperChecks,
     ...manualChecks,
   ];
@@ -923,6 +968,10 @@ function plainCheckLabel(row) {
     historical_maker_fill_rate: "Maker fills",
     maker_profit: "Maker profit",
     maker_lift: "Versus taking",
+    maker_walkforward_days: "Walk-forward days",
+    maker_walkforward_profit: "Walk-forward profit",
+    maker_walkforward_days_green: "Winning days",
+    maker_walkforward_lift: "WF vs taking",
     paper_start_source: "Start price verified",
     manual_live_enable: "Manual live enable",
   };
