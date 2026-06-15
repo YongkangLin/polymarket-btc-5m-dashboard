@@ -308,7 +308,7 @@ function renderBacktestSelects() {
       : allMarkets;
   byId("marketFilter").innerHTML = [
     ["all", `All markets (${fmt.format(allMarkets.length)})`],
-    ["bought", `Bought (${fmt.format(boughtCount)})`],
+    ["bought", `Ask-sim buys (${fmt.format(boughtCount)})`],
     ["no_action", `No action (${fmt.format(noActionCount)})`],
   ].map(([value, label]) => `<option value="${value}">${escapeHtml(label)}</option>`).join("");
   byId("marketFilter").value = state.marketFilter;
@@ -323,7 +323,7 @@ function renderBacktestSelects() {
       ? new Date(market.window_start).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
       : "Unknown";
     const status = signal
-      ? `Bought ${signal.intended_outcome} ${moneyCents.format(signal.pnl_after_slippage_haircut || 0)}`
+      ? `Ask-sim buy ${signal.intended_outcome} ${moneyCents.format(signal.pnl_after_slippage_haircut || 0)}`
       : `No action: ${rejectReasonLabel(noActionDecisionRow(market)?.reason)}`;
     return `<option value="${escapeHtml(market.condition_id)}">${escapeHtml(`${when} | ${status} | ${market.slug}`)}</option>`;
   }).join("");
@@ -377,9 +377,13 @@ function strategyCell(title, body) {
 function renderStrategyPanels() {
   const paperSummary = state.workflow.paper_trade.summary || {};
   const policy = state.workflow.live_trade.execution_policy || {};
-  const routeLabel = paperSummary.maker_route_label || policy.selected_route_label || "Maker join best bid for 15s";
+  const routeLabel = paperSummary.maker_route_label || policy.selected_route_label || "Maker 2c below ask for 60s";
+  const bookChecks = Number(paperSummary.external_book_checks || 0);
+  const depthSupportText = bookChecks > 0
+    ? "Live Binance BTC depth support is checked before a shadow quote is allowed."
+    : "BTC depth support is configured, but the current paper sample has not exercised that filter yet.";
   const liveStatus = policy.maker_route_ready
-    ? "Disabled until paper fills prove post-fill edge and a human enables live orders."
+    ? "Disabled until live paper fills prove post-fill edge and a human enables live orders."
     : "Disabled. The maker route failed the rolling walk-forward gate, so it is not live-ready.";
   byId("backtestStrategy").innerHTML = [
     strategyCell("Backtest strategy", ruleSummaryText()),
@@ -387,8 +391,8 @@ function renderStrategyPanels() {
     strategyCell("Backtest fill model", "$25 buy at the ask, hold to settlement, subtract 2c safety cost. This tests table quality; maker fills are checked separately."),
   ].join("");
   byId("paperStrategy").innerHTML = [
-    strategyCell("Paper strategy", "Same table rule in live markets, then require live Binance BTC depth support before a shadow quote is allowed."),
-    strategyCell("Maker route", `${routeLabel}: post-only best-bid quote, never cross the spread, cancel when edge decays or data is stale.`),
+    strategyCell("Paper strategy", `Same table rule in live markets. ${depthSupportText}`),
+    strategyCell("Maker route", `${routeLabel}: post-only configured maker quote, never cross the spread, cancel when edge decays or data is stale.`),
     strategyCell("Paper goal", "Prove post-fill edge and toxic-fill rate. A winning settlement can still be a bad maker fill."),
   ].join("");
   byId("liveStrategy").innerHTML = [
@@ -410,7 +414,7 @@ function marketDecisionSummary(row, market, isSignal) {
   const flowEdge = metricNumber(row.trade_flow_edge_15s);
   const pnl = metricNumber(row.pnl_after_slippage_haircut);
   const headline = isSignal
-    ? `Bought ${outcome} at ${formatPrice(selectedAsk)} with ${row.seconds_left}s left`
+    ? `Simulated ask buy ${outcome} at ${formatPrice(selectedAsk)} with ${row.seconds_left}s left`
     : `No action with ${row.seconds_left}s left`;
   const result = isSignal
     ? `${row.winner} won | settlement ${row.outcome_win ? "1.00" : "0.00"} | ${formatSignedMoney(pnl)} PnL after safety cost`
@@ -466,7 +470,7 @@ function tradeTitle(row) {
   const rawPnl = Number(row.pnl_dollars);
   const oppositeAsk = row.intended_outcome === "Up" ? row.down_ask : row.up_ask;
   return [
-    `Signal ${signalNumber(row)}: bought ${row.intended_outcome} at ${entry.toFixed(2)} with ${row.seconds_left}s left`,
+    `Signal ${signalNumber(row)}: simulated ask buy ${row.intended_outcome} at ${entry.toFixed(2)} with ${row.seconds_left}s left`,
     `Held to settlement: ${row.winner} won, exit ${exit.toFixed(2)}`,
     `Profit: ${moneyCents.format(pnl)} after 2c safety cost (${moneyCents.format(rawPnl)} raw)`,
     `Why: ${rangeText(rule.min_seconds_left, rule.max_seconds_left, "s")} left, BTC moved ${Number(row.abs_distance_bps).toFixed(1)} bps, buy price was ${rangeText(rule.min_ask, rule.max_ask)}, fair edge was ${formatCents(row.fair_edge_vs_signal_bid)}`,
@@ -864,6 +868,7 @@ function liveStatusRows() {
   const walkforwardRoi = metricNumber(policy.walkforward_roi_on_planned_cost);
   const walkforwardPositiveDayRate = metricNumber(policy.walkforward_positive_day_rate);
   const walkforwardLift = metricNumber(policy.walkforward_roi_lift_vs_always_taker);
+  const makerRouteDetail = `${policy.selected_route_label || "No route selected"} | ${humanReason(policy.maker_route_ready_reason || policy.selection_reason)}`;
   return [
     gateRow(
       "maker_route",
@@ -871,8 +876,8 @@ function liveStatusRows() {
       Boolean(policy.maker_route_ready),
       true,
       Boolean(policy.maker_route_ready),
-      policy.selected_route_label || "No route selected",
-      `${policy.selected_route_label || "No route selected"} | ${humanReason(policy.maker_route_ready_reason || policy.selection_reason)}`
+      makerRouteDetail,
+      makerRouteDetail
     ),
     gateRow(
       "historical_maker_fill_rate",
@@ -1073,7 +1078,17 @@ function paperStatusRows() {
       },
     ];
   }
-  return [
+  const rows = [];
+  if (summary.paper_route_matches_active === false) {
+    rows.push({
+      label: "Active route paper",
+      value: 0,
+      detail: "not collected",
+      tone: "fail",
+      title: summary.paper_route_note || "Paper evidence has not been collected for the active maker route.",
+    });
+  }
+  return rows.concat([
     {
       label: "Book checks",
       value: Number(summary.evaluations || 0),
@@ -1102,6 +1117,7 @@ function paperStatusRows() {
       label: "BTC book checks",
       value: Number(summary.external_book_checks || 0),
       detail: fmt.format(summary.external_book_checks || 0),
+      tone: Number(summary.external_book_checks || 0) > 0 ? "pass" : "fail",
       title: "Times the paper bot fetched Binance BTC depth after the Polymarket and fair-value gates passed.",
     },
     {
@@ -1156,18 +1172,21 @@ function paperStatusRows() {
       label: "Toxic fills",
       value: Number(summary.maker_toxic_fills || 0),
       detail: `${fmt.format(summary.maker_toxic_fills || 0)} toxic`,
+      tone: Number(summary.maker_toxic_fills || 0) > 0 ? "fail" : "pass",
       title: `A fill is toxic when fair value after fill is below our quote. Toxic rate: ${formatPercent(summary.maker_toxic_fill_rate)}.`,
     },
     {
       label: "Post-fill edge",
       value: Math.abs(Number(summary.maker_avg_post_fill_edge || 0) * 100),
       detail: formatCents(summary.maker_avg_post_fill_edge),
+      tone: Number(summary.maker_avg_post_fill_edge || 0) < 0 ? "fail" : "pass",
       title: "Average fair-after-fill minus quote price. Positive is the core maker-quality metric.",
     },
     {
       label: "Worst live edge",
       value: Math.abs(Number(summary.maker_min_live_edge || 0) * 100),
       detail: formatCents(summary.maker_min_live_edge),
+      tone: Number(summary.maker_min_live_edge || 0) < 0 ? "fail" : "pass",
       title: "Worst marked live fair edge while a maker quote was open. This should stay above the cancel threshold.",
     },
     {
@@ -1180,9 +1199,10 @@ function paperStatusRows() {
       label: "Maker profit",
       value: Math.abs(Number(summary.maker_pnl_dollars || 0)),
       detail: moneyCents.format(summary.maker_pnl_dollars || 0),
+      tone: Number(summary.maker_pnl_dollars || 0) < 0 ? "fail" : "pass",
       title: "Maker paper PnL from filled shadow quotes.",
     },
-  ];
+  ]);
 }
 
 function renderValueBarChart(el, rows, emptyMessage, axisText) {
@@ -1207,7 +1227,7 @@ function renderValueBarChart(el, rows, emptyMessage, axisText) {
     return `
       <text class="bar-label" x="${view.left - 14}" y="${y + barHeight * 0.65}" text-anchor="end">${row.label}</text>
       <rect class="bar-bg" x="${view.left}" y="${y}" width="${plotWidth}" height="${barHeight}" rx="4"></rect>
-      <rect class="bar pass" x="${view.left}" y="${y}" width="${width}" height="${barHeight}" rx="4">
+      <rect class="bar ${row.tone || "pass"}" x="${view.left}" y="${y}" width="${width}" height="${barHeight}" rx="4">
         <title>${row.title || `${row.label}: ${row.detail}`}</title>
       </rect>
       <text class="bar-value" x="${view.left + Math.max(width, 92) - 10}" y="${y + barHeight * 0.64}" text-anchor="end">${row.detail}</text>`;
@@ -1232,8 +1252,13 @@ function renderStatus() {
   const activeSummary = active?.summary || state.workflow.active_backtest?.summary || {};
   const activeBuys = Number(activeSummary.traded_markets || activeSummary.quoted_markets || b.signals || 0);
   const activeRoi = metricNumber(activeSummary.roi_on_filled_cost ?? b.roi_after_slippage_haircut);
-  const makerRoi = metricNumber(activeSummary.maker_test_roi_on_planned_cost);
-  const makerText = makerRoi === null ? "" : ` | maker test ${formatPercent(makerRoi)}`;
+  const policy = state.workflow.live_trade.execution_policy || {};
+  const makerRoi = metricNumber(policy.walkforward_roi_on_planned_cost ?? activeSummary.maker_walkforward_roi_on_planned_cost);
+  const makerTarget = metricNumber(policy.min_walkforward_roi_on_planned_cost) || 0.03;
+  const makerReady = Boolean(policy.maker_route_ready);
+  const makerText = makerRoi === null
+    ? ""
+    : ` | maker route ${makerReady ? "paper-ready" : "not ready"} | WF ROI ${formatPercent(makerRoi)} ${makerRoi >= makerTarget ? ">=" : "<"} ${formatPercent(makerTarget)}`;
   const generated = state.workflow.generated_at
     ? new Date(state.workflow.generated_at).toLocaleString("en-US", {
         month: "short",
@@ -1243,7 +1268,7 @@ function renderStatus() {
         timeZoneName: "short",
       })
     : "unknown build";
-  byId("statusText").textContent = `Loaded ${generated} | active backtest: ${fmt.format(activeBuys)} buys | ROI ${formatPercent(activeRoi)}${makerText} | ${fmt.format(q.clean_markets || 0)} clean windows`;
+  byId("statusText").textContent = `Loaded ${generated} | active backtest: ${fmt.format(activeBuys)} ask-sim buys | ask-entry ROI ${formatPercent(activeRoi)}${makerText} | ${fmt.format(q.clean_markets || 0)} clean windows`;
 }
 
 function renderActiveTab() {
