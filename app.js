@@ -13,6 +13,10 @@ const LIVE_TICK_RENDER_MAX_POINTS = 1200;
 const LIVE_TICK_PERSIST_MS = 1000;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 50000;
 const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v2";
+const LOCAL_BACKEND_BASE = window.POLYMARKET_BACKEND_BASE || "http://127.0.0.1:8787";
+const BACKEND_REFRESH_MS = 1000;
+const BACKEND_FETCH_TIMEOUT_MS = 1500;
+const BACKEND_TICK_LIMIT = 100000;
 const BINANCE_API_BASES = [
   "https://data-api.binance.vision",
   "https://api.binance.com",
@@ -61,6 +65,19 @@ const state = {
     lastError: null,
     url: null,
   },
+  paperStorageStatus: {
+    state: "unknown",
+    lastError: null,
+    restoredMarkets: 0,
+    savedAt: null,
+  },
+  backendStatus: {
+    state: "idle",
+    lastError: null,
+    lastFetchAt: null,
+    pointsLoaded: 0,
+  },
+  backendFetchInFlight: false,
   liveGate: "paper_to_live",
 };
 
@@ -256,6 +273,8 @@ function formatMicroTimestamp(value) {
 }
 
 function liveFeedLabel(row) {
+  if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws_book")) return "Local backend book";
+  if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws")) return "Local backend trade";
   if (row?.decision === "live_tick") return "Binance WS trade";
   if (row?.decision === "live_book_tick") return "Binance WS book";
   return row?.btc_price_venue || row?.reason || "--";
@@ -643,8 +662,12 @@ function rememberWorkflowPaperRows(paperTrade) {
 function loadPersistedPaperTicks() {
   try {
     const raw = window.localStorage?.getItem(LIVE_TICK_STORE_KEY);
-    if (!raw) return;
+    if (!raw) {
+      state.paperStorageStatus = { state: "empty", lastError: null, restoredMarkets: 0, savedAt: null };
+      return;
+    }
     const payload = JSON.parse(raw);
+    let restoredMarkets = 0;
     (payload.markets || []).forEach((entry) => {
       const market = entry.market || entry;
       const key = paperGraphKey(market);
@@ -656,45 +679,72 @@ function loadPersistedPaperTicks() {
         : { ...market, points: [], markers: market.markers || [] };
       rememberLiveMarket(restoredMarket);
       const points = (Array.isArray(entry.points) ? entry.points : [])
-        .filter(isBinanceLivePoint)
+        .filter(shouldPersistLivePoint)
         .sort((left, right) => (pointTimestampMicro(left) || 0) - (pointTimestampMicro(right) || 0));
       state.liveBtcTicksByMarket.set(key, points.slice(-LIVE_TICK_STORE_MAX_POINTS_PER_MARKET));
       rememberObservedPaperMarket(restoredMarket, entry.paper_points || [], entry.paper_markers || []);
+      restoredMarkets += 1;
     });
+    state.paperStorageStatus = {
+      state: "restored",
+      lastError: null,
+      restoredMarkets,
+      savedAt: payload.saved_at || null,
+    };
   } catch (error) {
+    state.paperStorageStatus = {
+      state: "error",
+      lastError: error.message || String(error),
+      restoredMarkets: 0,
+      savedAt: null,
+    };
     console.warn("paper tick restore failed", error);
   }
 }
 
 function persistPaperTicksNow() {
-  if (!window.localStorage) return;
-  const marketByKey = new Map();
-  [...state.livePersistedMarkets.values(), ...state.paperObservedMarkets.values()].forEach((market) => {
-    paperStorageKeysForMarket(market).forEach((key) => {
-      marketByKey.set(key, { ...(marketByKey.get(key) || {}), ...market, market_key: key });
-    });
-  });
-  const markets = [...marketByKey.values()].map((market) => {
-    const key = paperGraphKey(market);
-    return {
-      market: {
-        ...market,
-        points: [],
-        markers: market.markers || [],
-      },
-      points: (state.liveBtcTicksByMarket.get(key) || [])
-        .filter(isBinanceLivePoint)
-        .slice(-LIVE_TICK_STORE_MAX_POINTS_PER_MARKET),
-      paper_points: (state.paperObservedPointsByMarket.get(key) || []).slice(-LIVE_TICK_STORE_MAX_POINTS_PER_MARKET),
-      paper_markers: (state.paperObservedMarkersByMarket.get(key) || []).slice(-2000),
-    };
-  });
   try {
+    if (!window.localStorage) throw new Error("localStorage unavailable");
+    const marketByKey = new Map();
+    [...state.livePersistedMarkets.values(), ...state.paperObservedMarkets.values()].forEach((market) => {
+      const key = browserWindowKeyForMarket(market) || paperGraphKey(market);
+      if (key) marketByKey.set(key, { ...(marketByKey.get(key) || {}), ...market, market_key: key });
+    });
+    const markets = [...marketByKey.values()].map((market) => {
+      const keys = paperStorageKeysForMarket(market);
+      const points = mergePaperChartRows([], keys.flatMap((key) => state.liveBtcTicksByMarket.get(key) || []))
+        .filter(shouldPersistLivePoint)
+        .slice(-LIVE_TICK_STORE_MAX_POINTS_PER_MARKET);
+      return {
+        market: {
+          ...market,
+          points: [],
+          markers: market.markers || [],
+        },
+        points,
+        paper_points: mergePaperChartRows([], keys.flatMap((key) => state.paperObservedPointsByMarket.get(key) || []))
+          .slice(-LIVE_TICK_STORE_MAX_POINTS_PER_MARKET),
+        paper_markers: mergePaperChartRows([], keys.flatMap((key) => state.paperObservedMarkersByMarket.get(key) || []))
+          .slice(-2000),
+      };
+    });
+    const savedAt = new Date().toISOString();
     window.localStorage.setItem(
       LIVE_TICK_STORE_KEY,
-      JSON.stringify({ version: 2, saved_at: new Date().toISOString(), markets }),
+      JSON.stringify({ version: 2, saved_at: savedAt, markets }),
     );
+    state.paperStorageStatus = {
+      state: "saved",
+      lastError: null,
+      restoredMarkets: state.paperStorageStatus.restoredMarkets || 0,
+      savedAt,
+    };
   } catch (error) {
+    state.paperStorageStatus = {
+      ...state.paperStorageStatus,
+      state: "error",
+      lastError: error.message || String(error),
+    };
     console.warn("paper tick persist failed", error);
   }
 }
@@ -751,10 +801,24 @@ function currentDisplayPaperMarket() {
 }
 
 function isBinanceLivePoint(point) {
+  const venue = String(point?.btc_price_venue || "");
   return (
     ["live_tick", "live_book_tick"].includes(point?.decision) &&
-    String(point?.btc_price_venue || "").startsWith("binance_ws")
+    (
+      venue.startsWith("binance_ws") ||
+      venue.startsWith("local_backend_binance_ws") ||
+      venue.startsWith("binance_pg")
+    )
   );
+}
+
+function isBackendLivePoint(point) {
+  const venue = String(point?.btc_price_venue || "");
+  return venue.startsWith("local_backend_binance_ws") || venue.startsWith("binance_pg");
+}
+
+function shouldPersistLivePoint(point) {
+  return isBinanceLivePoint(point) && !isBackendLivePoint(point);
 }
 
 function liveTickPointsForMarket(market) {
@@ -782,6 +846,68 @@ function liveTickPointsForMarket(market) {
 function latestLiveTickForMarket(market) {
   const points = liveTickPointsForMarket(market);
   return points[points.length - 1] || null;
+}
+
+function backendBaseUrl() {
+  return String(LOCAL_BACKEND_BASE || "").replace(/\/+$/, "");
+}
+
+function backendUrl(path) {
+  const base = backendBaseUrl();
+  return base ? `${base}${path}` : "";
+}
+
+async function refreshBackendPaperFeeds(options = {}) {
+  const { render = false } = options;
+  const base = backendBaseUrl();
+  if (!base || state.backendFetchInFlight) return null;
+  state.backendFetchInFlight = true;
+  try {
+    const market = await fetchJsonWithTimeout(
+      backendUrl("/api/binance/windows/current?symbol=BTCUSDT"),
+      BACKEND_FETCH_TIMEOUT_MS,
+    );
+    const storedMarket = rememberLiveMarket({
+      ...market,
+      is_current: true,
+      is_open: true,
+      status: "backend_live",
+    });
+    const start = marketWindowStartUnix(storedMarket);
+    if (start === null) return storedMarket;
+    const payload = await fetchJsonWithTimeout(
+      backendUrl(`/api/binance/ticks?symbol=BTCUSDT&window_start_unix=${start}&limit=${BACKEND_TICK_LIMIT}`),
+      BACKEND_FETCH_TIMEOUT_MS,
+    );
+    const points = Array.isArray(payload.points) ? payload.points.filter(isBinanceLivePoint) : [];
+    points.forEach((point) => appendLiveBtcPoint(storedMarket, point));
+    state.backendStatus = {
+      state: "open",
+      lastError: null,
+      lastFetchAt: new Date(),
+      pointsLoaded: points.length,
+    };
+    state.liveTickStatus = {
+      ...state.liveTickStatus,
+      state: "open",
+      lastError: null,
+      lastTickAt: points.length ? new Date(Math.floor((pointTimestampMicro(points[points.length - 1]) || Date.now() * 1000) / 1000)) : state.liveTickStatus.lastTickAt,
+      url: base,
+    };
+    if (render || (state.activeTab === "paper" && currentPaperViewSelected())) renderPaperChart();
+    return storedMarket;
+  } catch (error) {
+    state.backendStatus = {
+      ...state.backendStatus,
+      state: "unavailable",
+      lastError: error.message || String(error),
+      lastFetchAt: new Date(),
+    };
+    if (render && state.activeTab === "paper") renderPaperChart();
+    return null;
+  } finally {
+    state.backendFetchInFlight = false;
+  }
 }
 
 function historicalPaperMarkets() {
@@ -835,10 +961,8 @@ function mergePaperChartRows(baseRows, liveRows) {
 function paperChartPointsFor(market) {
   const points = paperPointsFor(market);
   const ticks = downsamplePoints(liveTickPointsForMarket(market), LIVE_TICK_RENDER_MAX_POINTS);
+  if (isCurrentPaperMarket(market)) return ticks;
   const merged = ticks.length ? mergePaperChartRows(points, ticks) : points;
-  if (isCurrentPaperMarket(market) && merged.length > LIVE_TICK_RENDER_MAX_POINTS) {
-    return merged.slice(-LIVE_TICK_RENDER_MAX_POINTS);
-  }
   return merged;
 }
 
@@ -913,6 +1037,12 @@ function paperMarketLabel(market) {
 function paperStoredPointCount(market) {
   if (!market) return 0;
   return mergePaperChartRows(paperPointsFor(market), liveTickPointsForMarket(market)).length;
+}
+
+function paperStorageWarningText() {
+  if (state.backendStatus.state === "open") return "";
+  if (state.paperStorageStatus.state !== "error") return "";
+  return ` | storage error: ${compactNote(state.paperStorageStatus.lastError, 42)}`;
 }
 
 function paperMarkerType(row) {
@@ -1936,7 +2066,7 @@ function renderPaperSelects() {
   select.disabled = false;
   const historical = historicalPaperMarkets();
   const currentLabel = current
-    ? `Current live Binance window | ${paperMarketTimeLabel(current)} | ${fmt.format(paperStoredPointCount(current))} ticks`
+    ? `Current live Binance window | ${paperMarketTimeLabel(current)} | ${fmt.format(paperStoredPointCount(current))} stored`
     : `Current live market | waiting for workflow.json`;
   const marketOptions = historical.map((market) => {
     const key = paperGraphKey(market);
@@ -1958,32 +2088,41 @@ function renderPaperSelects() {
   if (meta) {
     const market = selectedPaperMarket();
     const selectedCurrent = (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE;
+    if (selectedCurrent && market) {
+      refreshBackendPaperFeeds();
+      ensureLiveTickStream();
+    }
     const points = market ? paperChartPointsFor(market) : [];
     if (selectedCurrent && market && !points.length && !verifiedBinanceStartPrice(market)) {
       const startStatus = market.start_price_status || liveStartMetadata(market).start_price_status || "loading";
       const startError = market.start_price_error || liveStartMetadata(market).start_price_error || "";
+      const streamError = state.liveTickStatus.lastError ? `, ${state.liveTickStatus.lastError}` : "";
       const message = startStatus === "error"
         ? `Binance start-price anchor failed${startError ? `: ${startError}` : ""}. Live ticks are not drawn without a real Binance start.`
-        : `Fetching Binance trade at the 5-minute window start. Stream: ${state.liveTickStatus.state}. Live ticks are ignored until this anchor is verified.`;
-      meta.innerHTML = `<span class="live-chip is-waiting">${escapeHtml(startStatus === "error" ? "Blocked" : "Waiting")}</span> ${escapeHtml(message)}`;
+        : `Fetching Binance trade at the 5-minute window start. Stream: ${state.liveTickStatus.state}${streamError}. Live ticks are ignored until this anchor is verified.`;
+      meta.innerHTML = `<span class="live-chip is-waiting">${escapeHtml(startStatus === "error" ? "Blocked" : "Waiting")}</span> ${escapeHtml(message + paperStorageWarningText())}`;
       return;
     }
     if (selectedCurrent && market && !points.length) {
-      meta.innerHTML = `<span class="live-chip is-waiting">Waiting</span> Binance stream ${escapeHtml(state.liveTickStatus.state)}. Trades use microsecond exchange timestamps.`;
+      const streamError = state.liveTickStatus.lastError ? ` (${state.liveTickStatus.lastError})` : "";
+      meta.innerHTML = `<span class="live-chip is-waiting">Waiting</span> Binance stream ${escapeHtml(state.liveTickStatus.state + streamError)}. Trades use microsecond exchange timestamps.${escapeHtml(paperStorageWarningText())}`;
       return;
     }
     const updatedAt = market ? paperDisplayUpdatedAt(market) : null;
     const statusClass = selectedCurrent && market && isCurrentPaperMarket(market) ? "is-live" : "is-past";
     const statusText = selectedCurrent ? "Live" : "Past";
     const tickCount = market ? liveTickPointsForMarket(market).length : 0;
+    const backendText = state.backendStatus.state === "open"
+      ? `Postgres backend ${fmt.format(state.backendStatus.pointsLoaded || 0)} pts`
+      : `Postgres backend ${state.backendStatus.state}${state.backendStatus.lastError ? ` (${state.backendStatus.lastError})` : ""}`;
     const tickStatus = state.liveTickStatus.state === "open"
       ? `${fmt.format(tickCount)} Binance WS trade/book ticks`
-      : `Binance WS ${state.liveTickStatus.state}`;
+      : `Binance WS ${state.liveTickStatus.state}${state.liveTickStatus.lastError ? ` (${state.liveTickStatus.lastError})` : ""}`;
     const refreshText = selectedCurrent
-      ? `${tickStatus}; Binance-only live line`
+      ? `${backendText}; ${tickStatus}; backend is durable, browser WS is fallback`
       : "Historical snapshot";
     const storedCount = market ? paperStoredPointCount(market) : 0;
-    meta.innerHTML = `<span class="live-chip ${statusClass}">${escapeHtml(statusText)}</span> ${fmt.format(points.length)} shown / ${fmt.format(storedCount)} stored ticks | updated ${escapeHtml(ageText(updatedAt))} | ${escapeHtml(refreshText)}`;
+    meta.innerHTML = `<span class="live-chip ${statusClass}">${escapeHtml(statusText)}</span> ${fmt.format(points.length)} shown / ${fmt.format(storedCount)} stored points | updated ${escapeHtml(ageText(updatedAt))} | ${escapeHtml(refreshText + paperStorageWarningText())}`;
   }
 }
 
@@ -2007,6 +2146,85 @@ function paperQuoteText(row) {
   const priceText = quotePrice === null ? "--" : formatPrice(quotePrice);
   const sizeText = size === null ? "" : ` x ${size.toFixed(2)}`;
   return `${side || "quote"} ${priceText}${sizeText}`;
+}
+
+function hasAnyField(row, fields) {
+  return fields.some((field) => row?.[field] !== null && row?.[field] !== undefined);
+}
+
+function latestBookRowForMarket(market, rawPoints) {
+  const candidates = [
+    ...(rawPoints || []),
+    ...paperMarkersFor(market),
+    ...paperPointsFor(market),
+  ];
+  const fields = [
+    "book_bid",
+    "book_ask",
+    "up_bid",
+    "up_ask",
+    "down_bid",
+    "down_ask",
+    "signal_bid",
+    "signal_ask",
+    "side_depth_imbalance",
+    "signal_depth_imbalance",
+    "external_book_imbalance",
+  ];
+  for (let index = candidates.length - 1; index >= 0; index -= 1) {
+    const row = candidates[index];
+    if (hasAnyField(row, fields)) return row;
+  }
+  return rawPoints?.[rawPoints.length - 1] || null;
+}
+
+function pricePairText(bid, ask) {
+  return bid === null && ask === null ? "--" : `${formatPrice(bid)} / ${formatPrice(ask)}`;
+}
+
+function qtyPairText(bidQty, askQty) {
+  if (bidQty === null && askQty === null) return "--";
+  const left = bidQty === null ? "--" : bidQty.toFixed(4);
+  const right = askQty === null ? "--" : askQty.toFixed(4);
+  return `${left} / ${right}`;
+}
+
+function orderBookSummaryRows(market, rawPoints, latestRaw, latestQuote) {
+  const row = latestBookRowForMarket(market, rawPoints) || latestRaw || {};
+  const quoteSide = latestQuote?.side || latestQuote?.intended_outcome || latestRaw?.side || latestRaw?.intended_outcome;
+  const outcome = quoteSide === "Up" || quoteSide === "Down" ? quoteSide : decisionOutcome(latestRaw || {});
+  const selectedSide = sideKey(outcome);
+  const oppositeSide = oppositeSideKey(outcome);
+  const bookBid = metricNumber(row.book_bid ?? latestRaw?.book_bid);
+  const bookAsk = metricNumber(row.book_ask ?? latestRaw?.book_ask);
+  const bookBidQty = metricNumber(row.book_bid_qty ?? latestRaw?.book_bid_qty);
+  const bookAskQty = metricNumber(row.book_ask_qty ?? latestRaw?.book_ask_qty);
+  const bookSpread = metricNumber(row.book_spread_bps ?? latestRaw?.book_spread_bps ?? row.external_book_spread_bps);
+  const bookMicro = metricNumber(row.book_microprice ?? latestRaw?.book_microprice);
+  const externalMicroEdge = metricNumber(row.external_book_microprice_edge_bps ?? latestRaw?.external_book_microprice_edge_bps);
+  const externalImbalance = metricNumber(row.external_book_imbalance ?? latestRaw?.external_book_imbalance);
+
+  const selectedBid = sideField(row, selectedSide, "bid") ?? metricNumber(row.signal_bid);
+  const selectedAsk = sideField(row, selectedSide, "ask") ?? metricNumber(row.signal_ask);
+  const oppositeBid = sideField(row, oppositeSide, "bid");
+  const oppositeAsk = sideField(row, oppositeSide, "ask");
+  const selectedDepth = sideField(row, selectedSide, "ask_depth_5") ?? metricNumber(row.signal_ask_depth_5);
+  const selectedLean = metricNumber(row[`${selectedSide}_depth_imbalance`] ?? row.signal_depth_imbalance ?? row.side_depth_imbalance);
+  const complementAskSum = metricNumber(row.complement_ask_sum ?? latestRaw?.complement_ask_sum);
+
+  return [
+    ["Order Book", "Local backend / live feed"],
+    ["BTC bid / ask", pricePairText(bookBid, bookAsk)],
+    ["BTC size", qtyPairText(bookBidQty, bookAskQty)],
+    ["BTC spread", bookSpread === null ? "--" : formatBps(bookSpread)],
+    ["BTC micro", bookMicro === null ? (externalMicroEdge === null ? "--" : formatBps(externalMicroEdge)) : formatPrice(bookMicro)],
+    ["BTC imbalance", externalImbalance === null ? "--" : percentText(externalImbalance)],
+    [`PM ${outcome} bid / ask`, pricePairText(selectedBid, selectedAsk)],
+    [`PM ${outcome} depth`, selectedDepth === null ? "--" : money.format(selectedDepth)],
+    [`PM ${oppositeSide === "up" ? "Up" : "Down"} bid / ask`, pricePairText(oppositeBid, oppositeAsk)],
+    ["PM book lean", selectedLean === null ? "--" : percentText(selectedLean)],
+    ["Both asks", complementAskSum === null ? "--" : complementAskSum.toFixed(2)],
+  ];
 }
 
 function paperMarkerTitle(row) {
@@ -2134,7 +2352,6 @@ function renderPaperDecisionGraph() {
 
   const latestRaw = latest.row;
   const latestQuote = [...paperMarkersFor(market)].reverse().find((row) => ["quote", "fill"].includes(paperMarkerType(row)));
-  const latestSupport = metricNumber(latestRaw.external_book_support ?? latestQuote?.external_book_support);
   const settlement = [...paperMarkersFor(market)].reverse().find((row) => paperMarkerType(row) === "settlement");
   const pnl = metricNumber(settlement?.pnl_dollars ?? market.pnl_dollars ?? market.maker_pnl_dollars);
   const selectedCurrent = (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE && isCurrentPaperMarket(market);
@@ -2147,45 +2364,41 @@ function renderPaperDecisionGraph() {
   const latestTradeTime = latestRaw.trade_time_micro
     ? formatMicroTimestamp(latestRaw.trade_time_micro)
     : (latestRaw.time_unix ? formatMicroTimestamp(Number(latestRaw.time_unix) * 1_000_000) : "--");
-  const latency = metricNumber(latestRaw.ws_latency_ms);
-  const latencyText = latency === null ? "--" : `${latency.toFixed(1)} ms`;
   const fairProbability = metricNumber(latestRaw.fair_probability);
   const fairEdge = metricNumber(latestRaw.fair_edge);
   const depthImbalance = metricNumber(latestRaw.side_depth_imbalance);
   const flowEdge = metricNumber(latestRaw.trade_flow_edge_15s);
-  const complementAskSum = metricNumber(latestRaw.complement_ask_sum);
-  const externalImbalance = metricNumber(latestRaw.external_book_imbalance);
-  const externalSpread = metricNumber(latestRaw.external_book_spread_bps);
-  const externalMicro = metricNumber(latestRaw.external_book_microprice_edge_bps);
   const startMeta = liveStartMetadata(market);
   const startDelay = metricNumber(startMeta.start_trade_delay_ms ?? latestRaw.start_trade_delay_ms);
   const startSource = verifiedBinanceStartPrice(market) === null
     ? (startMeta.start_price_status || "loading")
     : `Binance start +${startDelay === null ? "?" : startDelay.toFixed(0)}ms`;
-  const infoRows = [
+  const backendLabel = state.backendStatus.state === "open"
+    ? `backend ${fmt.format(state.backendStatus.pointsLoaded || 0)} pts`
+    : `backend ${state.backendStatus.state}`;
+  const coreRows = [
     ["Market", compactNote(market.slug || market.question || paperGraphKey(market), 30)],
     ["Mode", compactNote(modeText, 30)],
-    ["Window", paperMarketTimeLabel(market)],
     ["Zero line", compactNote(startSource, 30)],
     ["Latest BTC", `${formatPrice(latest.btcPrice)} | ${formatBps(latest.distanceBps)}`],
     ["Tick time", compactNote(latestTradeTime, 30)],
-    ["Feed", compactNote(`${liveFeedLabel(latestRaw)} | ${latencyText}`, 30)],
+    ["Feed", compactNote(`${backendLabel} | ${liveFeedLabel(latestRaw)}`, 30)],
     ["Seconds left", `${Math.round(latest.secondsLeft)}s`],
     ["Decision", compactNote(paperDecisionText(latestRaw), 30)],
     ["Paper quote", compactNote(paperQuoteText(latestQuote), 30)],
     ["Fair / edge", `${formatPercent(fairProbability)} | ${formatCents(fairEdge)}`],
+  ];
+  const bookRows = orderBookSummaryRows(market, rawPoints, latestRaw, latestQuote);
+  const infoRows = [
+    ...coreRows,
+    ...bookRows,
     ["PM depth / flow", `${depthImbalance === null ? "--" : percentText(depthImbalance)} | ${flowEdge === null ? "--" : moneyCents.format(flowEdge)}`],
-    ["Pair ask sum", complementAskSum === null ? "--" : complementAskSum.toFixed(2)],
-    ["BTC book", latestSupport === null ? "--" : percentText(latestSupport)],
-    ["BTC imbalance", externalImbalance === null ? "--" : percentText(externalImbalance)],
-    ["BTC spread", externalSpread === null ? "--" : formatBps(externalSpread)],
-    ["BTC micro", externalMicro === null ? "--" : formatBps(externalMicro)],
     ["Result", compactNote(resultText, 30)],
   ].map(([label, value], index) => {
-    const y = 90 + index * 29;
+    const y = 88 + index * 25;
     return `
       <text class="bar-label" x="718" y="${y}">${escapeHtml(label)}</text>
-      <text class="bar-value" x="718" y="${y + 17}">${escapeHtml(String(value))}</text>`;
+      <text class="bar-value" x="718" y="${y + 14}">${escapeHtml(String(value))}</text>`;
   }).join("");
   const latestTitle = [
     `latest ${Math.round(latest.secondsLeft)}s left`,
@@ -2218,7 +2431,7 @@ function renderPaperDecisionGraph() {
       <text class="legend bid" x="718" y="646">BTC move</text>
       <text class="legend ask" x="718" y="672">signal/fill</text>
       <text class="legend other" x="794" y="672">quote/cancel</text>
-      <text class="tick" x="718" y="704">${escapeHtml(`${fmt.format(markerRows.length)} paper events shown | ${fmt.format(rawPoints.length)} Binance ticks shown`)}</text>
+      <text class="tick" x="718" y="704">${escapeHtml(`${fmt.format(markerRows.length)} paper events shown | ${fmt.format(rawPoints.length)} ${selectedCurrent ? "Binance ticks" : "price points"} shown`)}</text>
     </svg>`;
 }
 
@@ -2262,7 +2475,7 @@ function currentPaperViewSelected() {
 }
 
 function liveMarketForTicks() {
-  if (state.activeTab !== "paper" || !currentPaperViewSelected()) return null;
+  if (!currentPaperViewSelected()) return null;
   const market = currentPaperMarket() || browserPaperMarket();
   requestLiveStartPrice(market);
   return market;
@@ -2292,7 +2505,7 @@ function appendLiveBtcPoint(market, point) {
     }
     state.liveBtcTicksByMarket.set(key, points);
   });
-  schedulePaperTickPersist();
+  if (shouldPersistLivePoint(point)) schedulePaperTickPersist();
 }
 
 function verifiedBinanceStartPrice(market) {
@@ -2767,6 +2980,7 @@ function ensureLiveTickStream() {
           state: "reconnecting",
           lastError: "websocket_connect_timeout",
         };
+        scheduleLiveTickRender();
         try {
           socket.close();
         } catch (error) {
@@ -2785,6 +2999,7 @@ function ensureLiveTickStream() {
         url: urls.join(" | "),
         lastError: null,
       };
+      scheduleLiveTickRender();
     };
     socket.onmessage = (message) => {
       try {
@@ -2813,6 +3028,7 @@ function ensureLiveTickStream() {
         state: "error",
         lastError: "websocket_error",
       };
+      scheduleLiveTickRender();
     };
     socket.onclose = () => {
       if (socket._connectTimer) {
@@ -2821,12 +3037,13 @@ function ensureLiveTickStream() {
       }
       liveTickSockets = liveTickSockets.filter((openSocket) => openSocket !== socket);
       if (liveTickSockets.length > 0) return;
-      if (state.activeTab !== "paper" || !currentPaperViewSelected()) return;
+      if (!currentPaperViewSelected()) return;
       state.liveTickStatus = {
         ...state.liveTickStatus,
         state: "reconnecting",
         lastError: state.liveTickStatus.lastError || "websocket_closed",
       };
+      scheduleLiveTickRender();
       liveTickSourceIndex += 1;
       clearLiveTickReconnect();
       liveTickReconnectTimer = window.setTimeout(() => {
@@ -2838,12 +3055,11 @@ function ensureLiveTickStream() {
 }
 
 function refreshLivePaperFeeds() {
-  if (state.activeTab !== "paper") return;
   const market = liveMarketForTicks();
   if (!market) return;
   requestLiveStartPrice(market);
   ensureLiveTickStream();
-  if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) renderPaperChart();
+  if (state.activeTab === "paper" && (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) renderPaperChart();
 }
 
 async function refreshWorkflow() {
@@ -2871,9 +3087,9 @@ function renderActiveTab() {
   });
   if (state.activeTab === "backtest") renderBacktestChart();
   if (state.activeTab === "paper") {
-    renderPaperChart();
     if (currentPaperViewSelected()) ensureLiveTickStream();
-  } else {
+    renderPaperChart();
+  } else if (!currentPaperViewSelected()) {
     closeLiveTickStream();
   }
   if (state.activeTab === "live") renderGateChart("live");
@@ -2888,6 +3104,8 @@ async function main() {
   renderBacktestChart();
   renderPaperChart();
   renderGateChart("live");
+  refreshBackendPaperFeeds({ render: false });
+  refreshLivePaperFeeds();
 
   document.querySelectorAll(".tab").forEach((button) => {
     button.addEventListener("click", () => {
@@ -2912,6 +3130,7 @@ async function main() {
     state.paperGraph = event.target.value;
     renderPaperChart();
     if (state.paperGraph === PAPER_CURRENT_VALUE) {
+      refreshBackendPaperFeeds({ render: state.activeTab === "paper" });
       ensureLiveTickStream();
       refreshWorkflow();
       refreshLivePaperFeeds();
@@ -2926,8 +3145,13 @@ async function main() {
     }
   }, PAPER_REFRESH_MS);
   window.setInterval(() => {
-    if (state.activeTab === "paper" && currentPaperViewSelected()) refreshLivePaperFeeds();
+    if (currentPaperViewSelected()) refreshLivePaperFeeds();
   }, 1000);
+  window.setInterval(() => {
+    if (currentPaperViewSelected()) {
+      refreshBackendPaperFeeds({ render: state.activeTab === "paper" });
+    }
+  }, BACKEND_REFRESH_MS);
   window.addEventListener("beforeunload", persistPaperTicksNow);
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") persistPaperTicksNow();
