@@ -3,221 +3,69 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>BTC 5m Polymarket Research</title>
+    <title>BTC 5m Trading Workflow</title>
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">Clean complete 5-minute windows</p>
-        <h1>BTC 5m Market Data</h1>
-      </div>
-      <div class="status">
-        <span id="generatedAt">Loading</span>
-      </div>
-    </header>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">BTC 5m Up/Down</p>
+          <h1>Trading Workflow</h1>
+        </div>
+        <div class="status" id="statusText">Loading</div>
+      </header>
 
-    <main>
-      <section class="notice" id="availabilityNote"></section>
+      <nav class="tabs" aria-label="Workflow">
+        <button class="tab is-active" type="button" data-tab="backtest">Back Test</button>
+        <button class="tab" type="button" data-tab="paper">Paper Trade</button>
+        <button class="tab" type="button" data-tab="live">Live Trade</button>
+      </nav>
 
-      <section class="panel engine-panel" id="enginePanel" hidden>
-        <div class="panel-head">
-          <div>
-            <h2>Live Engine Pivot</h2>
-            <p>Rust post-only BTC/ETH Up/Down engine status.</p>
-          </div>
-          <strong id="engineStatus" class="gate-status">--</strong>
-        </div>
-        <div class="gate-grid engine-grid">
-          <div class="gate-row">
-            <span>Mode</span>
-            <strong id="engineMode">--</strong>
-            <small id="engineModeStats">--</small>
-          </div>
-          <div class="gate-row">
-            <span>Execution Contract</span>
-            <strong id="engineContract">--</strong>
-            <small id="engineContractStats">--</small>
-          </div>
-          <div class="gate-row">
-            <span>SDK Adapter</span>
-            <strong id="engineSdk">--</strong>
-            <small id="engineSdkStats">--</small>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel edge-panel" id="edgePanel" hidden>
-        <div class="panel-head">
-          <div>
-            <h2>Table Selection</h2>
-            <p>Simple BTC 5m edge cards ranked before more bot buildout.</p>
-          </div>
-          <strong id="edgeStatus" class="gate-status">--</strong>
-        </div>
-        <div class="gate-grid edge-grid">
-          <div class="gate-row">
-            <span>Selected table</span>
-            <strong id="edgeName">--</strong>
-            <small id="edgeWhere">--</small>
-          </div>
-          <div class="gate-row">
-            <span>Evidence</span>
-            <strong id="edgeEvidence">--</strong>
-            <small id="edgeStats">--</small>
-          </div>
-          <div class="gate-row">
-            <span>Next action</span>
-            <strong id="edgeAction">--</strong>
-            <small id="edgeActionStats">--</small>
-          </div>
-        </div>
-      </section>
-
-      <section class="metric-grid" aria-label="Summary metrics">
-        <article class="metric">
-          <span>Complete 5m Markets</span>
-          <strong id="completeMarkets">--</strong>
-          <small id="marketRange">--</small>
-        </article>
-        <article class="metric">
-          <span>Price Ticks</span>
-          <strong id="priceRows">--</strong>
-          <small id="priceRange">--</small>
-        </article>
-        <article class="metric">
-          <span>Book Events</span>
-          <strong id="bookRows">--</strong>
-          <small id="bookStats">--</small>
-        </article>
-        <article class="metric">
-          <span>Trades</span>
-          <strong id="tradeRows">--</strong>
-          <small id="tradeStats">--</small>
-        </article>
-        <article class="metric">
-          <span>Fill Entries</span>
-          <strong id="entryRows">--</strong>
-          <small id="fillStats">--</small>
-        </article>
-      </section>
-
-      <section class="panel model-panel" id="modelPanel" hidden>
-        <div class="panel-head">
-          <div>
-            <h2>Model Gate</h2>
-            <p>Current selected-policy and EV-filter status on clean 5-minute windows.</p>
-          </div>
-          <strong id="modelStatus" class="gate-status">--</strong>
-        </div>
-        <div class="gate-grid">
-          <div class="gate-row">
-            <span>Selected policy</span>
-            <strong id="selectedPolicy">--</strong>
-            <small id="selectedPolicyStats">--</small>
-          </div>
-          <div class="gate-row">
-            <span>Raw wallet EV overlay</span>
-            <strong id="walletOverlay">--</strong>
-            <small id="walletOverlayStats">--</small>
-          </div>
-          <div class="gate-row">
-            <span>Live promotion gap</span>
-            <strong id="promotionGap">--</strong>
-            <small id="promotionGapStats">--</small>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel signal-panel" id="signalPanel" hidden>
-        <div class="panel-head">
-          <div>
-            <h2>Rule Signal Map</h2>
-            <p>Paper config entries across clean completed 5-minute markets.</p>
-          </div>
-          <select id="signalMarketSelect" aria-label="Rule signal market filter">
-            <option value="all">All rule-signal markets</option>
-          </select>
-        </div>
-        <div class="signal-summary" aria-label="Rule signal summary">
-          <div>
-            <span>Signals</span>
-            <strong id="ruleSignalCount">--</strong>
-          </div>
-          <div>
-            <span>Simulated Fills</span>
-            <strong id="ruleFillRate">--</strong>
-          </div>
-          <div>
-            <span>Planned ROI</span>
-            <strong id="ruleRoi">--</strong>
-          </div>
-          <div>
-            <span>Evidence Split</span>
-            <strong id="ruleScope">--</strong>
-          </div>
-        </div>
-        <div class="signal-layout">
-          <div id="signalMap" class="signal-map"></div>
-          <aside class="signal-detail">
-            <h3>Selected Signal</h3>
-            <div id="signalDetailRows" class="signal-detail-rows"></div>
-          </aside>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <h2>Large-Wallet Entry Map</h2>
-            <p>Only complete 5-minute windows with clean price, book, trade, and fill layers.</p>
-          </div>
-          <div class="map-controls">
-            <select id="marketSelect" aria-label="Market filter">
-              <option value="all">All clean markets</option>
+      <section class="panel is-active" id="backtestPanel" data-panel="backtest">
+        <div class="toolbar">
+          <label>
+            <span>Market</span>
+            <select id="backtestMarket"></select>
+          </label>
+          <label>
+            <span>Metric</span>
+            <select id="backtestMetric">
+              <option value="distance_bps">BTC distance</option>
+              <option value="signal_ask">Dominant-side ask</option>
+              <option value="top5_capacity_dollars">Top-5 capacity</option>
             </select>
-            <select id="roleSelect" aria-label="Role filter">
-              <option value="both">Maker + taker</option>
-              <option value="maker">Maker</option>
-              <option value="taker">Taker</option>
-            </select>
-          </div>
+          </label>
         </div>
-        <div class="entry-layout">
-          <div id="entryMap" class="entry-map"></div>
-          <aside class="entry-zones">
-            <h3>Top Zones</h3>
-            <div id="entryZoneRows" class="zone-list"></div>
-          </aside>
-        </div>
+        <div class="chart" id="backtestChart"></div>
       </section>
 
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <h2>Wallets</h2>
-            <p>Wallets are ranked by clean-market entry notional.</p>
-          </div>
+      <section class="panel" id="paperPanel" data-panel="paper">
+        <div class="toolbar">
+          <label>
+            <span>Gate</span>
+            <select id="paperGate">
+              <option value="backtest_to_paper">Backtest to paper</option>
+              <option value="live_paper">Live paper evidence</option>
+            </select>
+          </label>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Wallet</th>
-                <th>Notional</th>
-                <th>Entries</th>
-                <th>Maker</th>
-                <th>Taker</th>
-              </tr>
-            </thead>
-            <tbody id="walletRows">
-              <tr><td colspan="5">Loading</td></tr>
-            </tbody>
-          </table>
+        <div class="chart" id="paperChart"></div>
+      </section>
+
+      <section class="panel" id="livePanel" data-panel="live">
+        <div class="toolbar">
+          <label>
+            <span>Gate</span>
+            <select id="liveGate">
+              <option value="paper_to_live">Paper to live</option>
+            </select>
+          </label>
         </div>
+        <div class="chart" id="liveChart"></div>
       </section>
     </main>
 
-    <script src="app.js?v=20260615-02"></script>
+    <script src="app.js?v=20260615-03"></script>
   </body>
 </html>
