@@ -477,7 +477,7 @@ svg {
 
 .paper-move-value {
   fill: var(--ink);
-  font-size: 34px;
+  font-size: 42px;
   font-weight: 900;
 }
 
@@ -500,6 +500,65 @@ svg {
 .paper-move-value.move-flat,
 .bar-value.move-flat {
   fill: var(--muted);
+}
+
+.paper-book-table {
+  min-width: 820px;
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+  overflow-x: auto;
+}
+
+.paper-book-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 4px 10px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.paper-book-heading span:last-child {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.paper-book-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.paper-book-table th,
+.paper-book-table td {
+  padding: 10px 8px;
+  border-top: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.paper-book-table th:first-child,
+.paper-book-table td:first-child {
+  text-align: left;
+}
+
+.paper-book-table thead th {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.paper-book-table tbody th {
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.paper-book-table tbody td {
+  color: var(--ink);
+  font-weight: 700;
 }
 
 .fail-text {

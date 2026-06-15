@@ -345,6 +345,19 @@ function pathFrom(points) {
   return points.map((point, index) => `${index === 0 ? "M" : "L"}${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ");
 }
 
+function compressLinePoints(points, minPixelGap = 0.75) {
+  const output = [];
+  points.forEach((point) => {
+    const last = output[output.length - 1];
+    if (last && Math.abs(point.x - last.x) < minPixelGap) {
+      output[output.length - 1] = point;
+    } else {
+      output.push(point);
+    }
+  });
+  return output;
+}
+
 function downsamplePoints(points, maxPoints) {
   if (!Array.isArray(points) || points.length <= maxPoints) return points || [];
   if (maxPoints <= 2) return points.slice(-Math.max(1, maxPoints));
@@ -399,9 +412,23 @@ function formatNeutralMove(value) {
   return `${sign}${number.toFixed(decimals)} bps`;
 }
 
+function formatDollarMove(value) {
+  const number = metricNumber(value);
+  if (number === null) return "--";
+  const abs = Math.abs(number);
+  if (abs < 0.005) return "$0.00";
+  const decimals = abs >= 100 ? 0 : (abs >= 10 ? 1 : 2);
+  const amount = abs.toLocaleString("en-US", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+  const sign = number > 0 ? "+" : "-";
+  return `${sign}$${amount}`;
+}
+
 function moveToneClass(value) {
   const number = metricNumber(value);
-  if (number === null || Math.abs(number) < 0.00005) return "move-flat";
+  if (number === null || Math.abs(number) < 0.005) return "move-flat";
   return number > 0 ? "move-up" : "move-down";
 }
 
@@ -421,6 +448,30 @@ function paperDistanceDomain(samples) {
   }
   const span = Math.max(max - min, minSpan);
   const pad = Math.max(span * 0.12, 0.008);
+  return { min: min - pad, max: max + pad };
+}
+
+function paperDollarMove(row) {
+  const btc = metricNumber(row?.btc_price);
+  const start = metricNumber(row?.start_price ?? row?.binance_start_price);
+  if (btc === null || start === null) return null;
+  return btc - start;
+}
+
+function paperDollarDomain(samples, minSpan = 1) {
+  const values = samples
+    .map((point) => point.dollarMove)
+    .filter((value) => Number.isFinite(value));
+  if (!values.length) return { min: -minSpan, max: minSpan };
+  let min = Math.min(...values);
+  let max = Math.max(...values);
+  if (max - min < minSpan) {
+    const center = (min + max) / 2;
+    min = center - minSpan / 2;
+    max = center + minSpan / 2;
+  }
+  const span = Math.max(max - min, minSpan);
+  const pad = Math.max(span * 0.16, 0.25);
   return { min: min - pad, max: max + pad };
 }
 
@@ -954,6 +1005,20 @@ function paperPointSecondsLeft(row, fallbackIndex = 0, total = 1) {
   if (elapsed !== null) return Math.max(0, 300 - elapsed);
   if (total <= 1) return 300;
   return 300 - (fallbackIndex / (total - 1)) * 300;
+}
+
+function paperPointElapsedSeconds(row, fallbackIndex = 0, total = 1) {
+  const start = metricNumber(row?.window_start_unix);
+  const timestampMicro = pointTimestampMicro(row);
+  if (start !== null && timestampMicro !== null) {
+    return Math.max(0, Math.min(300, timestampMicro / 1_000_000 - start));
+  }
+  const elapsed = metricNumber(row?.elapsed_seconds);
+  if (elapsed !== null) return Math.max(0, Math.min(300, elapsed));
+  const secondsLeft = metricNumber(row?.seconds_left);
+  if (secondsLeft !== null) return Math.max(0, Math.min(300, 300 - secondsLeft));
+  if (total <= 1) return 0;
+  return (fallbackIndex / (total - 1)) * 300;
 }
 
 function paperMarketTimeLabel(market) {
@@ -2173,6 +2238,114 @@ function orderBookSummaryRows(market, rawPoints, latestRaw, latestQuote) {
   ];
 }
 
+function formatBookMoney(value) {
+  const number = metricNumber(value);
+  if (number === null) return "--";
+  const decimals = Math.abs(number) >= 100 ? 2 : 4;
+  return `$${number.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`;
+}
+
+function formatBookQty(value) {
+  const number = metricNumber(value);
+  if (number === null) return "--";
+  if (Math.abs(number) >= 1000) return fmt.format(Math.round(number));
+  if (Math.abs(number) >= 10) return number.toFixed(1);
+  return number.toFixed(4);
+}
+
+function formatPredictionPrice(value) {
+  const number = metricNumber(value);
+  if (number === null) return "--";
+  return number.toFixed(3);
+}
+
+function bookSpreadText(bid, ask, formatter) {
+  const bidNumber = metricNumber(bid);
+  const askNumber = metricNumber(ask);
+  if (bidNumber === null || askNumber === null) return "--";
+  return formatter(askNumber - bidNumber);
+}
+
+function orderBookTableRows(market, rawPoints, latestRaw, latestQuote) {
+  const row = latestBookRowForMarket(market, rawPoints) || latestRaw || {};
+  const bookBid = metricNumber(row.book_bid ?? latestRaw?.book_bid);
+  const bookAsk = metricNumber(row.book_ask ?? latestRaw?.book_ask);
+  const bookBidQty = metricNumber(row.book_bid_qty ?? latestRaw?.book_bid_qty);
+  const bookAskQty = metricNumber(row.book_ask_qty ?? latestRaw?.book_ask_qty);
+  const bookMicro = metricNumber(row.book_microprice ?? latestRaw?.book_microprice);
+  const externalImbalance = metricNumber(row.external_book_imbalance ?? latestRaw?.external_book_imbalance);
+  const externalSupport = metricNumber(row.external_book_support ?? latestRaw?.external_book_support);
+  const quoteSide = latestQuote?.side || latestQuote?.intended_outcome;
+  const activeOutcome = quoteSide === "Up" || quoteSide === "Down" ? quoteSide : null;
+
+  const predictionRow = (label, side) => {
+    const bid = sideField(row, side, "bid");
+    const ask = sideField(row, side, "ask");
+    const bidDepth = sideField(row, side, "bid_depth_5");
+    const askDepth = sideField(row, side, "ask_depth_5");
+    const lean = metricNumber(row[`${side}_depth_imbalance`] ?? row.signal_depth_imbalance ?? row.side_depth_imbalance);
+    const isActive = String(activeOutcome || "").toLowerCase() === side;
+    return {
+      feed: `${label}${isActive ? " quote side" : ""}`,
+      bid: formatPredictionPrice(bid),
+      ask: formatPredictionPrice(ask),
+      spread: bookSpreadText(bid, ask, formatCents),
+      depth: `${formatBookQty(bidDepth)} / ${formatBookQty(askDepth)}`,
+      pressure: lean === null ? "--" : percentText(lean),
+    };
+  };
+
+  return [
+    {
+      feed: "BTC book",
+      bid: formatBookMoney(bookBid),
+      ask: formatBookMoney(bookAsk),
+      spread: bookSpreadText(bookBid, bookAsk, formatDollarMove),
+      depth: `${formatBookQty(bookBidQty)} / ${formatBookQty(bookAskQty)}`,
+      pressure: [
+        externalImbalance === null ? null : `imb ${percentText(externalImbalance)}`,
+        externalSupport === null ? null : `support ${percentText(externalSupport)}`,
+        bookMicro === null ? null : `micro ${formatBookMoney(bookMicro)}`,
+      ].filter(Boolean).join(" | ") || "--",
+    },
+    predictionRow("Polymarket Up", "up"),
+    predictionRow("Polymarket Down", "down"),
+  ];
+}
+
+function renderOrderBookTable(market, rawPoints, latestRaw, latestQuote) {
+  const rows = orderBookTableRows(market, rawPoints, latestRaw, latestQuote);
+  const body = rows.map((row) => `
+    <tr>
+      <th scope="row">${escapeHtml(row.feed)}</th>
+      <td>${escapeHtml(row.bid)}</td>
+      <td>${escapeHtml(row.ask)}</td>
+      <td>${escapeHtml(row.spread)}</td>
+      <td>${escapeHtml(row.depth)}</td>
+      <td>${escapeHtml(row.pressure)}</td>
+    </tr>`).join("");
+  return `
+    <div class="paper-book-table">
+      <div class="paper-book-heading">
+        <span>Order Book</span>
+        <span>${escapeHtml(liveFeedLabel(latestRaw))}</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Book</th>
+            <th scope="col">Bid</th>
+            <th scope="col">Ask</th>
+            <th scope="col">Spread</th>
+            <th scope="col">Bid / Ask Size</th>
+            <th scope="col">Pressure</th>
+          </tr>
+        </thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>`;
+}
+
 function paperMarkerTitle(row) {
   const pieces = [
     paperMarkerLabel(row),
@@ -2181,8 +2354,8 @@ function paperMarkerTitle(row) {
   ];
   const btc = metricNumber(row.btc_price);
   if (btc !== null) pieces.push(`BTC ${formatPrice(btc)}`);
-  const distance = paperDistanceBps(row);
-  if (distance !== null) pieces.push(formatBpsDeep(distance));
+  const move = paperDollarMove(row);
+  if (move !== null) pieces.push(formatDollarMove(move));
   const support = metricNumber(row.external_book_support);
   if (support !== null) pieces.push(`BTC book ${percentText(support)}`);
   const quotePrice = metricNumber(row.maker_quote_price ?? row.quote_price ?? row.bid_price ?? row.price);
@@ -2196,6 +2369,7 @@ function renderPaperDecisionGraph() {
   const market = selectedPaperMarket();
   const rawPoints = market ? paperChartPointsFor(market) : [];
   const chart = byId("paperChart");
+  const selectedCurrent = (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE && isCurrentPaperMarket(market);
   if (!market || !rawPoints.length) {
     if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) {
       if (market && !verifiedBinanceStartPrice(market)) {
@@ -2213,17 +2387,20 @@ function renderPaperDecisionGraph() {
     return;
   }
 
-  const samples = rawPoints
+  const tradeRows = rawPoints.filter((row) => row.decision !== "live_book_tick");
+  const lineRows = tradeRows.length ? tradeRows : rawPoints;
+  const allSamples = lineRows
     .map((row, index) => ({
       row,
       index,
-      secondsLeft: paperPointSecondsLeft(row, index, rawPoints.length),
-      distanceBps: paperDistanceBps(row),
+      elapsedSeconds: paperPointElapsedSeconds(row, index, lineRows.length),
+      secondsLeft: Math.max(0, 300 - paperPointElapsedSeconds(row, index, lineRows.length)),
+      dollarMove: paperDollarMove(row),
       btcPrice: metricNumber(row.btc_price),
     }))
-    .filter((point) => Number.isFinite(point.secondsLeft) && Number.isFinite(point.distanceBps));
+    .filter((point) => Number.isFinite(point.secondsLeft) && Number.isFinite(point.dollarMove));
 
-  if (!samples.length) {
+  if (!allSamples.length) {
     chart.innerHTML = svgEmpty("This paper market has price points, but no usable BTC move values yet.");
     return;
   }
@@ -2232,35 +2409,59 @@ function renderPaperDecisionGraph() {
   const plot = { left: 76, right: 306, top: 42, height: 420 };
   const plotWidth = view.width - plot.left - plot.right;
   const plotBottom = plot.top + plot.height;
-  const xForSeconds = (secondsLeft) => {
-    const clamped = Math.max(0, Math.min(300, Number(secondsLeft)));
-    return plot.left + ((300 - clamped) / 300) * plotWidth;
+  const latest = allSamples[allSamples.length - 1];
+  const liveWindowSeconds = 90;
+  const liveLeadSeconds = 12;
+  const latestElapsed = Number.isFinite(latest.elapsedSeconds) ? latest.elapsedSeconds : Math.max(0, 300 - latest.secondsLeft);
+  const xDomain = selectedCurrent
+    ? {
+        min: Math.max(0, Math.min(300 - liveWindowSeconds, latestElapsed + liveLeadSeconds - liveWindowSeconds)),
+        max: Math.min(300, Math.max(liveWindowSeconds, latestElapsed + liveLeadSeconds)),
+      }
+    : { min: 0, max: 300 };
+  if (xDomain.max - xDomain.min < 1) xDomain.max = xDomain.min + 1;
+  const samples = allSamples.filter((point) => point.elapsedSeconds >= xDomain.min && point.elapsedSeconds <= xDomain.max);
+  const visibleSamples = samples.length ? samples : allSamples.slice(-1);
+  const xForElapsed = (elapsedSeconds) => {
+    const clamped = Math.max(xDomain.min, Math.min(xDomain.max, Number(elapsedSeconds)));
+    return plot.left + ((clamped - xDomain.min) / (xDomain.max - xDomain.min)) * plotWidth;
   };
-  const distanceDomain = paperDistanceDomain(samples);
-  const yForDistance = (value) => plot.top + ((distanceDomain.max - Number(value)) / (distanceDomain.max - distanceDomain.min)) * plot.height;
-  const linePoints = samples.map((point) => ({
-    x: xForSeconds(point.secondsLeft),
-    y: yForDistance(point.distanceBps),
-  }));
-  const latest = samples[samples.length - 1];
+  const dollarDomain = paperDollarDomain(visibleSamples, selectedCurrent ? 1 : 2);
+  const yForDollarMove = (value) => plot.top + ((dollarDomain.max - Number(value)) / (dollarDomain.max - dollarDomain.min)) * plot.height;
+  const linePoints = compressLinePoints(visibleSamples.map((point) => ({
+    x: xForElapsed(point.elapsedSeconds),
+    y: yForDollarMove(point.dollarMove),
+  })));
   const rule = activeRule();
-  const windowStartX = xForSeconds(rule.max_seconds_left ?? 120);
-  const windowEndX = xForSeconds(rule.min_seconds_left ?? 61);
-  const closeStartX = xForSeconds(20);
-  const xTicks = [300, 240, 180, 120, 60, 0].map((tick) => {
-    const x = xForSeconds(tick);
-    return `<line class="grid" x1="${x}" y1="${plot.top}" x2="${x}" y2="${plotBottom}"></line><text class="tick" x="${x}" y="${plotBottom + 24}" text-anchor="middle">${tick}s</text>`;
+  const bandRect = (startElapsed, endElapsed, className) => {
+    const left = Math.max(xDomain.min, Math.min(startElapsed, endElapsed));
+    const right = Math.min(xDomain.max, Math.max(startElapsed, endElapsed));
+    if (right <= left) return "";
+    const x = xForElapsed(left);
+    const width = xForElapsed(right) - x;
+    return `<rect class="${className}" x="${x}" y="${plot.top}" width="${width}" height="${plot.height}"></rect>`;
+  };
+  const decisionBand = bandRect(300 - (rule.max_seconds_left ?? 120), 300 - (rule.min_seconds_left ?? 61), "decision-band");
+  const closeBand = bandRect(280, 300, "paper-close-band");
+  const xTickCount = 5;
+  const xTicks = Array.from({ length: xTickCount }, (_, index) => {
+    const tick = xDomain.min + ((xDomain.max - xDomain.min) * index) / (xTickCount - 1);
+    const x = xForElapsed(tick);
+    return `<line class="grid" x1="${x}" y1="${plot.top}" x2="${x}" y2="${plotBottom}"></line><text class="tick" x="${x}" y="${plotBottom + 24}" text-anchor="middle">${Math.round(tick)}s</text>`;
   }).join("");
-  const yTicks = [distanceDomain.min, 0, distanceDomain.max].map((tick) => {
-    const y = yForDistance(tick);
-    return `<line class="${Math.abs(tick) < 1e-12 ? "axis-zero" : "grid"}" x1="${plot.left}" y1="${y}" x2="${plot.left + plotWidth}" y2="${y}"></line><text class="tick" x="${plot.left - 10}" y="${y + 4}" text-anchor="end">${formatBpsDeep(tick)}</text>`;
+  const yTickValues = [dollarDomain.min, (dollarDomain.min + dollarDomain.max) / 2, dollarDomain.max];
+  if (dollarDomain.min < 0 && dollarDomain.max > 0) yTickValues.push(0);
+  yTickValues.sort((left, right) => left - right);
+  const yTicks = yTickValues.map((tick) => {
+    const y = yForDollarMove(tick);
+    return `<line class="${Math.abs(tick) < 0.005 ? "axis-zero" : "grid"}" x1="${plot.left}" y1="${y}" x2="${plot.left + plotWidth}" y2="${y}"></line><text class="tick" x="${plot.left - 10}" y="${y + 4}" text-anchor="end">${formatDollarMove(tick)}</text>`;
   }).join("");
 
   const nearestSample = (row) => {
     const markerSeconds = paperPointSecondsLeft(row);
-    let best = samples[0];
-    let bestDelta = Math.abs(samples[0].secondsLeft - markerSeconds);
-    samples.forEach((sample) => {
+    let best = allSamples[0];
+    let bestDelta = Math.abs(allSamples[0].secondsLeft - markerSeconds);
+    allSamples.forEach((sample) => {
       const delta = Math.abs(sample.secondsLeft - markerSeconds);
       if (delta < bestDelta) {
         best = sample;
@@ -2281,12 +2482,14 @@ function renderPaperDecisionGraph() {
     })
     .slice(-90);
   const eventDots = markerRows.map((row) => {
-    const markerSample = paperDistanceBps(row) === null ? nearestSample(row) : null;
-    const secondsLeft = paperPointSecondsLeft(row, markerSample?.index || 0, samples.length);
-    const distance = paperDistanceBps(row) ?? markerSample?.distanceBps;
-    if (!Number.isFinite(secondsLeft) || !Number.isFinite(distance)) return "";
-    const x = xForSeconds(secondsLeft);
-    const y = yForDistance(distance);
+    const markerSample = paperDollarMove(row) === null ? nearestSample(row) : null;
+    const elapsedSeconds = paperPointElapsedSeconds(row, markerSample?.index || 0, allSamples.length);
+    const secondsLeft = Math.max(0, 300 - elapsedSeconds);
+    const dollarMove = paperDollarMove(row) ?? markerSample?.dollarMove;
+    if (!Number.isFinite(secondsLeft) || !Number.isFinite(dollarMove)) return "";
+    if (elapsedSeconds < xDomain.min || elapsedSeconds > xDomain.max) return "";
+    const x = xForElapsed(elapsedSeconds);
+    const y = yForDollarMove(dollarMove);
     const type = paperMarkerType(row);
     return `
       <circle class="dot ${type}" cx="${x}" cy="${y}" r="6">
@@ -2296,10 +2499,10 @@ function renderPaperDecisionGraph() {
   }).join("");
 
   const latestRaw = latest.row;
+  const latestBookRaw = latestBookRowForMarket(market, rawPoints) || latestRaw;
   const latestQuote = [...paperMarkersFor(market)].reverse().find((row) => ["quote", "fill"].includes(paperMarkerType(row)));
   const settlement = [...paperMarkersFor(market)].reverse().find((row) => paperMarkerType(row) === "settlement");
   const pnl = metricNumber(settlement?.pnl_dollars ?? market.pnl_dollars ?? market.maker_pnl_dollars);
-  const selectedCurrent = (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE && isCurrentPaperMarket(market);
   const modeText = selectedCurrent
     ? `live, updated ${ageText(paperDisplayUpdatedAt(market))}`
     : `past, updated ${ageText(paperDisplayUpdatedAt(market))}`;
@@ -2316,40 +2519,37 @@ function renderPaperDecisionGraph() {
   const startSource = verifiedBinanceStartPrice(market) === null
     ? (startMeta.start_price_status || "loading")
     : `Binance start +${startDelay === null ? "?" : startDelay.toFixed(0)}ms`;
-  const moveClass = moveToneClass(latest.distanceBps);
+  const moveClass = moveToneClass(latest.dollarMove);
   const startPrice = metricNumber(latestRaw.start_price ?? market.start_price ?? market.binance_start_price);
   const moveSubtext = startPrice === null
-    ? `BTC ${formatPrice(latest.btcPrice)}`
-    : `${formatPrice(startPrice)} -> ${formatPrice(latest.btcPrice)}`;
+    ? `BTC ${formatBookMoney(latest.btcPrice)}`
+    : `${formatBookMoney(startPrice)} -> ${formatBookMoney(latest.btcPrice)}`;
   const latestIsLiveTick = latestRaw.decision === "live_tick" || latestRaw.decision === "live_book_tick";
   const whyText = latestIsLiveTick
     ? (latestQuote?.reason || latestQuote?.maker_quote_invalid_reason || "tracking live price")
     : (latestRaw.reason || latestRaw.maker_quote_invalid_reason || latestQuote?.reason || latestQuote?.maker_quote_invalid_reason);
   const coreRows = [
-    ["Market", compactNote(market.slug || market.question || paperGraphKey(market), 31)],
-    ["Clock", compactNote(`${Math.round(latest.secondsLeft)}s left | ${modeText}`, 31)],
-    ["Decision", compactNote(paperDecisionText(latestRaw), 31)],
-    ["Why", compactNote(whyText ? rejectReasonLabel(whyText) : "--", 31)],
-    ["Paper quote", compactNote(paperQuoteText(latestQuote), 31)],
-    ["Fair edge", `${formatPercent(fairProbability)} | ${formatCents(fairEdge)}`],
-    ["Zero line", compactNote(startSource, 31)],
+    ["Market", compactNote(market.slug || market.question || paperGraphKey(market), 32)],
+    ["Clock", compactNote(`${Math.round(latest.elapsedSeconds)}s in | ${modeText}`, 32)],
+    ["BTC", compactNote(`${formatBookMoney(latest.btcPrice)} now`, 32)],
+    ["Decision", compactNote(paperDecisionText(latestRaw), 32)],
+    ["Why", compactNote(whyText ? rejectReasonLabel(whyText) : "--", 32)],
+    ["Paper quote", compactNote(paperQuoteText(latestQuote), 32)],
+    ["Result", compactNote(resultText, 32)],
   ];
-  const bookRows = orderBookSummaryRows(market, rawPoints, latestRaw, latestQuote);
-  const sideRows = [
-    ...coreRows,
-    ...bookRows,
-    ["Result", compactNote(resultText, 30)],
-  ];
-  const infoRows = sideRows.map(([label, value], index) => {
-    const y = 198 + index * 34;
+  if (fairProbability !== null || fairEdge !== null) {
+    coreRows.splice(6, 0, ["Fair edge", `${formatPercent(fairProbability)} | ${formatCents(fairEdge)}`]);
+  }
+  const infoRows = coreRows.map(([label, value], index) => {
+    const y = 210 + index * 42;
     return `
       <text class="bar-label" x="718" y="${y}">${escapeHtml(label)}</text>
       <text class="bar-value" x="718" y="${y + 16}">${escapeHtml(String(value))}</text>`;
   }).join("");
   const latestTitle = [
-    `latest ${Math.round(latest.secondsLeft)}s left`,
-    `BTC ${formatPrice(latest.btcPrice)}`,
-    formatBpsDeep(latest.distanceBps),
+    `latest ${Math.round(latest.elapsedSeconds)}s in`,
+    `BTC ${formatBookMoney(latest.btcPrice)}`,
+    formatDollarMove(latest.dollarMove),
     latestTradeTime,
     paperDecisionText(latestRaw),
   ].join(" | ");
@@ -2358,30 +2558,32 @@ function renderPaperDecisionGraph() {
     <svg viewBox="0 0 ${view.width} ${view.height}" role="img" aria-label="Paper trade BTC path and events">
       <title>${escapeHtml(`${paperMarketLabel(market)} | ${latestTitle}`)}</title>
       <rect class="plot" x="${plot.left}" y="${plot.top}" width="${plotWidth}" height="${plot.height}"></rect>
-      <rect class="decision-band" x="${Math.min(windowStartX, windowEndX)}" y="${plot.top}" width="${Math.abs(windowEndX - windowStartX)}" height="${plot.height}"></rect>
-      <rect class="paper-close-band" x="${closeStartX}" y="${plot.top}" width="${plot.left + plotWidth - closeStartX}" height="${plot.height}"></rect>
+      ${decisionBand}
+      ${closeBand}
       ${xTicks}
       ${yTicks}
       <path class="line line-distance" d="${pathFrom(linePoints)}"></path>
       ${eventDots}
-      <line class="paper-latest-line" x1="${xForSeconds(latest.secondsLeft)}" y1="${plot.top}" x2="${xForSeconds(latest.secondsLeft)}" y2="${plotBottom}"></line>
-      <circle class="dot latest ${selectedCurrent ? "live-now" : ""}" cx="${xForSeconds(latest.secondsLeft)}" cy="${yForDistance(latest.distanceBps)}" r="6">
+      <line class="paper-latest-line" x1="${xForElapsed(latest.elapsedSeconds)}" y1="${plot.top}" x2="${xForElapsed(latest.elapsedSeconds)}" y2="${plotBottom}"></line>
+      <circle class="dot latest ${selectedCurrent ? "live-now" : ""}" cx="${xForElapsed(latest.elapsedSeconds)}" cy="${yForDollarMove(latest.dollarMove)}" r="6">
         <title>${escapeHtml(latestTitle)}</title>
       </circle>
-      <text class="axis" x="${plot.left + plotWidth / 2}" y="${plot.top - 16}" text-anchor="middle">BTC move from this market start</text>
-      <text class="axis" x="${plot.left + plotWidth / 2}" y="${plotBottom + 54}" text-anchor="middle">Seconds left in the market</text>
-      <text class="axis" x="22" y="${plot.top + plot.height / 2}" text-anchor="middle" transform="rotate(-90 22 ${plot.top + plot.height / 2})">Move from start</text>
+      <text class="axis" x="${plot.left + plotWidth / 2}" y="${plot.top - 16}" text-anchor="middle">BTC dollars from this market start</text>
+      <text class="axis" x="${plot.left + plotWidth / 2}" y="${plotBottom + 54}" text-anchor="middle">Seconds into market</text>
+      <text class="axis" x="22" y="${plot.top + plot.height / 2}" text-anchor="middle" transform="rotate(-90 22 ${plot.top + plot.height / 2})">Dollars from start</text>
       <rect class="note-box" x="696" y="42" width="266" height="584" rx="6"></rect>
       <text class="axis" x="718" y="68">Paper Trade</text>
-      <text class="paper-move-label" x="718" y="100">Move From Neutral</text>
-      <text class="paper-move-value ${moveClass}" x="718" y="137">${escapeHtml(formatNeutralMove(latest.distanceBps))}</text>
+      <text class="paper-move-label" x="718" y="100">Market Status</text>
+      <text class="paper-move-value ${moveClass}" x="718" y="137">${escapeHtml(formatDollarMove(latest.dollarMove))}</text>
       <text class="paper-move-sub" x="718" y="160">${escapeHtml(moveSubtext)}</text>
       ${infoRows}
-      <text class="legend bid" x="718" y="646">BTC move</text>
-      <text class="legend ask" x="718" y="672">signal/fill</text>
-      <text class="legend other" x="794" y="672">quote/cancel</text>
-      <text class="tick" x="718" y="704">${escapeHtml(`${fmt.format(markerRows.length)} paper events shown | ${fmt.format(rawPoints.length)} ${selectedCurrent ? "Binance ticks" : "price points"} shown`)}</text>
-    </svg>`;
+      <text class="legend bid" x="718" y="604">BTC trade line</text>
+      <text class="legend ask" x="718" y="630">signal/fill</text>
+      <text class="legend other" x="794" y="630">quote/cancel</text>
+      <text class="tick" x="718" y="662">${escapeHtml(`${fmt.format(markerRows.length)} paper events | ${fmt.format(visibleSamples.length)} trade dots in view`)}</text>
+      <text class="tick" x="718" y="686">${escapeHtml(`${fmt.format(rawPoints.length)} ${selectedCurrent ? "backend WS ticks sampled" : "price points"}`)}</text>
+    </svg>
+    ${renderOrderBookTable(market, rawPoints, latestBookRaw, latestQuote)}`;
 }
 
 function renderPaperChart() {
