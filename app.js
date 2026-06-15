@@ -9,8 +9,11 @@ const state = {
   activeTab: "backtest",
   marketFilter: "all",
   backtestMarket: "",
+  paperGraph: "__current__",
   liveGate: "paper_to_live",
 };
+
+let workflowRefreshInFlight = false;
 
 function byId(id) {
   return document.getElementById(id);
@@ -24,7 +27,7 @@ function loadJson(path) {
 }
 
 function inflateRows(columns, rows) {
-  if (!Array.isArray(rows) || !rows.length || !Array.isArray(rows[0])) return rows || [];
+  if (!Array.isArray(rows) || !rows.length || !Array.isArray(rows[0]) || !Array.isArray(columns)) return rows || [];
   return rows.map((values) => Object.fromEntries(columns.map((column, index) => [column, values[index]])));
 }
 
@@ -40,6 +43,37 @@ function normalizeWorkflow(workflow) {
   (workflow.candidate_strategies || []).forEach((strategy) => {
     strategy.markets = inflateRows(strategy.market_columns, strategy.markets);
   });
+  const paperTrade = workflow.paper_trade || {};
+  workflow.paper_trade = paperTrade;
+  const graphs = paperTrade.graphs || {};
+  const graphColumns = paperTrade.graph_columns || {};
+  if (Array.isArray(graphs)) {
+    graphs.forEach((graph) => {
+      const key = paperGraphKey(graph);
+      graph.market_key = key;
+      graph.points = inflateRows(graphColumns.points || graph.point_columns, graph.points).map((row) => ({
+        ...row,
+        market_key: key,
+        condition_id: row.condition_id || graph.condition_id,
+        slug: row.slug || graph.slug,
+        question: row.question || graph.question,
+      }));
+      graph.markers = inflateRows(graphColumns.markers || graph.marker_columns, graph.markers).map((row) => ({
+        ...row,
+        market_key: key,
+        condition_id: row.condition_id || graph.condition_id,
+        slug: row.slug || graph.slug,
+        question: row.question || graph.question,
+      }));
+    });
+    paperTrade._graphMarkets = graphs;
+  } else if (graphs && typeof graphs === "object") {
+    graphs.markets = inflateRows(graphs.market_columns || graphs.markets_columns, graphs.markets);
+    graphs.points = inflateRows(graphs.point_columns || graphs.points_columns, graphs.points);
+    graphs.markers = inflateRows(graphs.marker_columns || graphs.markers_columns, graphs.markers);
+    paperTrade._graphMarkets = graphs.markets || [];
+    paperTrade.graphs = graphs;
+  }
   workflow._signalByMarket = new Map();
   (backtest.signals || []).forEach((signal) => {
     workflow._signalByMarket.set(signal.condition_id, signal);
@@ -50,6 +84,42 @@ function normalizeWorkflow(workflow) {
     workflow._seriesByMarket.get(row.condition_id).push(row);
   });
   workflow._seriesByMarket.forEach((rows) => rows.sort((left, right) => Number(right.seconds_left || 0) - Number(left.seconds_left || 0)));
+  workflow._paperPointsByMarket = new Map();
+  const graphPointRows = Array.isArray(paperTrade.graphs)
+    ? paperTrade.graphs.flatMap((graph) => graph.points || [])
+    : (paperTrade.graphs?.points || []);
+  graphPointRows.forEach((row) => {
+    const key = paperGraphKey(row);
+    if (!key) return;
+    if (!workflow._paperPointsByMarket.has(key)) workflow._paperPointsByMarket.set(key, []);
+    workflow._paperPointsByMarket.get(key).push(row);
+  });
+  workflow._paperPointsByMarket.forEach((rows) => {
+    rows.sort((left, right) => {
+      const leftTime = Date.parse(left.generated_at || left.ts || "");
+      const rightTime = Date.parse(right.generated_at || right.ts || "");
+      if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) return leftTime - rightTime;
+      return Number(right.seconds_left ?? 0) - Number(left.seconds_left ?? 0);
+    });
+  });
+  workflow._paperMarkersByMarket = new Map();
+  const graphMarkerRows = Array.isArray(paperTrade.graphs)
+    ? paperTrade.graphs.flatMap((graph) => graph.markers || [])
+    : (paperTrade.graphs?.markers || []);
+  graphMarkerRows.forEach((row) => {
+    const key = paperGraphKey(row);
+    if (!key) return;
+    if (!workflow._paperMarkersByMarket.has(key)) workflow._paperMarkersByMarket.set(key, []);
+    workflow._paperMarkersByMarket.get(key).push(row);
+  });
+  workflow._paperMarkersByMarket.forEach((rows) => {
+    rows.sort((left, right) => {
+      const leftTime = Date.parse(left.generated_at || left.ts || "");
+      const rightTime = Date.parse(right.generated_at || right.ts || "");
+      if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) return leftTime - rightTime;
+      return Number(right.seconds_left ?? 0) - Number(left.seconds_left ?? 0);
+    });
+  });
   return workflow;
 }
 
@@ -252,6 +322,114 @@ function marketSeriesRows(conditionId) {
 
 function activeRule() {
   return state.workflow?.active_backtest?.method?.rule || state.workflow?.strategy?.rule || {};
+}
+
+function paperGraphKey(row) {
+  return String(row?.market_key || row?.condition_id || row?.slug || row?.question || "");
+}
+
+function paperGraphs() {
+  return state.workflow?.paper_trade?.graphs || {};
+}
+
+function paperGraphMarkets() {
+  return state.workflow?.paper_trade?._graphMarkets || (Array.isArray(paperGraphs()) ? paperGraphs() : paperGraphs().markets || []);
+}
+
+function isCurrentPaperMarket(market) {
+  if (market?.is_current === true || market?.current === true) return true;
+  if (market?.status === "current" || market?.state === "current") return true;
+  const lastSeconds = metricNumber(market?.last_seconds_left);
+  const settled = Boolean(market?.settled || market?.has_settlement);
+  return !settled && lastSeconds !== null && lastSeconds > 0;
+}
+
+function currentPaperMarket() {
+  const markets = paperGraphMarkets();
+  return markets.find(isCurrentPaperMarket) || markets[0] || null;
+}
+
+function paperPointsFor(market) {
+  const key = paperGraphKey(market);
+  return state.workflow?._paperPointsByMarket?.get(key) || market?.points || [];
+}
+
+function paperMarkersFor(market) {
+  const key = paperGraphKey(market);
+  return state.workflow?._paperMarkersByMarket?.get(key) || market?.markers || [];
+}
+
+function selectedPaperMarket() {
+  const markets = paperGraphMarkets();
+  if (!markets.length) return null;
+  if (!state.paperGraph || state.paperGraph === "__current__") return currentPaperMarket();
+  return markets.find((market) => paperGraphKey(market) === state.paperGraph) || currentPaperMarket();
+}
+
+function paperDistanceBps(row) {
+  const distance = metricNumber(row?.distance_bps);
+  if (distance !== null) return distance;
+  const btc = metricNumber(row?.btc_price);
+  const start = metricNumber(row?.start_price);
+  if (btc === null || start === null || start <= 0) return null;
+  return Math.log(btc / start) * 10000;
+}
+
+function paperPointSecondsLeft(row, fallbackIndex = 0, total = 1) {
+  const seconds = metricNumber(row?.seconds_left);
+  if (seconds !== null) return seconds;
+  const elapsed = metricNumber(row?.elapsed_seconds);
+  if (elapsed !== null) return Math.max(0, 300 - elapsed);
+  if (total <= 1) return 300;
+  return 300 - (fallbackIndex / (total - 1)) * 300;
+}
+
+function paperMarketTimeLabel(market) {
+  const value = market?.window_start || market?.generated_at || market?.first_seen_at;
+  if (value) {
+    return new Date(value).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  }
+  if (market?.window_start_unix) {
+    return new Date(Number(market.window_start_unix) * 1000).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  }
+  return "Unknown time";
+}
+
+function paperMarketLabel(market) {
+  const status = isCurrentPaperMarket(market) ? "Current" : "Past";
+  const points = paperPointsFor(market);
+  const markers = paperMarkersFor(market);
+  const signals = Number(market.paper_signals ?? market.signals ?? points.filter((row) => row.decision === "paper_signal").length);
+  const quotes = Number(market.maker_quotes ?? market.quotes ?? markers.filter((row) => paperMarkerType(row) === "quote").length);
+  const fills = Number(market.maker_fills ?? market.fills ?? markers.filter((row) => paperMarkerType(row) === "fill").length);
+  const result = market.pnl_dollars !== undefined || market.maker_pnl_dollars !== undefined
+    ? ` | PnL ${formatSignedMoney(market.pnl_dollars ?? market.maker_pnl_dollars)}`
+    : "";
+  return `${status} | ${paperMarketTimeLabel(market)} | signals ${fmt.format(signals)} | quotes ${fmt.format(quotes)} | fills ${fmt.format(fills)}${result}`;
+}
+
+function paperMarkerType(row) {
+  const value = String(row?.event_type || row?.type || row?.decision || "");
+  if (value.includes("settlement")) return "settlement";
+  if (value.includes("fill")) return "fill";
+  if (value.includes("cancel")) return "cancel";
+  if (value.includes("quote")) return "quote";
+  if (value.includes("no_signal")) return "fail";
+  if (value.includes("signal")) return "signal";
+  return "latest";
+}
+
+function paperMarkerLabel(row) {
+  const labels = {
+    signal: "signal",
+    quote: "quote",
+    fill: "fill",
+    cancel: "cancel",
+    settlement: "settle",
+    fail: "no",
+    latest: "now",
+  };
+  return labels[paperMarkerType(row)] || "event";
 }
 
 function inRange(value, min, max) {
@@ -1238,10 +1416,240 @@ function renderValueBarChart(el, rows, emptyMessage, axisText) {
       ${grid}
       ${bars}
       <text class="axis" x="${view.left + plotWidth / 2}" y="${view.height - 16}" text-anchor="middle">${axisText}</text>
+	    </svg>`;
+}
+
+function renderPaperSelects() {
+  const select = byId("paperGraphSelect");
+  const meta = byId("paperGraphMeta");
+  if (!select) return;
+  const markets = paperGraphMarkets();
+  if (!markets.length) {
+    select.disabled = true;
+    select.innerHTML = `<option value="">No paper graphs yet</option>`;
+    if (meta) meta.textContent = "Paper graph data has not been built yet.";
+    return;
+  }
+
+  select.disabled = false;
+  const current = currentPaperMarket();
+  const currentLabel = current
+    ? `Current paper market | ${paperMarketTimeLabel(current)}`
+    : "Current paper market";
+  const marketOptions = markets.map((market) => {
+    const key = paperGraphKey(market);
+    return `<option value="${escapeHtml(key)}">${escapeHtml(paperMarketLabel(market))}</option>`;
+  }).join("");
+  select.innerHTML = `<option value="__current__">${escapeHtml(currentLabel)}</option>${marketOptions}`;
+  if (state.paperGraph !== "__current__" && !markets.some((market) => paperGraphKey(market) === state.paperGraph)) {
+    state.paperGraph = "__current__";
+  }
+  select.value = state.paperGraph || "__current__";
+
+  if (meta) {
+    const market = selectedPaperMarket();
+    const points = market ? paperPointsFor(market) : [];
+    const latest = points[points.length - 1];
+    const lastSeen = latest?.generated_at
+      ? new Date(latest.generated_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" })
+      : "not live";
+    const status = market && isCurrentPaperMarket(market) ? "current" : "past";
+    meta.textContent = `${status} | ${fmt.format(points.length)} price points | latest ${lastSeen}`;
+  }
+}
+
+function paperDecisionText(row) {
+  if (!row) return "--";
+  const side = row.side || row.intended_outcome || row.outcome || "";
+  if (row.decision === "paper_signal") return `Signal ${side || "matched"}`;
+  if (row.event_type === "maker_paper_quote") return `Quote ${side || ""}`.trim();
+  if (row.event_type === "maker_paper_fill") return `Fill ${side || ""}`.trim();
+  if (row.event_type === "maker_paper_cancel") return `Cancel: ${rejectReasonLabel(row.reason)}`;
+  return `No quote: ${rejectReasonLabel(row.reason)}`;
+}
+
+function paperQuoteText(row) {
+  if (!row) return "--";
+  const side = row.side || row.intended_outcome || row.outcome || "";
+  const quotePrice = metricNumber(row.maker_quote_price ?? row.quote_price ?? row.bid_price ?? row.price);
+  const size = metricNumber(row.size ?? row.shares ?? row.quantity);
+  const priceText = quotePrice === null ? "--" : formatPrice(quotePrice);
+  const sizeText = size === null ? "" : ` x ${size.toFixed(2)}`;
+  return `${side || "quote"} ${priceText}${sizeText}`;
+}
+
+function paperMarkerTitle(row) {
+  const pieces = [
+    paperMarkerLabel(row),
+    paperDecisionText(row),
+    `${Math.round(paperPointSecondsLeft(row))}s left`,
+  ];
+  const btc = metricNumber(row.btc_price);
+  if (btc !== null) pieces.push(`BTC ${formatPrice(btc)}`);
+  const distance = paperDistanceBps(row);
+  if (distance !== null) pieces.push(formatBps(distance));
+  const support = metricNumber(row.external_book_support);
+  if (support !== null) pieces.push(`BTC book ${percentText(support)}`);
+  const quotePrice = metricNumber(row.maker_quote_price ?? row.quote_price ?? row.bid_price ?? row.price);
+  if (quotePrice !== null) pieces.push(`quote ${formatPrice(quotePrice)}`);
+  const pnl = metricNumber(row.pnl_dollars);
+  if (pnl !== null) pieces.push(`PnL ${formatSignedMoney(pnl)}`);
+  return pieces.filter(Boolean).join(" | ");
+}
+
+function renderPaperDecisionGraph() {
+  const market = selectedPaperMarket();
+  const rawPoints = market ? paperPointsFor(market) : [];
+  const chart = byId("paperChart");
+  if (!market || !rawPoints.length) {
+    chart.innerHTML = svgEmpty("No paper price path for this market yet.");
+    return;
+  }
+
+  const samples = rawPoints
+    .map((row, index) => ({
+      row,
+      index,
+      secondsLeft: paperPointSecondsLeft(row, index, rawPoints.length),
+      distanceBps: paperDistanceBps(row),
+      btcPrice: metricNumber(row.btc_price),
+    }))
+    .filter((point) => Number.isFinite(point.secondsLeft) && Number.isFinite(point.distanceBps));
+
+  if (!samples.length) {
+    chart.innerHTML = svgEmpty("This paper market has price points, but no usable BTC move values yet.");
+    return;
+  }
+
+  const view = { width: 980, height: 590 };
+  const plot = { left: 76, right: 306, top: 42, height: 362 };
+  const plotWidth = view.width - plot.left - plot.right;
+  const plotBottom = plot.top + plot.height;
+  const xForSeconds = (secondsLeft) => {
+    const clamped = Math.max(0, Math.min(300, Number(secondsLeft)));
+    return plot.left + ((300 - clamped) / 300) * plotWidth;
+  };
+  const maxAbsDistance = Math.max(8, ...samples.map((point) => Math.abs(point.distanceBps))) * 1.18;
+  const tickAbs = Math.max(10, Math.ceil(maxAbsDistance / 10) * 10);
+  const yForDistance = (value) => plot.top + ((tickAbs - Number(value)) / (tickAbs * 2)) * plot.height;
+  const linePoints = samples.map((point) => ({
+    x: xForSeconds(point.secondsLeft),
+    y: yForDistance(point.distanceBps),
+  }));
+  const latest = samples[samples.length - 1];
+  const rule = activeRule();
+  const windowStartX = xForSeconds(rule.max_seconds_left ?? 120);
+  const windowEndX = xForSeconds(rule.min_seconds_left ?? 61);
+  const closeStartX = xForSeconds(20);
+  const xTicks = [300, 240, 180, 120, 60, 0].map((tick) => {
+    const x = xForSeconds(tick);
+    return `<line class="grid" x1="${x}" y1="${plot.top}" x2="${x}" y2="${plotBottom}"></line><text class="tick" x="${x}" y="${plotBottom + 24}" text-anchor="middle">${tick}s</text>`;
+  }).join("");
+  const yTicks = [-tickAbs, 0, tickAbs].map((tick) => {
+    const y = yForDistance(tick);
+    return `<line class="${tick === 0 ? "axis-zero" : "grid"}" x1="${plot.left}" y1="${y}" x2="${plot.left + plotWidth}" y2="${y}"></line><text class="tick" x="${plot.left - 10}" y="${y + 4}" text-anchor="end">${formatBps(tick)}</text>`;
+  }).join("");
+
+  const nearestSample = (row) => {
+    const markerSeconds = paperPointSecondsLeft(row);
+    let best = samples[0];
+    let bestDelta = Math.abs(samples[0].secondsLeft - markerSeconds);
+    samples.forEach((sample) => {
+      const delta = Math.abs(sample.secondsLeft - markerSeconds);
+      if (delta < bestDelta) {
+        best = sample;
+        bestDelta = delta;
+      }
+    });
+    return best;
+  };
+  const seenMarkers = new Set();
+  const pointSignals = rawPoints.filter((row) => row.decision === "paper_signal");
+  const markerRows = [...paperMarkersFor(market), ...pointSignals]
+    .filter((row) => paperMarkerType(row) !== "fail")
+    .filter((row) => {
+      const key = `${paperMarkerType(row)}:${row.generated_at || row.ts || ""}:${row.seconds_left ?? ""}:${row.quote_id || ""}`;
+      if (seenMarkers.has(key)) return false;
+      seenMarkers.add(key);
+      return true;
+    })
+    .slice(-90);
+  const eventDots = markerRows.map((row) => {
+    const markerSample = paperDistanceBps(row) === null ? nearestSample(row) : null;
+    const secondsLeft = paperPointSecondsLeft(row, markerSample?.index || 0, samples.length);
+    const distance = paperDistanceBps(row) ?? markerSample?.distanceBps;
+    if (!Number.isFinite(secondsLeft) || !Number.isFinite(distance)) return "";
+    const x = xForSeconds(secondsLeft);
+    const y = yForDistance(distance);
+    const type = paperMarkerType(row);
+    return `
+      <circle class="dot ${type}" cx="${x}" cy="${y}" r="6">
+        <title>${escapeHtml(paperMarkerTitle(row))}</title>
+      </circle>
+      <text class="paper-marker-label" x="${x + 8}" y="${y - 8}">${escapeHtml(paperMarkerLabel(row))}</text>`;
+  }).join("");
+
+  const latestRaw = latest.row;
+  const latestQuote = [...paperMarkersFor(market)].reverse().find((row) => ["quote", "fill"].includes(paperMarkerType(row)));
+  const latestSupport = metricNumber(latestRaw.external_book_support ?? latestQuote?.external_book_support);
+  const settlement = [...paperMarkersFor(market)].reverse().find((row) => paperMarkerType(row) === "settlement");
+  const pnl = metricNumber(settlement?.pnl_dollars ?? market.pnl_dollars ?? market.maker_pnl_dollars);
+  const infoRows = [
+    ["Market", compactNote(market.slug || market.question || paperGraphKey(market), 30)],
+    ["Window", paperMarketTimeLabel(market)],
+    ["Latest BTC", `${formatPrice(latest.btcPrice)} | ${formatBps(latest.distanceBps)}`],
+    ["Seconds left", `${Math.round(latest.secondsLeft)}s`],
+    ["Decision", compactNote(paperDecisionText(latestRaw), 30)],
+    ["Paper quote", compactNote(paperQuoteText(latestQuote), 30)],
+    ["BTC book", latestSupport === null ? "--" : percentText(latestSupport)],
+    ["Result", settlement ? compactNote(paperDecisionText(settlement), 30) : (market.winner ? `${market.winner} won` : "--")],
+    ["PnL", pnl === null ? "--" : formatSignedMoney(pnl)],
+  ].map(([label, value], index) => {
+    const y = 90 + index * 35;
+    return `
+      <text class="bar-label" x="718" y="${y}">${escapeHtml(label)}</text>
+      <text class="bar-value" x="718" y="${y + 17}">${escapeHtml(String(value))}</text>`;
+  }).join("");
+  const latestTitle = [
+    `latest ${Math.round(latest.secondsLeft)}s left`,
+    `BTC ${formatPrice(latest.btcPrice)}`,
+    formatBps(latest.distanceBps),
+    paperDecisionText(latestRaw),
+  ].join(" | ");
+
+  chart.innerHTML = `
+    <svg viewBox="0 0 ${view.width} ${view.height}" role="img" aria-label="Paper trade BTC path and events">
+      <title>${escapeHtml(`${paperMarketLabel(market)} | ${latestTitle}`)}</title>
+      <rect class="plot" x="${plot.left}" y="${plot.top}" width="${plotWidth}" height="${plot.height}"></rect>
+      <rect class="decision-band" x="${Math.min(windowStartX, windowEndX)}" y="${plot.top}" width="${Math.abs(windowEndX - windowStartX)}" height="${plot.height}"></rect>
+      <rect class="paper-close-band" x="${closeStartX}" y="${plot.top}" width="${plot.left + plotWidth - closeStartX}" height="${plot.height}"></rect>
+      ${xTicks}
+      ${yTicks}
+      <path class="line line-distance" d="${pathFrom(linePoints)}"></path>
+      ${eventDots}
+      <line class="paper-latest-line" x1="${xForSeconds(latest.secondsLeft)}" y1="${plot.top}" x2="${xForSeconds(latest.secondsLeft)}" y2="${plotBottom}"></line>
+      <circle class="dot latest" cx="${xForSeconds(latest.secondsLeft)}" cy="${yForDistance(latest.distanceBps)}" r="6">
+        <title>${escapeHtml(latestTitle)}</title>
+      </circle>
+      <text class="axis" x="${plot.left + plotWidth / 2}" y="${plot.top - 16}" text-anchor="middle">BTC move from this market start</text>
+      <text class="axis" x="${plot.left + plotWidth / 2}" y="${plotBottom + 54}" text-anchor="middle">Seconds left in the market</text>
+      <text class="axis" x="22" y="${plot.top + plot.height / 2}" text-anchor="middle" transform="rotate(-90 22 ${plot.top + plot.height / 2})">Move from start</text>
+      <rect class="note-box" x="696" y="42" width="266" height="376" rx="6"></rect>
+      <text class="axis" x="718" y="68">Paper Trade</text>
+      ${infoRows}
+      <text class="legend bid" x="718" y="452">BTC move</text>
+      <text class="legend ask" x="718" y="478">signal/fill</text>
+      <text class="legend other" x="794" y="478">quote/cancel</text>
+      <text class="tick" x="718" y="506">${escapeHtml(`${fmt.format(markerRows.length)} paper events shown | ${fmt.format(rawPoints.length)} collected points`)}</text>
     </svg>`;
 }
 
 function renderPaperChart() {
+  renderPaperSelects();
+  if (paperGraphMarkets().length) {
+    renderPaperDecisionGraph();
+    return;
+  }
   renderValueBarChart(byId("paperChart"), paperStatusRows(), "No paper evidence yet.", "Live paper evidence so far");
 }
 
@@ -1269,6 +1677,22 @@ function renderStatus() {
       })
     : "unknown build";
   byId("statusText").textContent = `Loaded ${generated} | active backtest: ${fmt.format(activeBuys)} ask-sim buys | ask-entry ROI ${formatPercent(activeRoi)}${makerText} | ${fmt.format(q.clean_markets || 0)} clean windows`;
+}
+
+async function refreshWorkflow() {
+  if (workflowRefreshInFlight) return;
+  workflowRefreshInFlight = true;
+  try {
+    state.workflow = normalizeWorkflow(await loadJson("data/workflow.json"));
+    renderStatus();
+    renderStrategyPanels();
+    renderBacktestSelects();
+    renderActiveTab();
+  } catch (error) {
+    console.warn("workflow refresh failed", error);
+  } finally {
+    workflowRefreshInFlight = false;
+  }
 }
 
 function renderActiveTab() {
@@ -1307,6 +1731,13 @@ async function main() {
     renderBacktestSelects();
     renderBacktestChart();
   });
+  byId("paperGraphSelect").addEventListener("change", (event) => {
+    state.paperGraph = event.target.value;
+    renderPaperChart();
+  });
+  window.setInterval(() => {
+    if (state.activeTab === "paper") refreshWorkflow();
+  }, 15000);
 }
 
 main().catch((error) => {

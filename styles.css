@@ -142,6 +142,14 @@ select {
   padding: 7px 10px;
 }
 
+.paper-meta {
+  flex: 1 1 260px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+  text-align: right;
+}
+
 .chart {
   min-height: 480px;
   overflow-x: auto;
@@ -310,6 +318,28 @@ svg {
   stroke-width: 1.4;
 }
 
+.decision-band {
+  fill: #e9f3ef;
+  opacity: 0.85;
+}
+
+.paper-close-band {
+  fill: #f8eceb;
+  opacity: 0.85;
+}
+
+.paper-latest-line {
+  stroke: #1b252c;
+  stroke-dasharray: 3 5;
+  stroke-width: 1.2;
+}
+
+.paper-marker-label {
+  fill: var(--ink);
+  font-size: 11px;
+  font-weight: 800;
+}
+
 .dot {
   fill: var(--blue);
   stroke: #ffffff;
@@ -320,6 +350,26 @@ svg {
 .dot.pass,
 .bar.pass {
   fill: var(--green);
+}
+
+.dot.quote {
+  fill: var(--blue);
+}
+
+.dot.fill {
+  fill: var(--green);
+}
+
+.dot.cancel {
+  fill: var(--amber);
+}
+
+.dot.settlement {
+  fill: #5a4aa0;
+}
+
+.dot.latest {
+  fill: var(--ink);
 }
 
 .dot.fail,
@@ -424,6 +474,10 @@ svg {
 
   .filter-label {
     flex-basis: 100%;
+  }
+
+  .paper-meta {
+    text-align: left;
   }
 
   .strategy-strip,
