@@ -16,6 +16,11 @@ const LIVE_BTC_SOURCES = [
     url: "https://api.coinbase.com/v2/prices/BTC-USD/spot",
     parse: (payload) => Number(payload?.data?.amount),
   },
+  {
+    venue: "kraken",
+    url: "https://api.kraken.com/0/public/Ticker?pair=XBTUSD",
+    parse: (payload) => Number(Object.values(payload?.result || {})[0]?.c?.[0]),
+  },
 ];
 
 const state = {
@@ -25,6 +30,7 @@ const state = {
   backtestMarket: "",
   paperGraph: PAPER_CURRENT_VALUE,
   liveBtcPoint: null,
+  liveSyntheticMarket: null,
   liveGate: "paper_to_live",
 };
 
@@ -404,6 +410,38 @@ function marketSecondsLeftNow(market) {
   return Math.max(0, Math.round(end - Date.now() / 1000));
 }
 
+function currentFiveMinuteWindow(nowMs = Date.now()) {
+  const start = Math.floor(nowMs / 1000 / 300) * 300;
+  return { start, end: start + 300 };
+}
+
+function syntheticPaperMarket() {
+  const { start, end } = currentFiveMinuteWindow();
+  const key = `browser-live-btc-5m-${start}`;
+  if (!state.liveSyntheticMarket || state.liveSyntheticMarket.market_key !== key) {
+    state.liveSyntheticMarket = {
+      market_key: key,
+      condition_id: key,
+      slug: `browser-live-btc-5m-${start}`,
+      question: "Browser live BTC 5-minute window",
+      window_start_unix: start,
+      window_end_unix: end,
+      window_start: new Date(start * 1000).toISOString(),
+      window_end: new Date(end * 1000).toISOString(),
+      start_price: null,
+      latest_btc_price: null,
+      latest_generated_at: null,
+      is_current: true,
+      is_open: true,
+      is_synthetic_live: true,
+      status: "browser_live",
+      points: [],
+      markers: [],
+    };
+  }
+  return state.liveSyntheticMarket;
+}
+
 function isCurrentPaperMarket(market) {
   const clockState = marketClockState(market);
   if (clockState !== null) return clockState === "open";
@@ -429,6 +467,10 @@ function isCurrentPaperMarket(market) {
 function currentPaperMarket() {
   const markets = paperGraphMarkets();
   return markets.find(isCurrentPaperMarket) || null;
+}
+
+function currentDisplayPaperMarket() {
+  return currentPaperMarket() || syntheticPaperMarket();
 }
 
 function historicalPaperMarkets() {
@@ -457,6 +499,7 @@ function pointTimeUnix(row) {
 }
 
 function livePointForMarket(market) {
+  if (market?.is_synthetic_live) return null;
   const live = state.liveBtcPoint;
   if (!live || !market || live.market_key !== paperGraphKey(market)) return null;
   if (!isCurrentPaperMarket(market)) return null;
@@ -486,8 +529,8 @@ function paperMarkersFor(market) {
 
 function selectedPaperMarket() {
   const markets = paperGraphMarkets();
+  if (!state.paperGraph || state.paperGraph === PAPER_CURRENT_VALUE) return currentDisplayPaperMarket();
   if (!markets.length) return null;
-  if (!state.paperGraph || state.paperGraph === PAPER_CURRENT_VALUE) return currentPaperMarket();
   return markets.find((market) => paperGraphKey(market) === state.paperGraph) || null;
 }
 
@@ -1552,20 +1595,12 @@ function renderPaperSelects() {
   const meta = byId("paperGraphMeta");
   if (!select) return;
   const markets = paperGraphMarkets();
-  if (!markets.length) {
-    select.disabled = true;
-    select.innerHTML = `<option value="">No paper graphs yet</option>`;
-    if (meta) {
-      meta.innerHTML = `<span class="live-chip is-waiting">Waiting</span> Paper graph data has not been built yet.`;
-    }
-    return;
-  }
-
+  const realCurrent = currentPaperMarket();
+  const current = realCurrent || syntheticPaperMarket();
   select.disabled = false;
-  const current = currentPaperMarket();
   const historical = historicalPaperMarkets();
   const currentLabel = current
-    ? `Current live market | ${paperMarketTimeLabel(current)} | ${fmt.format(paperChartPointsFor(current).length)} points`
+    ? `${current.is_synthetic_live ? "Current live BTC window" : "Current live market"} | ${paperMarketTimeLabel(current)} | ${fmt.format(paperChartPointsFor(current).length)} points`
     : `Current live market | waiting for workflow.json`;
   const marketOptions = historical.map((market) => {
     const key = paperGraphKey(market);
@@ -1587,16 +1622,18 @@ function renderPaperSelects() {
   if (meta) {
     const market = selectedPaperMarket();
     const selectedCurrent = (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE;
-    if (selectedCurrent && !market) {
-      meta.innerHTML = `<span class="live-chip is-waiting">Waiting</span> No current market in data yet. Auto-refreshing every ${Math.round(PAPER_REFRESH_MS / 1000)}s.`;
+    const points = market ? paperChartPointsFor(market) : [];
+    if (selectedCurrent && market?.is_synthetic_live && !points.length) {
+      meta.innerHTML = `<span class="live-chip is-waiting">Waiting</span> Fetching the first live BTC tick. Auto-refreshing every ${Math.round(PAPER_REFRESH_MS / 1000)}s.`;
       return;
     }
-    const points = market ? paperChartPointsFor(market) : [];
     const updatedAt = market ? paperDisplayUpdatedAt(market) : null;
     const statusClass = selectedCurrent && market && isCurrentPaperMarket(market) ? "is-live" : "is-past";
     const statusText = selectedCurrent ? "Live" : "Past";
     const refreshText = selectedCurrent
-      ? `Auto-refreshing every ${Math.round(PAPER_REFRESH_MS / 1000)}s`
+      ? (market?.is_synthetic_live
+        ? `Browser live BTC feed, refreshes every ${Math.round(PAPER_REFRESH_MS / 1000)}s`
+        : `Auto-refreshing every ${Math.round(PAPER_REFRESH_MS / 1000)}s`)
       : "Historical snapshot";
     meta.innerHTML = `<span class="live-chip ${statusClass}">${escapeHtml(statusText)}</span> ${fmt.format(points.length)} price points | updated ${escapeHtml(ageText(updatedAt))} | ${escapeHtml(refreshText)}`;
   }
@@ -1648,7 +1685,7 @@ function renderPaperDecisionGraph() {
   const chart = byId("paperChart");
   if (!market || !rawPoints.length) {
     if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) {
-      chart.innerHTML = svgEmpty(`No current live paper market in workflow.json yet. This tab checks for updates every ${Math.round(PAPER_REFRESH_MS / 1000)}s while it is open.`);
+      chart.innerHTML = svgEmpty(`Waiting for the first live BTC tick. This tab checks spot price every ${Math.round(PAPER_REFRESH_MS / 1000)}s while it is open.`);
       return;
     }
     chart.innerHTML = svgEmpty("No paper price path for this historical market yet.");
@@ -1802,7 +1839,7 @@ function renderPaperDecisionGraph() {
 
 function renderPaperChart() {
   renderPaperSelects();
-  if (paperGraphMarkets().length) {
+  if (paperGraphMarkets().length || selectedPaperMarket()) {
     renderPaperDecisionGraph();
     return;
   }
@@ -1856,23 +1893,26 @@ async function fetchLiveBtcPrice() {
 
 async function refreshLivePaperPrice() {
   if (state.activeTab !== "paper" || liveBtcRefreshInFlight) return;
-  const market = currentPaperMarket();
-  if (!market) {
+  const market = currentPaperMarket() || syntheticPaperMarket();
+  const secondsLeft = marketSecondsLeftNow(market);
+  if (secondsLeft === null || secondsLeft <= 0 || secondsLeft > 300) {
     state.liveBtcPoint = null;
     return;
   }
-  const startPrice = metricNumber(market.start_price ?? latestPaperPointFor(market)?.start_price);
-  if (startPrice === null || startPrice <= 0) return;
-  const secondsLeft = marketSecondsLeftNow(market);
-  if (secondsLeft === null || secondsLeft <= 0 || secondsLeft > 300) return;
 
   liveBtcRefreshInFlight = true;
   try {
     const live = await fetchLiveBtcPrice();
     if (!live) return;
+    let startPrice = metricNumber(market.start_price ?? latestPaperPointFor(market)?.start_price);
+    if ((startPrice === null || startPrice <= 0) && market.is_synthetic_live) {
+      startPrice = live.price;
+      market.start_price = startPrice;
+    }
+    if (startPrice === null || startPrice <= 0) return;
     const now = new Date();
     const distanceBps = Math.log(live.price / startPrice) * 10000;
-    state.liveBtcPoint = {
+    const point = {
       market_key: paperGraphKey(market),
       condition_id: market.condition_id,
       slug: market.slug,
@@ -1888,6 +1928,15 @@ async function refreshLivePaperPrice() {
       side: distanceBps > 0 ? "Up" : (distanceBps < 0 ? "Down" : null),
       btc_price_venue: live.venue,
     };
+    if (market.is_synthetic_live) {
+      market.latest_btc_price = live.price;
+      market.latest_generated_at = point.generated_at;
+      market.points.push(point);
+      if (market.points.length > 160) market.points = market.points.slice(-160);
+      state.liveBtcPoint = null;
+    } else {
+      state.liveBtcPoint = point;
+    }
     if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) renderPaperChart();
   } finally {
     liveBtcRefreshInFlight = false;
