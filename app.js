@@ -34,6 +34,9 @@ function normalizeWorkflow(workflow) {
   profileSkew.markets = inflateRows(profileSkew.market_columns, profileSkew.markets);
   const profileCheapPair = workflow.profile_cheap_pair || {};
   profileCheapPair.markets = inflateRows(profileCheapPair.market_columns, profileCheapPair.markets);
+  (workflow.candidate_strategies || []).forEach((strategy) => {
+    strategy.markets = inflateRows(strategy.market_columns, strategy.markets);
+  });
   return workflow;
 }
 
@@ -44,6 +47,23 @@ function shortDate(value) {
 
 function signalRows() {
   return state.workflow?.backtest?.signals || [];
+}
+
+function candidateStrategies() {
+  return state.workflow?.candidate_strategies || [];
+}
+
+function candidateValue(strategy) {
+  return `candidate:${strategy.key || strategy.strategy_id}`;
+}
+
+function candidateFromValue(value) {
+  return candidateStrategies().find((strategy) => candidateValue(strategy) === value);
+}
+
+function selectedStrategyProfile(profileKey) {
+  if (profileKey.startsWith("candidate:")) return candidateFromValue(profileKey) || {};
+  return state.workflow?.[profileKey] || {};
 }
 
 function signalNumber(row) {
@@ -185,12 +205,14 @@ function linePathFor(rows, valueFor, xFor, yFor) {
 
 function renderBacktestSelects() {
   const signals = signalRows();
+  const candidates = candidateStrategies();
   const profileSummary = state.workflow?.profile_skew?.summary || {};
   const cheapPairSummary = state.workflow?.profile_cheap_pair?.summary || {};
   const hasProfile = Number(profileSummary.clean_markets_scanned || 0) > 0;
   const hasCheapPair = Number(cheapPairSummary.clean_markets_scanned || 0) > 0;
   const allowed = new Set([
     "all-signals",
+    ...candidates.map(candidateValue),
     ...(hasCheapPair ? ["profile-cheap-pair"] : []),
     ...(hasProfile ? ["profile-skew"] : []),
     ...signals.map((row) => row.condition_id),
@@ -207,8 +229,15 @@ function renderBacktestSelects() {
   const cheapPairOption = hasCheapPair
     ? [`<option value="profile-cheap-pair">Cheap Pair (${fmt.format(cheapPairSummary.traded_markets || 0)} markets, ${formatPercent(cheapPairSummary.roi_on_filled_cost)} ROI)</option>`]
     : [];
+  const candidateOptions = candidates.map((strategy) => {
+    const summary = strategy.summary || {};
+    const makerRoi = metricNumber(summary.maker_test_roi_on_planned_cost);
+    const makerText = makerRoi === null ? "" : `, ${formatPercent(makerRoi)} maker test`;
+    return `<option value="${escapeHtml(candidateValue(strategy))}">${escapeHtml(strategy.strategy_name || strategy.strategy_id)} (${fmt.format(summary.traded_markets || 0)} buys, ${formatPercent(summary.roi_on_filled_cost)} ROI${makerText})</option>`;
+  });
   byId("backtestMarket").innerHTML = [
     `<option value="all-signals">${allLabel}</option>`,
+    ...candidateOptions,
     ...cheapPairOption,
     ...profileOption,
     ...signals.map((row, index) => `<option value="${row.condition_id}">${signalLabel(row, index)}</option>`),
@@ -418,17 +447,27 @@ function profileMarketTitle(row) {
 }
 
 function profileChartTitle(profileKey, profile) {
+  if (profileKey.startsWith("candidate:")) return profile.strategy_name || "Candidate Strategy";
   if (profileKey === "profile_cheap_pair") return "Cheap Pair";
   if (profileKey === "profile_skew") return "Late Skew";
   return profile.strategy_name || "Profile Strategy";
 }
 
 function walletProfileRead(profileKey) {
+  if (profileKey.startsWith("candidate:")) {
+    const profile = candidateFromValue(profileKey) || {};
+    return {
+      label: "Backtest candidate",
+      read: profile.method?.description,
+      engine_rule: profile.method?.description,
+      risk: profile.method?.risk,
+    };
+  }
   return state.workflow?.wallet_profiles?.strategy_map?.[profileKey] || {};
 }
 
 function renderProfileSkewChart(profileKey = "profile_skew") {
-  const profile = state.workflow[profileKey] || {};
+  const profile = selectedStrategyProfile(profileKey);
   const summary = profile.summary || {};
   const method = profile.method || {};
   const walletRead = walletProfileRead(profileKey);
@@ -473,6 +512,13 @@ function renderProfileSkewChart(profileKey = "profile_skew") {
     x: xFor(index),
     y: yFor(cumulative[index]),
   }));
+  const makerRoi = metricNumber(summary.maker_test_roi_on_planned_cost);
+  const makerRows = makerRoi === null
+    ? []
+    : [
+        ["Maker route", summary.maker_route_label || "Proxy route"],
+        ["Maker test", `${fmt.format(summary.maker_test_fills || 0)} / ${fmt.format(summary.maker_test_signals || 0)} fills, ${formatPercent(makerRoi)}`],
+      ];
   const noteRows = [
     ["Profile read", walletRead.read || method.description || "Historical profile rule"],
     ["Rule", walletRead.engine_rule || profile.strategy_name || displayTitle],
@@ -483,6 +529,7 @@ function renderProfileSkewChart(profileKey = "profile_skew") {
     ["ROI", formatPercent(summary.roi_on_filled_cost)],
     ["Positive markets", formatPercent(summary.positive_market_rate)],
     ["Positive days", formatPercent(summary.positive_day_rate)],
+    ...makerRows,
     ["Main risk", walletRead.risk || "Needs live maker-fill proof"],
   ].map(([label, value], index) => {
     const y = 96 + index * 28;
@@ -503,7 +550,7 @@ function renderProfileSkewChart(profileKey = "profile_skew") {
       <text class="axis" x="722" y="68">${escapeHtml(displayTitle)}</text>
       ${noteRows}
       <text class="tick" x="722" y="420">${escapeHtml(walletRead.label || "Historical proxy only.")}</text>
-      <text class="tick" x="722" y="444">Needs live maker-fill proof before money.</text>
+      <text class="tick" x="722" y="444">Paper-fill proof required before live money.</text>
     </svg>`;
 }
 
@@ -515,6 +562,10 @@ function renderBacktestChart() {
   }
   if (state.backtestMarket === "profile-skew") {
     renderProfileSkewChart("profile_skew");
+    return;
+  }
+  if (state.backtestMarket.startsWith("candidate:")) {
+    renderProfileSkewChart(state.backtestMarket);
     return;
   }
   const signals = workflow.backtest.signals || [];
