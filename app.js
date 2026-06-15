@@ -354,11 +354,13 @@ function ruleLine() {
 function ruleSummaryText() {
   const rule = activeRule();
   return [
-    `Buy the dominant side only ${rangeText(rule.min_seconds_left, rule.max_seconds_left, "s")} before close`,
+    `Buy Up if BTC is above start, Down if below start; only ${rangeText(rule.min_seconds_left, rule.max_seconds_left, "s")} before close`,
     `BTC move ${rangeText(rule.min_abs_distance_bps, rule.max_abs_distance_bps, " bps")}`,
     `ask ${rangeText(rule.min_ask, rule.max_ask)}`,
     `top-5 depth >= ${money.format(rule.min_top5_capacity_dollars || 0)}`,
     `fair edge >= ${formatCents(rule.min_fair_edge_vs_bid)}`,
+    `book lean >= ${percentText(rule.min_signal_depth_imbalance)}`,
+    `both asks <= ${formatPrice(rule.max_complement_ask_sum)}`,
   ].join(" | ");
 }
 
@@ -375,17 +377,17 @@ function renderStrategyPanels() {
   const policy = state.workflow.live_trade.execution_policy || {};
   const routeLabel = paperSummary.maker_route_label || policy.selected_route_label || "Maker join best bid for 15s";
   byId("backtestStrategy").innerHTML = [
-    strategyCell("Backtest strategy", "Rule-based, not ML: late dominant-side fair-value quoting."),
-    strategyCell("Active signals", "BTC vs start, fair probability, Polymarket bid/ask, top-5 depth, book lean, both-asks sanity."),
-    strategyCell("Buy rule", ruleSummaryText()),
+    strategyCell("Backtest rule", ruleSummaryText()),
+    strategyCell("Backtest data", "Historical BTC price plus Polymarket books: fair value, bid/ask, top-5 depth, side book lean, and both-asks sanity."),
+    strategyCell("Backtest execution", "Entry is modeled at the Polymarket ask, held to settlement, with a 2c safety haircut. It tests table quality, not maker fill quality."),
   ].join("");
   byId("paperStrategy").innerHTML = [
-    strategyCell("Paper strategy", "Same backtest signal, then no-money maker simulation."),
-    strategyCell("Maker route", `${routeLabel}: quote best bid, mark live edge every poll, cancel when edge decays.`),
-    strategyCell("Live-only signal", "Binance BTC depth must support the selected side in paper/live; historical backtest still excludes this feed."),
+    strategyCell("Paper rule", "Same table as backtest, then add live Binance BTC depth support before a shadow quote is allowed."),
+    strategyCell("Maker route", `${routeLabel}: post-only quote at best bid, mark live edge every poll, cancel when edge decays.`),
+    strategyCell("Paper goal", "Measure maker fill quality: post-fill edge and toxic fills. A winning settlement can still be a bad fill."),
   ].join("");
   byId("liveStrategy").innerHTML = [
-    strategyCell("Live strategy", "Disabled until paper proves fills are good, not just frequent."),
+    strategyCell("Live status", "Disabled. The Rust engine is for post-only quoting after paper proves the fills are good, not just frequent."),
     strategyCell("Order policy", "Post-only maker limits only; no taker entries, no market orders, cancel stale or negative-edge quotes."),
     strategyCell("Promotion gate", "Needs positive post-fill edge, low toxic fills, clean start prices, healthy latency, and manual enable."),
   ].join("");
