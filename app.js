@@ -69,7 +69,8 @@ function activeCandidateStrategy() {
 
 function activeBacktestValue() {
   const active = activeCandidateStrategy();
-  return active ? candidateValue(active) : "all-signals";
+  const first = candidateStrategies()[0];
+  return active ? candidateValue(active) : (first ? candidateValue(first) : "");
 }
 
 function selectedStrategyProfile(profileKey) {
@@ -215,7 +216,6 @@ function linePathFor(rows, valueFor, xFor, yFor) {
 }
 
 function renderBacktestSelects() {
-  const signals = signalRows();
   const candidates = candidateStrategies();
   const activeValue = activeBacktestValue();
   const orderedCandidates = [...candidates].sort((left, right) => {
@@ -228,18 +228,11 @@ function renderBacktestSelects() {
   const hasProfile = Number(profileSummary.clean_markets_scanned || 0) > 0;
   const hasCheapPair = Number(cheapPairSummary.clean_markets_scanned || 0) > 0;
   const allowed = new Set([
-    "all-signals",
     ...candidates.map(candidateValue),
     ...(hasCheapPair ? ["profile-cheap-pair"] : []),
     ...(hasProfile ? ["profile-skew"] : []),
-    ...signals.map((row) => row.condition_id),
   ]);
   if (!allowed.has(state.backtestMarket)) state.backtestMarket = activeValue;
-  const summary = state.workflow?.backtest?.summary || {};
-  const buySeconds = Number(summary.qualifying_buy_seconds || signals.length);
-  const allLabel = buySeconds > signals.length
-    ? `Legacy strict rule (${signals.length} buy markets, ${fmt.format(buySeconds)} buy seconds)`
-    : `Legacy strict rule (${signals.length} buy markets)`;
   const profileOption = hasProfile
     ? [`<option value="profile-skew">Late Skew (${fmt.format(profileSummary.traded_markets || 0)} markets, ${formatPercent(profileSummary.roi_on_filled_cost)} ROI)</option>`]
     : [];
@@ -254,10 +247,8 @@ function renderBacktestSelects() {
   });
   byId("backtestMarket").innerHTML = [
     ...candidateOptions,
-    `<option value="all-signals">${allLabel}</option>`,
     ...cheapPairOption,
     ...profileOption,
-    ...signals.map((row, index) => `<option value="${row.condition_id}">${signalLabel(row, index)}</option>`),
   ].join("");
   byId("backtestMarket").value = state.backtestMarket;
 }
@@ -586,19 +577,13 @@ function renderBacktestChart() {
     return;
   }
   const signals = workflow.backtest.signals || [];
-  const selectedSignals = state.backtestMarket === "all-signals"
-    ? signals
-    : signals.filter((row) => row.condition_id === state.backtestMarket);
+  const selectedSignals = signals.filter((row) => row.condition_id === state.backtestMarket);
 
   if (!selectedSignals.length) {
     byId("backtestChart").innerHTML = svgEmpty("No buy signals for this selection.");
     return;
   }
-  if (state.backtestMarket === "all-signals") {
-    renderTradePnlChart(selectedSignals);
-  } else {
-    renderSignalDecisionChart(selectedSignals[0]);
-  }
+  renderSignalDecisionChart(selectedSignals[0]);
 }
 
 function checksFor(tab) {
