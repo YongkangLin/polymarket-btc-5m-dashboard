@@ -2371,8 +2371,19 @@ function startMetadataFromSource(source, fallbackSource = "paper_market_start") 
   return {
     price,
     source: source?.start_price_source || source?.btc_price_source || fallbackSource,
+    eventTimeMicro: source?.start_event_time_micro || null,
     capturedAt: source?.generated_at || source?.ts || source?.btc_price_fetched_at || null,
   };
+}
+
+function startSourceLabel(source) {
+  const text = String(source || "");
+  if (!text) return "source unknown";
+  if (text === "binance_ws_trade_at_window_start") return "Binance WS start tick";
+  if (text === "polymarket_paper_event") return "paper capture";
+  if (text.includes("binance.com")) return "Binance REST capture";
+  if (text === "binance") return "Binance capture";
+  return compactNote(text.replace(/^https?:\/\//, ""), 34);
 }
 
 function preferredPaperStartMetadata(market) {
@@ -2648,14 +2659,15 @@ function renderPaperDecisionGraph() {
   const upProbability = outcomeBookProbability(latestBookRaw || latestRaw, "up") ?? metricNumber(latestRaw.fair_up);
   const downProbability = outcomeBookProbability(latestBookRaw || latestRaw, "down") ?? metricNumber(latestRaw.fair_down);
   const infoRows = [
-    ["Up", formatOutcomePercent(upProbability)],
-    ["Down", formatOutcomePercent(downProbability)],
-    ["Start", startPrice === null ? "--" : formatBookMoney(startPrice)],
-  ].map(([label, value], index) => {
-    const y = 220 + index * 76;
+    { label: "Up", value: formatOutcomePercent(upProbability), sub: "Polymarket mid" },
+    { label: "Down", value: formatOutcomePercent(downProbability), sub: "Polymarket mid" },
+    { label: "Start", value: startPrice === null ? "--" : formatBookMoney(startPrice), sub: startSourceLabel(startMeta?.source) },
+  ].map((row, index) => {
+    const y = 232 + index * 90;
     return `
-      <text class="paper-side-label" x="718" y="${y}">${escapeHtml(label)}</text>
-      <text class="paper-side-value" x="718" y="${y + 34}">${escapeHtml(String(value))}</text>`;
+      <text class="paper-side-label" x="718" y="${y}">${escapeHtml(row.label)}</text>
+      <text class="paper-side-value" x="718" y="${y + 34}">${escapeHtml(String(row.value))}</text>
+      <text class="paper-side-source" x="718" y="${y + 55}">${escapeHtml(row.sub)}</text>`;
   }).join("");
   const latestTitle = [
     `latest ${Math.round(latest.elapsedSeconds)}s in`,
@@ -2683,7 +2695,9 @@ function renderPaperDecisionGraph() {
       <text class="axis" x="${plot.left + plotWidth / 2}" y="${plotBottom + 54}" text-anchor="middle">Seconds into market</text>
       <text class="axis" x="22" y="${plot.top + plot.height / 2}" text-anchor="middle" transform="rotate(-90 22 ${plot.top + plot.height / 2})">Dollars from start</text>
       <rect class="note-box" x="696" y="42" width="266" height="584" rx="6"></rect>
-      <text class="paper-move-value ${moveClass}" x="718" y="118">${escapeHtml(formatDollarMove(latest.dollarMove))}</text>
+      <text class="paper-move-label" x="718" y="88">BTC vs Start</text>
+      <text class="paper-move-value ${moveClass}" x="718" y="128">${escapeHtml(formatDollarMove(latest.dollarMove))}</text>
+      <text class="paper-move-sub" x="718" y="152">${escapeHtml(startPrice === null ? "waiting for start anchor" : `Start ${formatBookMoney(startPrice)}`)}</text>
       ${infoRows}
     </svg>
     ${renderOrderBookTable(market, rawPoints, latestBookRaw, latestQuote)}`;
