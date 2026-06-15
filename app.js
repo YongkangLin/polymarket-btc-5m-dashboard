@@ -30,6 +30,12 @@ function normalizeWorkflow(workflow) {
   backtest.markets = inflateRows(backtest.market_columns, backtest.markets);
   backtest.series = inflateRows(backtest.series_columns, backtest.series);
   backtest.signals = inflateRows(backtest.signal_columns, backtest.signals);
+  const profileSkew = workflow.profile_skew || {};
+  profileSkew.markets = inflateRows(profileSkew.market_columns, profileSkew.markets);
+  const profileCheapPair = workflow.profile_cheap_pair || {};
+  profileCheapPair.markets = inflateRows(profileCheapPair.market_columns, profileCheapPair.markets);
+  const profilePaperGate = workflow.profile_paper_gate || {};
+  profilePaperGate.markets = inflateRows(profilePaperGate.market_columns, profilePaperGate.markets);
   return workflow;
 }
 
@@ -76,6 +82,7 @@ function formatActual(value) {
 }
 
 function metricNumber(value) {
+  if (value === null || value === undefined) return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
@@ -85,11 +92,23 @@ function formatPercent(value) {
   return number === null ? "--" : `${(number * 100).toFixed(1)}%`;
 }
 
+function formatCents(value) {
+  const number = metricNumber(value);
+  if (number === null) return "--";
+  const sign = number > 0 ? "+" : "";
+  return `${sign}${(number * 100).toFixed(1)}c`;
+}
+
 function formatSignedPercent(value) {
   const number = metricNumber(value);
   if (number === null) return "--";
   const sign = number > 0 ? "+" : "";
   return `${sign}${(number * 100).toFixed(1)} pts`;
+}
+
+function compactNote(value, maxLength = 33) {
+  const text = String(value ?? "--");
+  return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
 }
 
 function humanReason(value) {
@@ -168,15 +187,39 @@ function linePathFor(rows, valueFor, xFor, yFor) {
 
 function renderBacktestSelects() {
   const signals = signalRows();
-  const allowed = new Set(["all-signals", ...signals.map((row) => row.condition_id)]);
+  const profileSummary = state.workflow?.profile_skew?.summary || {};
+  const cheapPairSummary = state.workflow?.profile_cheap_pair?.summary || {};
+  const paperGateSummary = state.workflow?.profile_paper_gate?.summary || {};
+  const hasProfile = Number(profileSummary.clean_markets_scanned || 0) > 0;
+  const hasCheapPair = Number(cheapPairSummary.clean_markets_scanned || 0) > 0;
+  const hasPaperGate = Number(paperGateSummary.clean_markets_scanned || 0) > 0;
+  const allowed = new Set([
+    "all-signals",
+    ...(hasCheapPair ? ["profile-cheap-pair"] : []),
+    ...(hasProfile ? ["profile-skew"] : []),
+    ...(hasPaperGate ? ["profile-paper-gate"] : []),
+    ...signals.map((row) => row.condition_id),
+  ]);
   if (!allowed.has(state.backtestMarket)) state.backtestMarket = "all-signals";
   const summary = state.workflow?.backtest?.summary || {};
   const buySeconds = Number(summary.qualifying_buy_seconds || signals.length);
   const allLabel = buySeconds > signals.length
-    ? `All Planned Buys (${signals.length} markets, ${fmt.format(buySeconds)} buy seconds)`
-    : `All Planned Buys (${signals.length} markets)`;
+    ? `Strict Backtest (${signals.length} buy markets, ${fmt.format(buySeconds)} buy seconds)`
+    : `Strict Backtest (${signals.length} buy markets)`;
+  const profileOption = hasProfile
+    ? [`<option value="profile-skew">Late Skew (${fmt.format(profileSummary.traded_markets || 0)} markets, ${formatPercent(profileSummary.roi_on_filled_cost)} ROI)</option>`]
+    : [];
+  const cheapPairOption = hasCheapPair
+    ? [`<option value="profile-cheap-pair">Cheap Pair (${fmt.format(cheapPairSummary.traded_markets || 0)} markets, ${formatPercent(cheapPairSummary.roi_on_filled_cost)} ROI)</option>`]
+    : [];
+  const paperGateOption = hasPaperGate
+    ? [`<option value="profile-paper-gate">Paper Gate (${fmt.format(paperGateSummary.traded_markets || 0)} markets, ${formatPercent(paperGateSummary.roi_on_filled_cost)} ROI)</option>`]
+    : [];
   byId("backtestMarket").innerHTML = [
     `<option value="all-signals">${allLabel}</option>`,
+    ...cheapPairOption,
+    ...profileOption,
+    ...paperGateOption,
     ...signals.map((row, index) => `<option value="${row.condition_id}">${signalLabel(row, index)}</option>`),
   ].join("");
   byId("backtestMarket").value = state.backtestMarket;
@@ -370,8 +413,124 @@ function renderTradePnlChart(signals) {
     </svg>`;
 }
 
+function profileMarketTitle(row) {
+  const pnl = Number(row.pnl_dollars || 0);
+  const cost = Number(row.total_cost || 0);
+  return [
+    `${row.slug || row.condition_id}`,
+    `Winner: ${row.winner}`,
+    `Cost: ${moneyCents.format(cost)}`,
+    `Payout: ${moneyCents.format(row.payout || 0)}`,
+    `PnL: ${moneyCents.format(pnl)}`,
+    `Filled quotes: ${fmt.format(row.filled_quotes || 0)}`,
+  ].join(" | ");
+}
+
+function profileChartTitle(profileKey, profile) {
+  if (profileKey === "profile_cheap_pair") return "Cheap Pair";
+  if (profileKey === "profile_paper_gate") return "Paper Gate";
+  if (profileKey === "profile_skew") return "Late Skew";
+  return profile.strategy_name || "Profile Strategy";
+}
+
+function walletProfileRead(profileKey) {
+  return state.workflow?.wallet_profiles?.strategy_map?.[profileKey] || {};
+}
+
+function renderProfileSkewChart(profileKey = "profile_skew") {
+  const profile = state.workflow[profileKey] || {};
+  const summary = profile.summary || {};
+  const method = profile.method || {};
+  const walletRead = walletProfileRead(profileKey);
+  const displayTitle = profileChartTitle(profileKey, profile);
+  const rows = (profile.markets || [])
+    .filter((row) => row.traded)
+    .sort((left, right) => new Date(left.window_start) - new Date(right.window_start));
+  if (!rows.length) {
+    byId("backtestChart").innerHTML = svgEmpty(`No ${displayTitle.toLowerCase()} fills in this dataset.`);
+    return;
+  }
+  const view = { width: 980, height: 500, left: 76, right: 300, top: 32, bottom: 64 };
+  const plotWidth = view.width - view.left - view.right;
+  const plotHeight = view.height - view.top - view.bottom;
+  const cumulative = [];
+  let running = 0;
+  rows.forEach((row) => {
+    running += Number(row.pnl_dollars || 0);
+    cumulative.push(running);
+  });
+  const pnlValues = rows.map((row) => Number(row.pnl_dollars || 0));
+  const [minY, maxY] = profitDomain([0, ...pnlValues, ...cumulative]);
+  const xFor = (index) => view.left + ((index + 0.5) / rows.length) * plotWidth;
+  const yFor = (value) => view.top + ((maxY - value) / Math.max(maxY - minY, 1)) * plotHeight;
+  const yZero = yFor(0);
+  const barWidth = Math.max(1, plotWidth / rows.length * 0.72);
+  const grid = [minY, 0, (minY + maxY) / 2, maxY].map((tick) => {
+    const y = yFor(tick);
+    return `<line class="${Math.abs(tick) < 0.001 ? "axis-zero" : "grid"}" x1="${view.left}" y1="${y}" x2="${view.left + plotWidth}" y2="${y}"></line><text class="tick" x="${view.left - 10}" y="${y + 4}" text-anchor="end">${formatPnl(tick)}</text>`;
+  }).join("");
+  const bars = rows.map((row, index) => {
+    const pnl = Number(row.pnl_dollars || 0);
+    const x = xFor(index) - barWidth / 2;
+    const y = yFor(Math.max(pnl, 0));
+    const height = Math.max(1, Math.abs(yFor(pnl) - yZero));
+    return `
+      <rect class="pnl-bar ${pnl >= 0 ? "pass" : "fail"}" x="${x}" y="${y}" width="${barWidth}" height="${height}" rx="1">
+        <title>${escapeHtml(profileMarketTitle(row))}</title>
+      </rect>`;
+  }).join("");
+  const linePoints = rows.map((row, index) => ({
+    x: xFor(index),
+    y: yFor(cumulative[index]),
+  }));
+  const noteRows = [
+    ["Profile read", walletRead.read || method.description || "Historical profile rule"],
+    ["Rule", walletRead.engine_rule || profile.strategy_name || displayTitle],
+    ["Clean markets", fmt.format(summary.clean_markets_scanned || 0)],
+    ["Filled markets", `${fmt.format(summary.traded_markets || 0)} (${formatPercent(summary.fill_market_rate)})`],
+    ["Cost", moneyCents.format(summary.filled_cost || 0)],
+    ["PnL", moneyCents.format(summary.pnl_dollars || 0)],
+    ["ROI", formatPercent(summary.roi_on_filled_cost)],
+    ["Positive markets", formatPercent(summary.positive_market_rate)],
+    ["Positive days", formatPercent(summary.positive_day_rate)],
+    ["Main risk", walletRead.risk || "Needs live maker-fill proof"],
+  ].map(([label, value], index) => {
+    const y = 96 + index * 28;
+    return `
+      <text class="bar-label" x="722" y="${y}">${escapeHtml(label)}</text>
+      <text class="bar-value" x="936" y="${y}" text-anchor="end">${escapeHtml(compactNote(value))}</text>`;
+  }).join("");
+
+  byId("backtestChart").innerHTML = `
+    <svg viewBox="0 0 ${view.width} ${view.height}" role="img" aria-label="Profile skew backtest market PnL">
+      <rect class="plot" x="${view.left}" y="${view.top}" width="${plotWidth}" height="${plotHeight}"></rect>
+      ${grid}
+      ${bars}
+      <path class="line" d="${pathFrom(linePoints)}"></path>
+      <text class="axis" x="${view.left + plotWidth / 2}" y="${view.height - 18}" text-anchor="middle">${fmt.format(rows.length)} filled markets: bars = each market, line = total PnL</text>
+      <text class="axis" x="20" y="${view.top + plotHeight / 2}" text-anchor="middle" transform="rotate(-90 20 ${view.top + plotHeight / 2})">Profit after settlement</text>
+      <rect class="note-box" x="696" y="42" width="252" height="356" rx="6"></rect>
+      <text class="axis" x="722" y="68">${escapeHtml(displayTitle)}</text>
+      ${noteRows}
+      <text class="tick" x="722" y="420">${escapeHtml(walletRead.label || "Historical proxy only.")}</text>
+      <text class="tick" x="722" y="444">Needs live maker-fill proof before money.</text>
+    </svg>`;
+}
+
 function renderBacktestChart() {
   const workflow = state.workflow;
+  if (state.backtestMarket === "profile-cheap-pair") {
+    renderProfileSkewChart("profile_cheap_pair");
+    return;
+  }
+  if (state.backtestMarket === "profile-skew") {
+    renderProfileSkewChart("profile_skew");
+    return;
+  }
+  if (state.backtestMarket === "profile-paper-gate") {
+    renderProfileSkewChart("profile_paper_gate");
+    return;
+  }
   const signals = workflow.backtest.signals || [];
   const selectedSignals = state.backtestMarket === "all-signals"
     ? signals
@@ -528,6 +687,65 @@ function renderGateChart(tab) {
 
 function paperStatusRows() {
   const summary = state.workflow.paper_trade.summary || {};
+  const isCheapPair = state.workflow.paper_trade.edge_id === "profile_cheap_pair" || Number(summary.pair_quote_markets || 0) > 0;
+  if (isCheapPair) {
+    return [
+      {
+        label: "Book checks",
+        value: Number(summary.evaluations || 0),
+        detail: `${fmt.format(summary.evaluations || 0)} checks`,
+        title: "Each check pulls the live Polymarket Up/Down books and BTC price.",
+      },
+      {
+        label: "Pair quotes",
+        value: Number(summary.pair_quote_markets || 0),
+        detail: `${fmt.format(summary.pair_quote_markets || 0)} markets`,
+        title: "Markets where the paper bot opened both Up and Down post-only quotes.",
+      },
+      {
+        label: "Avg pair cost",
+        value: Math.max(0, Number(summary.pair_avg_quote_sum || 0) * 100),
+        detail: formatPrice(summary.pair_avg_quote_sum),
+        title: "Average Up quote plus Down quote. Below 1.00 is the paired-cost edge.",
+      },
+      {
+        label: "Both legs filled",
+        value: Number(summary.pair_both_legs_filled_markets || 0),
+        detail: `${fmt.format(summary.pair_both_legs_filled_markets || 0)} markets`,
+        title: `Both-leg fill rate: ${formatPercent(summary.pair_both_leg_fill_rate)}.`,
+      },
+      {
+        label: "One-leg risk",
+        value: Number(summary.pair_one_leg_filled_markets || 0),
+        detail: `${fmt.format(summary.pair_one_leg_filled_markets || 0)} markets`,
+        title: `One-leg risk rate: ${formatPercent(summary.pair_one_leg_risk_rate)}. This is the danger in cheap-pair quoting.`,
+      },
+      {
+        label: "Locked edge",
+        value: Math.abs(Number(summary.pair_locked_edge_dollars || 0)),
+        detail: moneyCents.format(summary.pair_locked_edge_dollars || 0),
+        title: "Estimated dollars locked by matched Up/Down shares where pair cost was below 1.00.",
+      },
+      {
+        label: "Unpaired cost",
+        value: Math.abs(Number(summary.pair_unpaired_cost || 0)),
+        detail: moneyCents.format(summary.pair_unpaired_cost || 0),
+        title: "Filled exposure that did not have the opposite side filled yet.",
+      },
+      {
+        label: "Settled profit",
+        value: Math.abs(Number(summary.maker_pnl_dollars || 0)),
+        detail: moneyCents.format(summary.maker_pnl_dollars || 0),
+        title: "Maker paper PnL from filled shadow quotes after settlement.",
+      },
+      {
+        label: "Toxic fills",
+        value: Number(summary.maker_toxic_fills || 0),
+        detail: `${fmt.format(summary.maker_toxic_fills || 0)} toxic`,
+        title: `A fill is toxic when fair value after fill is below our quote. Toxic rate: ${formatPercent(summary.maker_toxic_fill_rate)}.`,
+      },
+    ];
+  }
   return [
     {
       label: "Book checks",
@@ -563,7 +781,25 @@ function paperStatusRows() {
       label: "Maker fills",
       value: Number(summary.maker_fills || 0),
       detail: `${fmt.format(summary.maker_fills || 0)} filled`,
-      title: "Shadow maker quotes inferred filled from live order-book movement.",
+      title: "Shadow maker quotes inferred filled from same-outcome public SELL flow or conservative book-queue evidence.",
+    },
+    {
+      label: "Fill events",
+      value: Number(summary.maker_fill_events || 0),
+      detail: `${fmt.format(summary.maker_fill_events || 0)} events`,
+      title: "Partial maker fills can create multiple events for one shadow quote.",
+    },
+    {
+      label: "Toxic fills",
+      value: Number(summary.maker_toxic_fills || 0),
+      detail: `${fmt.format(summary.maker_toxic_fills || 0)} toxic`,
+      title: `A fill is toxic when fair value after fill is below our quote. Toxic rate: ${formatPercent(summary.maker_toxic_fill_rate)}.`,
+    },
+    {
+      label: "Post-fill edge",
+      value: Math.abs(Number(summary.maker_avg_post_fill_edge || 0) * 100),
+      detail: formatCents(summary.maker_avg_post_fill_edge),
+      title: "Average fair-after-fill minus quote price. Positive is the core maker-quality metric.",
     },
     {
       label: "Settled buys",
@@ -624,7 +860,16 @@ function renderStatus() {
   const q = state.workflow.data_quality || {};
   const b = state.workflow.backtest.summary || {};
   const buySeconds = Number(b.qualifying_buy_seconds || b.signals || 0);
-  byId("statusText").textContent = `${fmt.format(q.clean_markets || 0)} clean windows scanned | ${fmt.format(b.signals || 0)} market buys / ${fmt.format(buySeconds)} buy seconds | ${moneyCents.format(b.pnl_after_slippage_haircut || 0)} test profit`;
+  const generated = state.workflow.generated_at
+    ? new Date(state.workflow.generated_at).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        timeZoneName: "short",
+      })
+    : "unknown build";
+  byId("statusText").textContent = `Loaded ${generated} | strict backtest: ${fmt.format(b.signals || 0)} buys / ${fmt.format(buySeconds)} buy seconds | ${fmt.format(q.clean_markets || 0)} clean windows`;
 }
 
 function renderActiveTab() {
