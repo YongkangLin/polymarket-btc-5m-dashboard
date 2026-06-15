@@ -138,7 +138,10 @@ function renderTradePnlChart(signals) {
   const [minY, maxY] = profitDomain(values);
   const xFor = (index) => view.left + ((index + 0.5) / signals.length) * plotWidth;
   const yFor = (value) => view.top + ((maxY - value) / Math.max(maxY - minY, 1)) * plotHeight;
-  const barWidth = Math.min(54, Math.max(14, plotWidth / signals.length * 0.42));
+  const dense = signals.length > 80;
+  const barWidth = dense
+    ? Math.max(1, plotWidth / signals.length * 0.72)
+    : Math.min(54, Math.max(14, plotWidth / signals.length * 0.42));
   const yZero = yFor(0);
   const yTicks = [minY, 0, (minY + maxY) / 2, maxY]
     .filter((value, index, array) => array.findIndex((other) => Math.abs(other - value) < 0.001) === index);
@@ -151,11 +154,15 @@ function renderTradePnlChart(signals) {
     const x = xFor(index) - barWidth / 2;
     const y = yFor(Math.max(pnl, 0));
     const height = Math.max(2, Math.abs(yFor(pnl) - yZero));
+    const labelStep = dense ? Math.ceil(signals.length / 12) : 1;
+    const label = !dense || index % labelStep === 0 || index === signals.length - 1
+      ? `<text class="tick" x="${xFor(index)}" y="${view.top + plotHeight + 26}" text-anchor="middle">${signalNumber(row) || index + 1}</text>`
+      : "";
     return `
       <rect class="pnl-bar ${pnl >= 0 ? "pass" : "fail"}" x="${x}" y="${y}" width="${barWidth}" height="${height}" rx="4">
         <title>${tradeTitle(row)}</title>
       </rect>
-      <text class="tick" x="${xFor(index)}" y="${view.top + plotHeight + 26}" text-anchor="middle">${signalNumber(row) || index + 1}</text>`;
+      ${label}`;
   }).join("");
   const linePoints = signals.map((row, index) => ({
     row,
@@ -174,7 +181,7 @@ function renderTradePnlChart(signals) {
       ${bars}
       <path class="line" d="${pathFrom(linePoints)}"></path>
       ${dots}
-      <text class="axis" x="${view.left + plotWidth / 2}" y="${view.height - 18}" text-anchor="middle">Buy signals: bar = each trade, line = total profit</text>
+      <text class="axis" x="${view.left + plotWidth / 2}" y="${view.height - 18}" text-anchor="middle">${signals.length} buy signals: bar = each trade, line = total profit</text>
       <text class="axis" x="20" y="${view.top + plotHeight / 2}" text-anchor="middle" transform="rotate(-90 20 ${view.top + plotHeight / 2})">Profit after 2c safety cost</text>
     </svg>`;
 }
@@ -216,6 +223,7 @@ function plainCheckLabel(row) {
     no_missed_start_captures: "No missed starts",
     paper_signals: "Paper buys found",
     paper_days: "Paper buy days",
+    maker_route: "Maker route proven",
     paper_start_source: "Start price verified",
     manual_live_enable: "Manual live enable",
   };
