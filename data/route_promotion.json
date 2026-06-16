@@ -217,7 +217,7 @@
       "ready": false
     }
   },
-  "generated_at": "2026-06-16T23:38:38.441828+00:00",
+  "generated_at": "2026-06-16T23:46:55.968149+00:00",
   "routes": {
     "active": {
       "key": "active_late_depth_fair",
@@ -237,7 +237,7 @@
             "reason": "missing_entry_price"
           },
           {
-            "events": 91,
+            "events": 98,
             "reason": "outside_time_window"
           }
         ],
@@ -300,7 +300,7 @@
             "reason": "missing_entry_price"
           },
           {
-            "events": 91,
+            "events": 98,
             "reason": "outside_time_window"
           }
         ],
@@ -361,7 +361,7 @@
           "reason": "missing_entry_price"
         },
         {
-          "events": 91,
+          "events": 98,
           "reason": "outside_time_window"
         }
       ],
@@ -382,7 +382,7 @@
             "reason": "distance_outside_route"
           },
           {
-            "events": 107,
+            "events": 114,
             "reason": "outside_time_window"
           }
         ],
@@ -445,7 +445,7 @@
             "reason": "missing_entry_price"
           },
           {
-            "events": 91,
+            "events": 98,
             "reason": "outside_time_window"
           }
         ],
@@ -504,7 +504,7 @@
             "reason": "distance_outside_route"
           },
           {
-            "events": 107,
+            "events": 114,
             "reason": "outside_time_window"
           }
         ],

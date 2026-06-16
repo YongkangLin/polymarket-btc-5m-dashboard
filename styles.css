@@ -551,7 +551,43 @@ svg {
   stroke-width: 1;
 }
 
+.paper-side-section {
+  fill: #ffffff;
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.paper-side-section.is-positions {
+  fill: #f8fafc;
+}
+
+.paper-side-section-title {
+  fill: var(--ink);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
 .paper-side-source {
+  fill: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.paper-position-status {
+  fill: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.paper-position-value {
+  fill: var(--ink);
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.paper-position-detail {
   fill: var(--muted);
   font-size: 11px;
   font-weight: 800;
@@ -559,18 +595,24 @@ svg {
 
 .paper-move-value.move-up,
 .paper-side-value.move-up,
+.paper-position-status.move-up,
+.paper-position-value.move-up,
 .bar-value.move-up {
   fill: var(--green);
 }
 
 .paper-move-value.move-down,
 .paper-side-value.move-down,
+.paper-position-status.move-down,
+.paper-position-value.move-down,
 .bar-value.move-down {
   fill: var(--red);
 }
 
 .paper-move-value.move-flat,
 .paper-side-value.move-flat,
+.paper-position-status.move-flat,
+.paper-position-value.move-flat,
 .bar-value.move-flat {
   fill: var(--muted);
 }

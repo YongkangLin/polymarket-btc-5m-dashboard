@@ -3134,6 +3134,8 @@ function paperEventPositionsForMarket(market, rawPoints = []) {
       signal_id: row.signal_id || existing.signal_id,
       slug: row.slug || existing.slug,
       side: row.side || existing.side,
+      generated_at: row.generated_at || existing.generated_at,
+      time_unix: row.time_unix ?? existing.time_unix,
       entry_price: row.entry_price ?? row.quote_price ?? row.price ?? existing.entry_price,
       quote_price: row.quote_price ?? row.entry_price ?? row.price ?? existing.quote_price,
       price: row.price ?? existing.price,
@@ -3193,6 +3195,54 @@ function paperPositionSummaryText(positions) {
   const openQuotes = (positions || []).filter((position) => String(position.status || "") === "open_quote");
   if (openQuotes.length) return openQuotes.map(paperOpenQuoteLabel).join(" | ");
   return "No position";
+}
+
+function paperPositionPanelRows(positions) {
+  const rows = (positions || [])
+    .map((position) => {
+      const status = String(position.status || "");
+      const filledCost = metricNumber(position.filled_cost) ?? 0;
+      const orderNotional = metricNumber(position.order_notional ?? position.reserved_notional);
+      const price = metricNumber(position.entry_price ?? position.quote_price ?? position.price);
+      const shares = metricNumber(position.shares);
+      const pnl = metricNumber(position.pnl_dollars);
+      const side = position.side || "--";
+      let label = "Position";
+      let tone = "";
+      if (status === "open_quote") label = "Open quote";
+      if (status === "filled" || filledCost > 0) label = "Holding";
+      if (status === "canceled") label = "Canceled";
+      if (status === "settled") label = "Closed";
+      if (status === "settled" && pnl !== null) tone = pnl < 0 ? "move-down" : "move-up";
+      const value = shares !== null && shares > 0 && price !== null
+        ? `${shares.toFixed(shares >= 100 ? 0 : 2)} ${side} @ ${formatPrice(price)}`
+        : `${side}${price === null ? "" : ` @ ${formatPrice(price)}`}`;
+      const detailParts = [];
+      if (orderNotional !== null && orderNotional > 0) detailParts.push(`size ${moneyCents.format(orderNotional)}`);
+      if (status === "canceled") detailParts.push(position.cancel_reason || "canceled");
+      if (status === "settled" && pnl !== null) detailParts.push(formatSignedMoney(pnl));
+      return {
+        label,
+        value,
+        detail: detailParts.join(" | "),
+        status,
+        tone,
+        time: metricNumber(position.time_unix) ?? (Date.parse(position.generated_at || "") / 1000 || 0),
+        priority: status === "filled" ? 0 : status === "open_quote" ? 1 : status === "settled" ? 2 : 3,
+      };
+    })
+    .sort((left, right) => left.priority - right.priority || right.time - left.time);
+  const active = rows.filter((row) => ["Holding", "Open quote"].includes(row.label));
+  if (active.length) return active.slice(0, 3);
+  const closed = rows.filter((row) => row.label === "Closed");
+  if (closed.length) return closed.slice(0, 2);
+  const canceled = rows.filter((row) => row.label === "Canceled");
+  if (canceled.length) {
+    return [
+      { label: "No open position", value: "None", detail: `last ${canceled[0].value} canceled`, tone: "move-flat" },
+    ];
+  }
+  return [{ label: "No open position", value: "None", detail: "waiting for a fill", tone: "move-flat" }];
 }
 
 function latestSessionMetric(market, rawPoints, session, keys) {
@@ -3783,29 +3833,57 @@ function renderPaperDecisionGraph() {
     ?? metricNumber(latestRaw.market_down_probability ?? latestRaw.paper_down_probability ?? latestRaw.down_probability);
   const session = paperSession();
   const currentPositions = paperPositionsForMarket(market, rawPoints);
-  const positionText = paperPositionSummaryText(currentPositions);
+  const positionRows = paperPositionPanelRows(currentPositions);
   const sessionCapital = latestSessionMetric(market, rawPoints, session, ["paper_session_current_capital", "current_capital"]);
   const sessionPnl = latestSessionMetric(market, rawPoints, session, ["paper_session_total_pnl", "paper_session_total_pnl_dollars", "total_pnl_dollars", "realized_pnl_dollars"]);
-  const sideMetrics = [
+  const marketMetrics = [
     { label: "Start price", value: startPrice === null ? "Waiting" : formatBookMoney(startPrice) },
     { label: "Current price", value: currentPrice === null ? "Waiting" : formatBookMoney(currentPrice) },
     { label: "Difference", value: priceDifference === null ? "Waiting" : formatDollarMove(priceDifference), tone: moveClass },
     { label: "Up percent", value: formatOutcomePercent(upProbability) },
     { label: "Down percent", value: formatOutcomePercent(downProbability) },
-    { label: "Position", value: compactNote(positionText, 34), compact: true },
+  ];
+  const accountMetrics = [
     { label: "Capital", value: sessionCapital === null ? "--" : moneyCents.format(sessionCapital) },
     { label: "Session P&L", value: formatSignedMoney(sessionPnl), tone: sessionPnl === null ? "" : sessionPnl < 0 ? "move-down" : "move-up" },
   ];
-  const infoRows = compact ? "" : sideMetrics.map((row, index) => {
-    const y = 76 + index * 52 + (index >= 6 ? 16 : 0);
-    const divider = index === 6 ? `<line class="paper-side-divider" x1="718" x2="952" y1="${y - 30}" y2="${y - 30}"></line>` : "";
+  const renderPanelMetric = (row, x, y, valueClass = "") => `
+      <text class="paper-side-label" x="${x}" y="${y}">${escapeHtml(row.label)}</text>
+      <text class="paper-side-value ${row.tone || ""} ${valueClass}" x="${x}" y="${y + 27}">${escapeHtml(String(row.value))}</text>`;
+  const renderPanelSection = (title, top, height, rows, options = {}) => {
+    const x = 716;
+    const rowGap = options.rowGap || 48;
+    const valueClass = options.valueClass || "";
     return `
-      ${divider}
-      <text class="paper-side-label" x="718" y="${y}">${escapeHtml(row.label)}</text>
-      <text class="paper-side-value ${row.tone || ""} ${row.compact ? "is-compact" : ""}" x="718" y="${y + 30}">${escapeHtml(String(row.value))}</text>`;
-  }).join("");
+      <rect class="paper-side-section" x="708" y="${top}" width="242" height="${height}" rx="6"></rect>
+      <text class="paper-side-section-title" x="${x}" y="${top + 22}">${escapeHtml(title)}</text>
+      ${rows.map((row, index) => renderPanelMetric(row, x, top + 50 + index * rowGap, valueClass)).join("")}`;
+  };
+  const renderPositionPanel = () => {
+    const x = 716;
+    return `
+      <rect class="paper-side-section is-positions" x="708" y="506" width="242" height="150" rx="6"></rect>
+      <text class="paper-side-section-title" x="${x}" y="528">POSITIONS</text>
+      ${positionRows.map((row, index) => {
+        const y = 558 + index * 38;
+        return `
+          <text class="paper-position-status ${row.tone || ""}" x="${x}" y="${y}">${escapeHtml(row.label)}</text>
+          <text class="paper-position-value ${row.tone || ""}" x="${x}" y="${y + 18}">${escapeHtml(compactNote(row.value, 24))}</text>
+          ${row.detail ? `<text class="paper-position-detail" x="${x}" y="${y + 34}">${escapeHtml(compactNote(row.detail, 30))}</text>` : ""}`;
+      }).join("")}`;
+  };
+  const infoRows = compact ? "" : `
+    <rect class="note-box" x="696" y="42" width="266" height="634" rx="6"></rect>
+    ${renderPanelSection("MARKET", 56, 282, marketMetrics)}
+    ${renderPanelSection("ACCOUNT", 352, 126, accountMetrics)}
+    ${renderPositionPanel()}`;
+  const mobileMetrics = [
+    ...marketMetrics,
+    ...accountMetrics,
+    { label: "Positions", value: positionRows.map((row) => `${row.label}: ${row.value}`).join(" | "), compact: true },
+  ];
   const compactInfoRows = compact
-    ? `<div class="paper-mobile-stats">${sideMetrics.map((row) => `
+    ? `<div class="paper-mobile-stats">${mobileMetrics.map((row) => `
         <div class="paper-mobile-stat">
           <span>${escapeHtml(row.label)}</span>
           <strong class="${escapeHtml(row.tone || "")}">${escapeHtml(String(row.value))}</strong>
@@ -3842,7 +3920,6 @@ function renderPaperDecisionGraph() {
       <circle class="dot latest ${selectedCurrent ? "live-now" : ""}" cx="${headX}" cy="${headY}" r="6">
         <title>${escapeHtml(latestTitle)}</title>
       </circle>
-      ${compact ? "" : '<rect class="note-box" x="696" y="42" width="266" height="584" rx="6"></rect>'}
       ${infoRows}
     </svg>
     ${compactInfoRows}
