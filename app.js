@@ -393,6 +393,8 @@ function rejectReasonLabel(value) {
     external_book_missing: "BTC book missing",
     external_book_support_too_low: "BTC book support too weak",
     external_microprice_support_too_low: "BTC microprice against buy",
+    external_trade_flow_missing: "BTC trade flow missing",
+    external_trade_flow_support_too_low: "BTC trade flow against buy",
     missing_best_ask: "missing best ask",
     outside_time_window: "outside decision window",
     public_trade_sell_flow_or_visible_book_queue: "sell flow reached our bid",
@@ -1998,13 +2000,14 @@ function renderStrategyPanels() {
   const policy = state.workflow.live_trade.execution_policy || {};
   const routeLabel = paperSummary.maker_route_label || policy.selected_route_label || "Maker 2c below ask for 60s";
   const bookChecks = Number(paperSummary.external_book_checks || 0);
-  const depthSupportText = bookChecks > 0 ? "Depth checked" : "Depth pending";
+  const flowChecks = Number(paperSummary.external_trade_flow_checks || 0);
+  const depthSupportText = bookChecks > 0 || flowChecks > 0 ? "BTC pressure checked" : "BTC pressure pending";
   const liveStatus = policy.maker_route_ready
     ? "Disabled until manual enable"
     : "Disabled";
   byId("backtestStrategy").innerHTML = [
     strategyCell("Rule", ruleSummaryText()),
-    strategyCell("Signals", "BTC price + Polymarket book"),
+    strategyCell("Signals", "BTC price + PM book"),
     strategyCell("Fill", "$25 ask buy, hold, -2c"),
   ].join("");
   byId("paperStrategy").innerHTML = [
@@ -2939,6 +2942,7 @@ function latestBookRowForMarket(market, rawPoints) {
     "signal_depth_imbalance",
     "external_book_imbalance",
     "external_book_microprice_support_bps",
+    "external_trade_flow_support",
   ];
   for (let index = candidates.length - 1; index >= 0; index -= 1) {
     const row = candidates[index];
@@ -2990,6 +2994,7 @@ function orderBookSummaryRows(market, rawPoints, latestRaw, latestQuote) {
   const externalMicroEdge = metricNumber(row.external_book_microprice_edge_bps ?? latestRaw?.external_book_microprice_edge_bps);
   const externalMicroSupport = metricNumber(row.external_book_microprice_support_bps ?? latestRaw?.external_book_microprice_support_bps);
   const externalImbalance = metricNumber(row.external_book_imbalance ?? latestRaw?.external_book_imbalance);
+  const externalTradeFlow = metricNumber(row.external_trade_flow_support ?? latestRaw?.external_trade_flow_support);
 
   const selectedBid = sideField(row, selectedSide, "bid") ?? metricNumber(row.signal_bid);
   const selectedAsk = sideField(row, selectedSide, "ask") ?? metricNumber(row.signal_ask);
@@ -3007,6 +3012,7 @@ function orderBookSummaryRows(market, rawPoints, latestRaw, latestQuote) {
   return [
     ["BTC book", compactNote(`${pricePairText(bookBid, bookAsk)} | ${bookSpread === null ? "--" : formatBpsDeep(bookSpread)}`, 31)],
     ["BTC pressure", compactNote(`${externalImbalance === null ? "--" : percentText(externalImbalance)} | micro ${microText}`, 31)],
+    ["BTC flow", externalTradeFlow === null ? "--" : formatBookMoney(externalTradeFlow)],
     [`PM ${outcome}`, compactNote(`${pricePairText(selectedBid, selectedAsk)} | depth ${selectedDepth === null ? "--" : money.format(selectedDepth)}`, 31)],
     [`PM ${oppositeSide === "up" ? "Up" : "Down"}`, compactNote(pricePairText(oppositeBid, oppositeAsk), 31)],
     ["PM lean", compactNote(`${selectedLean === null ? "--" : percentText(selectedLean)} | asks ${complementAskSum === null ? "--" : complementAskSum.toFixed(2)}`, 31)],
@@ -3038,6 +3044,68 @@ function formatOutcomePercent(value) {
   const number = metricNumber(value);
   if (number === null) return "--";
   return `${(number * 100).toFixed(1)}%`;
+}
+
+function paperSession() {
+  return state.workflow?.paper_trade?.session || {};
+}
+
+function paperSessionPositionsForMarket(market) {
+  if (!market) return [];
+  const slug = market.slug || market.condition_id;
+  const positions = Array.isArray(paperSession().positions) ? paperSession().positions : [];
+  return positions.filter((position) => String(position.slug || "") === String(slug || ""));
+}
+
+function paperPositionLabel(position) {
+  const shares = metricNumber(position?.shares);
+  const side = position?.side || "--";
+  const price = metricNumber(position?.entry_price ?? position?.quote_price);
+  if (shares === null || price === null) return compactNote(position?.label || "position", 26);
+  return `${shares.toFixed(shares >= 100 ? 0 : 2)} shares ${side} @ ${formatPrice(price)}`;
+}
+
+function paperSessionPnlHistoryText(session) {
+  const history = Array.isArray(session?.pnl_history) ? session.pnl_history : [];
+  if (!history.length) return "No settled PnL";
+  return history.slice(-3).map((row) => formatSignedMoney(row.pnl_dollars)).join(" / ");
+}
+
+function renderPaperSessionHistory(session) {
+  const history = Array.isArray(session?.pnl_history) ? session.pnl_history : [];
+  if (!history.length) return "";
+  const rows = history.slice(-12).reverse().map((row) => {
+    const pnl = metricNumber(row.pnl_dollars);
+    const tone = pnl === null ? "" : pnl < 0 ? "is-loss" : "is-win";
+    const slug = String(row.slug || "--").replace(/^btc-updown-5m-/, "");
+    return `
+      <tr class="paper-session-row ${tone}">
+        <td>${escapeHtml(slug)}</td>
+        <td>${escapeHtml(row.side || "--")}</td>
+        <td>${escapeHtml(row.winner || "--")}</td>
+        <td>${escapeHtml(formatSignedMoney(pnl))}</td>
+        <td>${escapeHtml(moneyCents.format(metricNumber(row.capital_after) ?? 0))}</td>
+      </tr>`;
+  }).join("");
+  return `
+    <div class="paper-session-history">
+      <div class="paper-book-heading">
+        <span>Session P&L History</span>
+        <span>${escapeHtml(`${metricNumber(session?.market_count) ?? 0}/${metricNumber(session?.market_limit) ?? 12} markets`)}</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Market</th>
+            <th scope="col">Buy</th>
+            <th scope="col">Winner</th>
+            <th scope="col">P&L</th>
+            <th scope="col">Capital</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
 }
 
 function outcomeBookProbability(row, side) {
@@ -3567,18 +3635,27 @@ function renderPaperDecisionGraph() {
   const downProbability = outcomeBookProbability(latestBookRaw || latestRaw, "down")
     ?? metricNumber(market.market_down_probability ?? market.paper_down_probability ?? market.down_probability ?? market.latest_down_probability)
     ?? metricNumber(latestRaw.market_down_probability ?? latestRaw.paper_down_probability ?? latestRaw.down_probability);
+  const session = paperSession();
+  const currentPositions = paperSessionPositionsForMarket(market);
+  const positionText = currentPositions.length ? currentPositions.map(paperPositionLabel).join(" | ") : "No position";
+  const sessionCapital = metricNumber(session.current_capital);
+  const sessionPnl = metricNumber(session.total_pnl_dollars ?? session.realized_pnl_dollars);
   const sideMetrics = [
     { label: "Start price", value: startPrice === null ? "Waiting" : formatBookMoney(startPrice) },
     { label: "Current price", value: currentPrice === null ? "Waiting" : formatBookMoney(currentPrice) },
     { label: "Difference", value: priceDifference === null ? "Waiting" : formatDollarMove(priceDifference), tone: moveClass },
     { label: "Up percent", value: formatOutcomePercent(upProbability) },
     { label: "Down percent", value: formatOutcomePercent(downProbability) },
+    { label: "Position", value: compactNote(positionText, 29), compact: true },
+    { label: "Capital", value: sessionCapital === null ? "--" : moneyCents.format(sessionCapital) },
+    { label: "Session P&L", value: formatSignedMoney(sessionPnl), tone: sessionPnl === null ? "" : sessionPnl < 0 ? "move-down" : "move-up" },
+    { label: "P&L history", value: compactNote(paperSessionPnlHistoryText(session), 29), compact: true },
   ];
   const infoRows = compact ? "" : sideMetrics.map((row, index) => {
-    const y = 94 + index * 100;
+    const y = 76 + index * 58;
     return `
       <text class="paper-side-label" x="718" y="${y}">${escapeHtml(row.label)}</text>
-      <text class="paper-side-value ${row.tone || ""}" x="718" y="${y + 38}">${escapeHtml(String(row.value))}</text>`;
+      <text class="paper-side-value ${row.tone || ""} ${row.compact ? "is-compact" : ""}" x="718" y="${y + 30}">${escapeHtml(String(row.value))}</text>`;
   }).join("");
   const compactInfoRows = compact
     ? `<div class="paper-mobile-stats">${sideMetrics.map((row) => `
@@ -3623,6 +3700,7 @@ function renderPaperDecisionGraph() {
     </svg>
     ${compactInfoRows}
     ${renderPaperActionLog(market, rawPoints)}
+    ${renderPaperSessionHistory(session)}
     ${renderOrderBookTable(market, rawPoints, latestBookRaw, latestQuote)}`;
 }
 
