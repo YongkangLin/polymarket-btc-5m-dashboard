@@ -94,7 +94,7 @@
           "passed": true
         }
       ],
-      "quote_rate_lift": 0.016574585635359115,
+      "quote_rate_lift": 0.015544041450777202,
       "ready": false
     },
     "reasons": [
@@ -105,19 +105,19 @@
     ],
     "recommendation": "Keep the strict active route as the execution route and run the high-ask challenger as a shadow route."
   },
-  "generated_at": "2026-06-16T09:27:04.872008+00:00",
+  "generated_at": "2026-06-16T10:11:54.841081+00:00",
   "routes": {
     "active": {
       "key": "active_late_depth_fair",
       "live": {
-        "inband_events": 181,
+        "inband_events": 193,
         "key": "active_late_depth_fair",
         "label": "Active: 55c-75c near-strike depth/fair maker",
         "path": "reports/live_paper_miss_diagnosis.json",
-        "quote_rate": 0.0055248618784530384,
+        "quote_rate": 0.0051813471502590676,
         "top_reasons": [
           {
-            "events": 111,
+            "events": 122,
             "reason": "ask_outside_route"
           },
           {
@@ -125,7 +125,7 @@
             "reason": "depth_imbalance_too_low"
           },
           {
-            "events": 49,
+            "events": 50,
             "reason": "distance_outside_route"
           },
           {
@@ -137,7 +137,7 @@
             "reason": "fair_edge_too_low"
           },
           {
-            "events": 987,
+            "events": 1054,
             "reason": "outside_time_window"
           },
           {
@@ -187,14 +187,14 @@
       }
     },
     "best_probe_live": {
-      "inband_events": 181,
+      "inband_events": 193,
       "key": "high_ask_depth_relaxed_probe",
       "label": "Probe: 75c-98c high-fair with -25% depth floor",
       "path": "reports/live_paper_miss_diagnosis.json",
-      "quote_rate": 0.027624309392265192,
+      "quote_rate": 0.025906735751295335,
       "top_reasons": [
         {
-          "events": 34,
+          "events": 40,
           "reason": "ask_outside_route"
         },
         {
@@ -202,7 +202,7 @@
           "reason": "complement_ask_sum_too_high"
         },
         {
-          "events": 58,
+          "events": 63,
           "reason": "depth_imbalance_too_low"
         },
         {
@@ -222,7 +222,7 @@
           "reason": "fair_edge_too_low"
         },
         {
-          "events": 15,
+          "events": 16,
           "reason": "missing_entry_price"
         }
       ],
@@ -232,14 +232,14 @@
     "challenger": {
       "key": "late_high_ask_fair_probe",
       "live": {
-        "inband_events": 181,
+        "inband_events": 193,
         "key": "late_high_ask_fair_probe",
         "label": "Challenger: 75c-98c high-fair maker probe",
         "path": "reports/live_paper_miss_diagnosis.json",
-        "quote_rate": 0.022099447513812154,
+        "quote_rate": 0.02072538860103627,
         "top_reasons": [
           {
-            "events": 34,
+            "events": 40,
             "reason": "ask_outside_route"
           },
           {
@@ -247,7 +247,7 @@
             "reason": "complement_ask_sum_too_high"
           },
           {
-            "events": 71,
+            "events": 76,
             "reason": "depth_imbalance_too_low"
           },
           {
@@ -267,7 +267,7 @@
             "reason": "fair_edge_too_low"
           },
           {
-            "events": 15,
+            "events": 16,
             "reason": "missing_entry_price"
           }
         ],
