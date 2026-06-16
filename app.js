@@ -29,8 +29,8 @@ const LIVE_PAPER_Y_EXPANSION_PAD = 1.24;
 const LIVE_PAPER_Y_BUCKET = 4;
 const LIVE_PAPER_RENDER_BUCKET_SECONDS = 0.075;
 const LIVE_BINANCE_RENDER_BUCKET_SECONDS = 0.2;
-const POLYMARKET_TRUTH_CURRENT_STALE_MS = 30000;
-const POLYMARKET_TRUTH_EVENT_STALE_MS = 45000;
+const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
+const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const LOCAL_BACKEND_BASE = window.POLYMARKET_BACKEND_BASE || "http://127.0.0.1:8788";
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
 const BACKEND_WS_SNAPSHOT_LIMIT = 3000;
@@ -2911,7 +2911,8 @@ function renderPaperDecisionGraph() {
   const realTruthSamples = truthSamples.filter((point) => point.row?.decision !== "chainlink_anchor");
   const latestTruth = realTruthSamples[realTruthSamples.length - 1] || null;
   const latestExternal = externalSamples[externalSamples.length - 1] || null;
-  const latest = latestTruth || latestExternal || allSamples[allSamples.length - 1];
+  const truthDisplaySample = freshestTruthDisplaySample(market, latestTruth, marketTruthPoint);
+  const latest = truthDisplaySample || latestExternal || latestTruth || allSamples[allSamples.length - 1];
   const latestDomainSample = allSamples[allSamples.length - 1];
   const latestElapsed = Number.isFinite(latestDomainSample.elapsedSeconds)
     ? latestDomainSample.elapsedSeconds
@@ -3060,7 +3061,6 @@ function renderPaperDecisionGraph() {
   const fairProbability = metricNumber(latestRaw.fair_probability);
   const fairEdge = metricNumber(latestRaw.fair_edge);
   const startPrice = metricNumber(startMeta?.price);
-  const truthDisplaySample = freshestTruthDisplaySample(market, latestTruth, marketTruthPoint);
   const currentPrice = metricNumber(truthDisplaySample?.btcPrice);
   const priceDifference = currentPrice !== null && startPrice !== null ? currentPrice - startPrice : null;
   const moveClass = moveToneClass(priceDifference);
