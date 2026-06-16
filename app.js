@@ -40,7 +40,7 @@ const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const LOCAL_BACKEND_BASE = configuredBackendBase();
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
 const BACKEND_WS_SNAPSHOT_LIMIT = 5000;
-const POLYMARKET_TRUTH_SOURCE = "polymarket_chainlink_crypto_prices";
+const POLYMARKET_TRUTH_SOURCE = "chainlink_data_streams";
 
 const state = {
   workflow: null,
@@ -310,8 +310,6 @@ function liveFeedLabel(row) {
   if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws_book")) return "Local backend book";
   if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws")) return "Local backend trade";
   if (String(row?.btc_price_venue || row?.btc_price_source || "").includes("chainlink_data_streams")) return "Chainlink Data Streams";
-  if (String(row?.btc_price_venue || row?.btc_price_source || "").includes("polymarket_rtds_crypto_prices_chainlink")) return "Polymarket Chainlink proxy";
-  if (String(row?.btc_price_venue || "").includes("polymarket_chainlink_proxy")) return "Polymarket Chainlink proxy";
   if (row?.decision === "live_tick") return "Local backend WS trade";
   if (row?.decision === "live_book_tick") return "Local backend WS book";
   return row?.btc_price_venue || row?.reason || "--";
@@ -608,6 +606,26 @@ function stableLiveLineSamples(samples, bucketSeconds = null) {
   if (first && output[0] !== first) output.unshift(first);
   if (last && output[output.length - 1] !== last) output.push(last);
   return output;
+}
+
+function latestRenderedLinePoint(...linePointGroups) {
+  return linePointGroups
+    .flat()
+    .filter((point) => (
+      point
+      && Number.isFinite(point.x)
+      && Number.isFinite(point.y)
+      && point.sample
+      && Number.isFinite(point.sample.elapsedSeconds)
+    ))
+    .sort((left, right) => {
+      if (left.sample.elapsedSeconds !== right.sample.elapsedSeconds) {
+        return left.sample.elapsedSeconds - right.sample.elapsedSeconds;
+      }
+      if (left.x !== right.x) return left.x - right.x;
+      return (left.sample.row?.receive_time_micro || 0) - (right.sample.row?.receive_time_micro || 0);
+    })
+    .at(-1) || null;
 }
 
 function nearestSampleByElapsed(samples, elapsedSeconds, maxGapSeconds = CHAINLINK_NEAREST_EXTERNAL_SECONDS) {
@@ -1121,12 +1139,15 @@ function currentWindowRow(row, fallbackKey = "") {
 }
 
 function compactPersistedRows(rows, maxRows) {
-  const currentRows = (rows || []).filter((row) => currentWindowRow(row)).slice(-maxRows);
+  const currentRows = (rows || []).filter((row) => currentWindowRow(row));
+  const keepRows = currentRows.length <= maxRows
+    ? currentRows
+    : [currentRows[0], ...currentRows.slice(-(maxRows - 1))];
   let keepBookIndex = -1;
-  currentRows.forEach((row, index) => {
+  keepRows.forEach((row, index) => {
     if (Array.isArray(row?.book_bids) || Array.isArray(row?.book_asks)) keepBookIndex = index;
   });
-  return currentRows.map((row, index) => compactPersistedRow(row, index === keepBookIndex));
+  return keepRows.map((row, index) => compactPersistedRow(row, index === keepBookIndex));
 }
 
 function currentMarketEntries(map) {
@@ -1371,10 +1392,12 @@ function rowUsesExternalBinancePrice(row) {
 function hasStrictPolymarketTruthPrice(row) {
   if (rowUsesExternalBinancePrice(row)) return false;
   const source = rowPriceSourceText(row);
-  return source.includes("polymarket")
-    || source.includes("chainlink")
-    || row?.price_role === "polymarket_truth"
-    || row?.btc_price_is_truth === true;
+  return isChainlinkDataStreamsSource(source)
+    && (
+      row?.btc_price_is_truth === true
+      || row?.backend_event_kind === "chainlink"
+      || row?.decision === "chainlink_tick"
+    );
 }
 
 function isPolymarketTruthPoint(row) {
@@ -1385,15 +1408,9 @@ function isChainlinkDataStreamsSource(source) {
   return String(source || "").toLowerCase().includes("chainlink_data_streams");
 }
 
-function isPolymarketChainlinkProxySource(source) {
-  const text = String(source || "").toLowerCase();
-  return text.includes("polymarket_rtds_crypto_prices_chainlink") || text.includes("polymarket_chainlink_proxy");
-}
-
 function chainlinkVenueFromSource(source) {
   if (isChainlinkDataStreamsSource(source)) return "chainlink_data_streams";
-  if (isPolymarketChainlinkProxySource(source)) return "polymarket_chainlink_proxy";
-  return "polymarket_chainlink";
+  return "unknown_chainlink_source";
 }
 
 function isChainlinkPriceRow(row) {
@@ -1407,9 +1424,7 @@ function chainlinkLineLabel(rows) {
     .map((row) => String(row?.btc_price_source || row?.btc_price_venue || row?.price_source || "").toLowerCase())
     .join(" ");
   if (text.includes("chainlink_data_streams")) return "Chainlink Data Streams";
-  if (text.includes("polymarket_rtds_crypto_prices_chainlink") || text.includes("polymarket_chainlink_proxy")) return "Polymarket Chainlink proxy";
-  if (text.includes("polymarket_chainlink")) return "Polymarket Chainlink";
-  return "Chainlink";
+  return "Chainlink Data Streams";
 }
 
 function truthRowReceiveTimeMicro(row) {
@@ -3038,16 +3053,13 @@ function startMetadataFromSource(source, fallbackSource = "paper_market_start") 
 }
 
 function isPolymarketTruthSource(source) {
-  const text = String(source || "").toLowerCase();
-  return text.includes("polymarket") || text.includes("chainlink");
+  return isChainlinkDataStreamsSource(source);
 }
 
 function startSourceLabel(source) {
   const text = String(source || "");
   if (!text) return "source unknown";
   if (isChainlinkDataStreamsSource(text)) return "Chainlink Data Streams";
-  if (isPolymarketChainlinkProxySource(text)) return "Polymarket Chainlink proxy";
-  if (isPolymarketTruthSource(text)) return "Polymarket Chainlink";
   if (text === "binance_ws_trade_at_window_start") return "Binance WS start tick";
   if (text === "polymarket_paper_event") return "paper capture";
   if (text.includes("binance.com")) return "Binance REST capture";
@@ -3275,15 +3287,10 @@ function renderPaperDecisionGraph() {
   const headCandidates = [...truthLineSamples, ...externalLineSamples]
     .filter((point) => point && Number.isFinite(point.elapsedSeconds) && Number.isFinite(point.dollarMove))
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
-  const renderedHeadCandidates = [...truthLinePoints, ...externalLinePoints]
-    .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y) && point.sample)
-    .sort((left, right) => {
-      if (left.x !== right.x) return left.x - right.x;
-      return Number(left.elapsedSeconds || 0) - Number(right.elapsedSeconds || 0);
-    });
-  const renderedHeadPoint = renderedHeadCandidates[renderedHeadCandidates.length - 1] || null;
+  const renderedTruthHeadPoint = latestRenderedLinePoint(truthLinePoints);
+  const renderedHeadPoint = renderedTruthHeadPoint;
   const headSample = selectedCurrent
-    ? (renderedHeadPoint?.sample || headCandidates[headCandidates.length - 1] || latest)
+    ? (renderedHeadPoint?.sample || displayedTruthSample || latest)
     : latest;
   const headX = renderedHeadPoint?.x ?? xForElapsed(headSample.elapsedSeconds);
   const headY = renderedHeadPoint?.y ?? yForDollarMove(headSample.dollarMove);
@@ -3406,7 +3413,8 @@ function renderPaperDecisionGraph() {
   const fairProbability = metricNumber(latestRaw.fair_probability);
   const fairEdge = metricNumber(latestRaw.fair_edge);
   const startPrice = metricNumber(startMeta?.price);
-  const currentPrice = metricNumber(truthDisplaySample?.btcPrice);
+  const currentDisplaySample = displayedTruthSample;
+  const currentPrice = metricNumber(currentDisplaySample?.btcPrice);
   const priceDifference = currentPrice !== null && startPrice !== null ? currentPrice - startPrice : null;
   const moveClass = moveToneClass(priceDifference);
   const upProbability = outcomeBookProbability(latestBookRaw || latestRaw, "up")
@@ -3719,8 +3727,7 @@ function chainlinkPointFromMarket(market) {
 function chainlinkReasonFromMarket(market) {
   const source = market?.btc_price_source || market?.price_source || market?.start_price_source;
   if (isChainlinkDataStreamsSource(source)) return "chainlink_data_streams";
-  if (isPolymarketChainlinkProxySource(source)) return "polymarket_rtds_chainlink_proxy";
-  return "polymarket_chainlink_current";
+  return "unknown_chainlink_source";
 }
 
 function rememberBackendStreamPoints(market, allPoints) {
@@ -3748,6 +3755,7 @@ function handleBackendStreamMessage(payload) {
       const latestPoint = externalPoints[externalPoints.length - 1];
       state.liveTickStatus.lastTickAt = new Date(Math.floor((pointTimestampMicro(latestPoint) || Date.now() * 1000) / 1000));
     }
+    flushPaperTickPersist();
     scheduleLiveTickRender();
     return;
   }
@@ -3761,6 +3769,7 @@ function handleBackendStreamMessage(payload) {
       lastStreamAt: new Date(),
       url: backendWebSocketUrl(),
     };
+    if (payload.type === "window") flushPaperTickPersist();
     scheduleLiveTickRender();
     return;
   }
