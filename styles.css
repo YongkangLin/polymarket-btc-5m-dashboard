@@ -531,15 +531,19 @@ svg {
 
 .paper-side-label {
   fill: var(--muted);
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 900;
   text-transform: uppercase;
 }
 
 .paper-side-value {
   fill: var(--ink);
-  font-size: 30px;
+  font-size: 24px;
   font-weight: 900;
+}
+
+.paper-side-value.is-inline {
+  font-size: 19px;
 }
 
 .paper-side-value.is-compact {
@@ -576,20 +580,20 @@ svg {
 
 .paper-position-status {
   fill: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
   text-transform: uppercase;
 }
 
 .paper-position-value {
   fill: var(--ink);
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 900;
 }
 
 .paper-position-detail {
   fill: var(--muted);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
 }
 

@@ -3645,10 +3645,10 @@ function renderPaperDecisionGraph() {
   }
 
   const compact = isCompactPaperChart();
-  const view = compact ? { width: 390, height: 430 } : { width: 980, height: 720 };
+  const view = compact ? { width: 390, height: 430 } : { width: 980, height: 540 };
   const plot = compact
     ? { left: 58, right: 16, top: 36, height: 280 }
-    : { left: 76, right: 306, top: 42, height: 420 };
+    : { left: 76, right: 306, top: 42, height: 360 };
   const plotWidth = view.width - plot.left - plot.right;
   const plotBottom = plot.top + plot.height;
   const realTruthSamples = truthSamples.filter((point) => point.row?.decision !== "chainlink_anchor");
@@ -3847,25 +3847,32 @@ function renderPaperDecisionGraph() {
     { label: "Capital", value: sessionCapital === null ? "--" : moneyCents.format(sessionCapital) },
     { label: "Session P&L", value: formatSignedMoney(sessionPnl), tone: sessionPnl === null ? "" : sessionPnl < 0 ? "move-down" : "move-up" },
   ];
-  const renderPanelMetric = (row, x, y, valueClass = "") => `
+  const renderPanelMetric = (row, x, y, options = {}) => {
+    const valueClass = options.valueClass || "";
+    if (options.inline) {
+      return `
+      <text class="paper-side-label" x="${x}" y="${y}">${escapeHtml(row.label)}</text>
+      <text class="paper-side-value is-inline ${row.tone || ""} ${valueClass}" x="${x + 226}" y="${y}" text-anchor="end">${escapeHtml(String(row.value))}</text>`;
+    }
+    return `
       <text class="paper-side-label" x="${x}" y="${y}">${escapeHtml(row.label)}</text>
       <text class="paper-side-value ${row.tone || ""} ${valueClass}" x="${x}" y="${y + 27}">${escapeHtml(String(row.value))}</text>`;
+  };
   const renderPanelSection = (title, top, height, rows, options = {}) => {
     const x = 716;
     const rowGap = options.rowGap || 48;
-    const valueClass = options.valueClass || "";
     return `
       <rect class="paper-side-section" x="708" y="${top}" width="242" height="${height}" rx="6"></rect>
       <text class="paper-side-section-title" x="${x}" y="${top + 22}">${escapeHtml(title)}</text>
-      ${rows.map((row, index) => renderPanelMetric(row, x, top + 50 + index * rowGap, valueClass)).join("")}`;
+      ${rows.map((row, index) => renderPanelMetric(row, x, top + 46 + index * rowGap, options)).join("")}`;
   };
   const renderPositionPanel = () => {
     const x = 716;
     return `
-      <rect class="paper-side-section is-positions" x="708" y="506" width="242" height="150" rx="6"></rect>
-      <text class="paper-side-section-title" x="${x}" y="528">POSITIONS</text>
+      <rect class="paper-side-section is-positions" x="708" y="358" width="242" height="112" rx="6"></rect>
+      <text class="paper-side-section-title" x="${x}" y="380">POSITIONS</text>
       ${positionRows.map((row, index) => {
-        const y = 558 + index * 38;
+        const y = 408 + index * 32;
         return `
           <text class="paper-position-status ${row.tone || ""}" x="${x}" y="${y}">${escapeHtml(row.label)}</text>
           <text class="paper-position-value ${row.tone || ""}" x="${x}" y="${y + 18}">${escapeHtml(compactNote(row.value, 24))}</text>
@@ -3873,9 +3880,9 @@ function renderPaperDecisionGraph() {
       }).join("")}`;
   };
   const infoRows = compact ? "" : `
-    <rect class="note-box" x="696" y="42" width="266" height="634" rx="6"></rect>
-    ${renderPanelSection("MARKET", 56, 282, marketMetrics)}
-    ${renderPanelSection("ACCOUNT", 352, 126, accountMetrics)}
+    <rect class="note-box" x="696" y="42" width="266" height="444" rx="6"></rect>
+    ${renderPanelSection("MARKET", 56, 190, marketMetrics, { rowGap: 33, inline: true })}
+    ${renderPanelSection("ACCOUNT", 258, 84, accountMetrics, { rowGap: 33, inline: true })}
     ${renderPositionPanel()}`;
   const mobileMetrics = [
     ...marketMetrics,
