@@ -29,9 +29,12 @@ const LIVE_PAPER_Y_EXPANSION_PAD = 1.24;
 const LIVE_PAPER_Y_BUCKET = 4;
 const LIVE_PAPER_RENDER_BUCKET_SECONDS = 0.075;
 const LIVE_BINANCE_RENDER_BUCKET_SECONDS = 0.12;
+const CHAINLINK_MAX_UNCONFIRMED_STEP_DOLLARS = 10;
+const CHAINLINK_MAX_STEP_RESIDUAL_DOLLARS = 8;
+const CHAINLINK_NEAREST_EXTERNAL_SECONDS = 2.5;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
-const LOCAL_BACKEND_BASE = window.POLYMARKET_BACKEND_BASE || "http://127.0.0.1:8788";
+const LOCAL_BACKEND_BASE = configuredBackendBase();
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
 const BACKEND_WS_SNAPSHOT_LIMIT = 1200;
 const POLYMARKET_TRUTH_SOURCE = "polymarket_chainlink_crypto_prices";
@@ -86,6 +89,20 @@ function byId(id) {
 
 function isCompactPaperChart() {
   return window.matchMedia("(max-width: 760px)").matches;
+}
+
+function configuredBackendBase() {
+  const params = new URLSearchParams(window.location.search || "");
+  const explicit = window.POLYMARKET_BACKEND_BASE
+    || params.get("backend")
+    || window.localStorage?.getItem("POLYMARKET_BACKEND_BASE");
+  if (explicit) return String(explicit).replace(/\/+$/, "");
+  const host = window.location.hostname;
+  const protocol = window.location.protocol === "https:" ? "https:" : "http:";
+  if (host && !["127.0.0.1", "localhost", "yongkanglin.github.io"].includes(host)) {
+    return `${protocol}//${host}:8788`;
+  }
+  return "http://127.0.0.1:8788";
 }
 
 function loadJson(path) {
@@ -577,6 +594,54 @@ function stableLiveLineSamples(samples, bucketSeconds = null) {
   if (first && output[0] !== first) output.unshift(first);
   if (last && output[output.length - 1] !== last) output.push(last);
   return output;
+}
+
+function nearestSampleByElapsed(samples, elapsedSeconds, maxGapSeconds = CHAINLINK_NEAREST_EXTERNAL_SECONDS) {
+  let best = null;
+  let bestGap = Number.POSITIVE_INFINITY;
+  (samples || []).forEach((sample) => {
+    if (!Number.isFinite(sample?.elapsedSeconds)) return;
+    const gap = Math.abs(sample.elapsedSeconds - elapsedSeconds);
+    if (gap <= maxGapSeconds && gap < bestGap) {
+      best = sample;
+      bestGap = gap;
+    }
+  });
+  return best;
+}
+
+function removeUnconfirmedChainlinkSpikes(samples, externalSamples) {
+  const rows = (samples || [])
+    .filter((sample) => sample && Number.isFinite(sample.elapsedSeconds) && Number.isFinite(sample.dollarMove))
+    .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
+  const output = [];
+  rows.forEach((sample) => {
+    if (sample.row?.decision === "chainlink_anchor" || !output.length) {
+      output.push(sample);
+      return;
+    }
+    const previous = output[output.length - 1];
+    const elapsedDelta = Math.max(1, sample.elapsedSeconds - previous.elapsedSeconds);
+    const chainStep = sample.dollarMove - previous.dollarMove;
+    const allowedUnconfirmed = CHAINLINK_MAX_UNCONFIRMED_STEP_DOLLARS * Math.sqrt(elapsedDelta);
+    if (Math.abs(chainStep) <= allowedUnconfirmed) {
+      output.push(sample);
+      return;
+    }
+    const externalNow = nearestSampleByElapsed(externalSamples, sample.elapsedSeconds);
+    const externalPrev = nearestSampleByElapsed(externalSamples, previous.elapsedSeconds);
+    const externalStep = externalNow && externalPrev
+      ? externalNow.dollarMove - externalPrev.dollarMove
+      : null;
+    const residual = externalStep === null ? Math.abs(chainStep) : Math.abs(chainStep - externalStep);
+    const allowedResidual = externalStep === null
+      ? allowedUnconfirmed * 2.5
+      : Math.max(CHAINLINK_MAX_STEP_RESIDUAL_DOLLARS, Math.abs(externalStep) * 3 + 4);
+    if (residual <= allowedResidual) {
+      output.push(sample);
+    }
+  });
+  return output.length >= 2 ? output : rows;
 }
 
 function sideKey(outcome) {
@@ -2996,10 +3061,11 @@ function renderPaperDecisionGraph() {
   const externalCandidates = priceRows.filter((row) => isExternalPricePoint(row) && !isPolymarketTruthPoint(row));
   const externalRows = externalLineRows(externalCandidates);
   const externalStartPrice = startMeta?.price ?? firstExternalStartPrice(externalRows);
-  const truthSamples = (startMeta ? paperGraphSamples(truthRows, startMeta.price, "chainlink") : [])
-    .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
   const externalSamples = paperGraphSamples(externalRows, externalStartPrice, "binance")
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
+  const rawTruthSamples = (startMeta ? paperGraphSamples(truthRows, startMeta.price, "chainlink") : [])
+    .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
+  const truthSamples = removeUnconfirmedChainlinkSpikes(rawTruthSamples, externalSamples);
   const allSamples = [...truthSamples, ...externalSamples]
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
 
@@ -3248,7 +3314,7 @@ function renderPaperChart(options = {}) {
     renderPaperDecisionGraph();
     return;
   }
-  renderValueBarChart(byId("paperChart"), paperStatusRows(), "No paper evidence yet.", "Live paper evidence so far");
+  byId("paperChart").innerHTML = `<div class="empty">Waiting for current BTC 5m market.</div>`;
 }
 
 function renderStatus() {
