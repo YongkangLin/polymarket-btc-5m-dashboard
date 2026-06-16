@@ -12,8 +12,8 @@ const LIVE_SOCKET_CONNECT_TIMEOUT_MS = 3500;
 const LIVE_TICK_RENDER_MAX_POINTS = 1200;
 const LIVE_TICK_PERSIST_MS = 1000;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 50000;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v3";
-const LEGACY_LIVE_TICK_STORE_KEYS = ["polymarketPaperLiveTicks.v2"];
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v4";
+const LEGACY_LIVE_TICK_STORE_KEYS = ["polymarketPaperLiveTicks.v2", "polymarketPaperLiveTicks.v3"];
 const LIVE_PAPER_X_WINDOW_SECONDS = 90;
 const LIVE_PAPER_X_LEAD_SECONDS = 12;
 const LIVE_PAPER_X_SCROLL_STEP_SECONDS = 1;
@@ -861,7 +861,7 @@ function persistPaperTicksNow() {
     const savedAt = new Date().toISOString();
     window.localStorage.setItem(
       LIVE_TICK_STORE_KEY,
-      JSON.stringify({ version: 3, saved_at: savedAt, markets }),
+      JSON.stringify({ version: 4, saved_at: savedAt, markets }),
     );
     state.paperStorageStatus = {
       state: "saved",
