@@ -428,6 +428,14 @@ svg {
   fill: var(--amber);
 }
 
+.dot.chainlink-anchor {
+  fill: var(--green);
+}
+
+.dot.external-anchor {
+  fill: var(--blue);
+}
+
 .dot.settlement {
   fill: #5a4aa0;
 }

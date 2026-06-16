@@ -1089,6 +1089,41 @@ function isExternalPricePoint(row) {
     || String(row?.external_btc_source || "").toLowerCase().includes("binance");
 }
 
+function isExternalBookPricePoint(row) {
+  return isExternalPricePoint(row) && row?.decision === "live_book_tick";
+}
+
+function isExternalTradePricePoint(row) {
+  return isExternalPricePoint(row) && row?.decision === "live_tick";
+}
+
+function externalLineRows(rows) {
+  const bookRows = (rows || []).filter((row) => isExternalBookPricePoint(row) && row?.backend_event_kind === "book");
+  if (bookRows.length >= 2) return bookRows;
+  const depthRows = (rows || []).filter((row) => isExternalBookPricePoint(row) && row?.backend_event_kind === "depth");
+  if (depthRows.length >= 2) return depthRows;
+  return (rows || []).filter(isExternalTradePricePoint);
+}
+
+function externalLineLabel(rows) {
+  const kinds = new Set((rows || []).map((row) => row?.backend_event_kind).filter(Boolean));
+  if (kinds.has("book")) return "Binance WSS book";
+  if (kinds.has("depth")) return "Binance WSS depth";
+  return "Binance WSS trades";
+}
+
+function firstExternalStartPrice(rows) {
+  const candidates = (rows || [])
+    .map((row) => ({ row, price: metricNumber(row?.btc_price), time: pointPlotTimestampMicro(row, "binance") }))
+    .filter((item) => item.price !== null)
+    .sort((left, right) => {
+      const leftTime = left.time ?? Number.MAX_SAFE_INTEGER;
+      const rightTime = right.time ?? Number.MAX_SAFE_INTEGER;
+      return leftTime - rightTime;
+    });
+  return candidates[0]?.price ?? null;
+}
+
 function backendBaseUrl() {
   return String(LOCAL_BACKEND_BASE || "").replace(/\/+$/, "");
 }
@@ -2683,22 +2718,26 @@ function renderPaperDecisionGraph() {
   const priceRows = rawPoints;
   const anchor = chainlinkAnchorRow(market, startMeta, 0);
   let truthRows = priceRows.filter(isPolymarketTruthPoint);
+  const marketTruthPoint = chainlinkPointFromMarket(market);
+  if (marketTruthPoint && !truthRows.some((row) => row.point_id === marketTruthPoint.point_id || row.event_time_micro === marketTruthPoint.event_time_micro)) {
+    truthRows = [...truthRows, marketTruthPoint];
+  }
   if (anchor && !truthRows.some((row) => Math.abs(paperPointElapsedSeconds(row, 0, 1)) < 0.001)) {
     truthRows = [anchor, ...truthRows];
   }
   const externalCandidates = priceRows.filter((row) => isExternalPricePoint(row) && !isPolymarketTruthPoint(row));
-  const externalTradeRows = externalCandidates.filter((row) => row.decision === "live_tick");
-  const externalRows = externalTradeRows;
-  const truthSamples = paperGraphSamples(truthRows, startMeta?.price, "chainlink")
+  const externalRows = externalLineRows(externalCandidates);
+  const externalStartPrice = startMeta?.price ?? firstExternalStartPrice(externalRows);
+  const truthSamples = (startMeta ? paperGraphSamples(truthRows, startMeta.price, "chainlink") : [])
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
-  const externalSamples = paperGraphSamples(externalRows, startMeta?.price, "binance")
+  const externalSamples = paperGraphSamples(externalRows, externalStartPrice, "binance")
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
   const allSamples = [...truthSamples, ...externalSamples]
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
 
   if (!allSamples.length) {
     const hasPrices = priceRows.some((row) => metricNumber(row?.btc_price) !== null);
-    chart.innerHTML = svgEmpty(hasPrices && !startMeta ? "Waiting for Chainlink start." : "No usable points.");
+    chart.innerHTML = svgEmpty(hasPrices && !startMeta ? "Waiting for Polymarket start." : "No usable points.");
     return;
   }
 
@@ -2715,6 +2754,9 @@ function renderPaperDecisionGraph() {
     ? latestDomainSample.elapsedSeconds
     : Math.max(0, 300 - latestDomainSample.secondsLeft);
   const xDomain = selectedCurrent ? livePaperXDomain(market, latestElapsed) : { min: 0, max: 300 };
+  if (selectedCurrent && Number.isFinite(latestTruth?.elapsedSeconds) && latestTruth.elapsedSeconds < xDomain.min) {
+    xDomain.min = Math.max(0, latestTruth.elapsedSeconds - 5);
+  }
   if (xDomain.max - xDomain.min < 1) xDomain.max = xDomain.min + 1;
   const samples = allSamples.filter((point) => point.elapsedSeconds >= xDomain.min && point.elapsedSeconds <= xDomain.max);
   const visibleSamples = samples.length ? samples : allSamples.slice(-1);
@@ -2822,13 +2864,21 @@ function renderPaperDecisionGraph() {
     ? `<path class="line line-external" d="${pathFrom(externalLinePoints)}"></path>`
     : "";
   const truthLabel = chainlinkLineLabel(truthRows);
+  const externalLabel = externalLineLabel(externalRows);
   const truthLegend = truthLinePoints.length
     ? `<text class="legend chainlink" x="${plot.left + 8}" y="${plot.top + 20}">${escapeHtml(truthLabel)}</text>`
     : "";
   const externalLegendX = plot.left + Math.min(220, 20 + truthLabel.length * 7);
   const externalLegend = externalLinePoints.length
-    ? `<text class="legend external" x="${externalLegendX}" y="${plot.top + 20}">Binance external</text>`
+    ? `<text class="legend external" x="${externalLegendX}" y="${plot.top + 20}">${escapeHtml(externalLabel)}</text>`
     : "";
+  const anchorDot = (points, className, label) => {
+    const point = points[0];
+    if (!point) return "";
+    return `<circle class="dot ${className}" cx="${point.x}" cy="${point.y}" r="4.8"><title>${escapeHtml(label)}</title></circle>`;
+  };
+  const chainlinkStartDot = anchorDot(truthLinePoints, "chainlink-anchor", `${truthLabel} open anchor`);
+  const externalStartDot = anchorDot(externalLinePoints, "external-anchor", `${externalLabel} open anchor`);
 
   const latestRaw = latest.row;
   const latestBookRaw = latestBookRowForMarket(market, rawPoints) || latestRaw;
@@ -2846,11 +2896,11 @@ function renderPaperDecisionGraph() {
     : (latestRaw.time_unix ? formatMicroTimestamp(Number(latestRaw.time_unix) * 1_000_000) : "--");
   const fairProbability = metricNumber(latestRaw.fair_probability);
   const fairEdge = metricNumber(latestRaw.fair_edge);
-  const startPrice = metricNumber(startMeta?.price ?? latestRaw.start_price ?? market.start_price);
+  const startPrice = metricNumber(startMeta?.price);
   const marketTruthCurrentPrice = marketUsesPolymarketTruthPrice(market)
     ? metricNumber(market.btc_price ?? market.latest_btc_price)
     : null;
-  const currentPrice = metricNumber(latestTruth?.btcPrice ?? marketTruthCurrentPrice);
+  const currentPrice = metricNumber(marketTruthCurrentPrice ?? latestTruth?.btcPrice);
   const priceDifference = currentPrice !== null && startPrice !== null ? currentPrice - startPrice : null;
   const moveClass = moveToneClass(priceDifference);
   const upProbability = outcomeBookProbability(latestBookRaw || latestRaw, "up")
@@ -2860,9 +2910,9 @@ function renderPaperDecisionGraph() {
     ?? metricNumber(market.market_down_probability ?? market.paper_down_probability ?? market.down_probability ?? market.latest_down_probability)
     ?? metricNumber(latestRaw.market_down_probability ?? latestRaw.paper_down_probability ?? latestRaw.down_probability);
   const infoRows = [
-    { label: "Start price", value: startPrice === null ? "--" : formatBookMoney(startPrice) },
-    { label: "Current price", value: currentPrice === null ? "--" : formatBookMoney(currentPrice) },
-    { label: "Difference", value: formatDollarMove(priceDifference), tone: moveClass },
+    { label: "Start price", value: startPrice === null ? "Waiting" : formatBookMoney(startPrice) },
+    { label: "Current price", value: currentPrice === null ? "Waiting" : formatBookMoney(currentPrice) },
+    { label: "Difference", value: priceDifference === null ? "Waiting" : formatDollarMove(priceDifference), tone: moveClass },
     { label: "Up percent", value: formatOutcomePercent(upProbability) },
     { label: "Down percent", value: formatOutcomePercent(downProbability) },
   ].map((row, index) => {
@@ -2873,7 +2923,7 @@ function renderPaperDecisionGraph() {
   }).join("");
   const latestTitle = [
     `latest ${Math.round(latest.elapsedSeconds)}s in`,
-    latest.source === "chainlink" ? truthLabel : "Binance external",
+    latest.source === "chainlink" ? truthLabel : externalLabel,
     `BTC ${formatBookMoney(latest.btcPrice)}`,
     formatDollarMove(latest.dollarMove),
     latest.source === "chainlink" && latestRaw.receive_time_micro
@@ -2893,6 +2943,8 @@ function renderPaperDecisionGraph() {
       ${yTicks}
       ${truthPath}
       ${externalPath}
+      ${chainlinkStartDot}
+      ${externalStartDot}
       ${truthLegend}
       ${externalLegend}
       ${eventDots}
@@ -3080,34 +3132,80 @@ function rememberBackendStreamMarket(market) {
     status: "backend_live",
   });
   recomputeLiveTickDistances(stored);
+  const chainlinkPoint = chainlinkPointFromMarket(stored);
+  if (chainlinkPoint) rememberObservedPaperMarket(stored, [chainlinkPoint], []);
   return stored;
+}
+
+function chainlinkPointFromMarket(market) {
+  if (!market || !isPolymarketTruthPoint(market)) return null;
+  const price = metricNumber(market.btc_price ?? market.latest_btc_price);
+  const windowStart = marketWindowStartUnix(market);
+  const startPrice = metricNumber(market.start_price);
+  if (price === null || windowStart === null || startPrice === null) return null;
+  const eventMicro = metricNumber(market.latest_chainlink_time_micro)
+    ?? metricNumber(market.event_time_micro)
+    ?? metricNumber(market.time_unix === undefined ? null : Number(market.time_unix) * 1_000_000)
+    ?? Date.now() * 1000;
+  const receiveMicro = metricNumber(market.latest_chainlink_receive_time_micro) ?? eventMicro;
+  return {
+    ...market,
+    decision: "chainlink_tick",
+    event_time_micro: eventMicro,
+    receive_time_micro: receiveMicro,
+    time_unix: eventMicro / 1_000_000,
+    generated_at: new Date(Math.floor(eventMicro / 1000)).toISOString(),
+    btc_price: price,
+    start_price: startPrice,
+    btc_price_is_truth: true,
+    truth_current_price_missing: false,
+    price_role: market.btc_price_venue || market.price_role || chainlinkVenueFromSource(market.btc_price_source || market.start_price_source),
+    btc_price_source: market.btc_price_source || market.start_price_source || POLYMARKET_TRUTH_SOURCE,
+    btc_price_venue: market.btc_price_venue || market.price_role || chainlinkVenueFromSource(market.btc_price_source || market.start_price_source),
+    reason: chainlinkReasonFromMarket(market),
+    backend_event_kind: "chainlink",
+    point_id: `backend:chainlink-current:${windowStart}:${eventMicro}:${price}`,
+  };
+}
+
+function chainlinkReasonFromMarket(market) {
+  const source = market?.btc_price_source || market?.price_source || market?.start_price_source;
+  if (isChainlinkDataStreamsSource(source)) return "chainlink_data_streams";
+  if (isPolymarketChainlinkProxySource(source)) return "polymarket_rtds_chainlink_proxy";
+  return "polymarket_chainlink_current";
+}
+
+function rememberBackendStreamPoints(market, allPoints) {
+  const points = Array.isArray(allPoints) ? allPoints : [];
+  const truthPoints = points.filter(isPolymarketTruthPoint);
+  const externalPoints = points.filter(isBinanceLivePoint);
+  if (truthPoints.length) rememberObservedPaperMarket(market || truthPoints[0], truthPoints, []);
+  externalPoints.forEach((point) => appendLiveBtcPoint(market || point, point));
+  return { truthPoints, externalPoints };
 }
 
 function handleBackendStreamMessage(payload) {
   if (!payload || typeof payload !== "object") return;
   if (payload.type === "snapshot") {
     const market = rememberBackendStreamMarket(payload.market);
-    const allPoints = Array.isArray(payload.points) ? payload.points : [];
-    const truthPoints = allPoints.filter(isPolymarketTruthPoint);
-    const points = allPoints.filter(isBinanceLivePoint);
-    if (truthPoints.length) rememberObservedPaperMarket(market || truthPoints[0], truthPoints, []);
-    points.forEach((point) => appendLiveBtcPoint(market || point, point));
+    const { externalPoints } = rememberBackendStreamPoints(market, payload.points);
     state.backendStatus = {
       state: "open",
       lastError: null,
       lastStreamAt: new Date(),
-      pointsLoaded: allPoints.length,
+      pointsLoaded: Array.isArray(payload.points) ? payload.points.length : 0,
       url: backendWebSocketUrl(),
     };
-    if (points.length) {
-      const latestPoint = points[points.length - 1];
+    if (externalPoints.length) {
+      const latestPoint = externalPoints[externalPoints.length - 1];
       state.liveTickStatus.lastTickAt = new Date(Math.floor((pointTimestampMicro(latestPoint) || Date.now() * 1000) / 1000));
     }
     scheduleLiveTickRender();
     return;
   }
   if (payload.type === "window" || payload.type === "heartbeat") {
-    rememberBackendStreamMarket(payload.market);
+    const market = rememberBackendStreamMarket(payload.market);
+    rememberBackendStreamPoints(market, payload.points);
     state.backendStatus = {
       ...state.backendStatus,
       state: "open",
@@ -3121,6 +3219,7 @@ function handleBackendStreamMessage(payload) {
   if (payload.type !== "tick") return;
   const point = payload.point;
   const market = rememberBackendStreamMarket(payload.market || point) || point;
+  rememberBackendStreamPoints(market, payload.points);
   if (isPolymarketTruthPoint(point)) {
     rememberObservedPaperMarket(market, [point], []);
     state.backendStatus = {
