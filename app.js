@@ -29,6 +29,7 @@ const LIVE_PAPER_Y_EXPANSION_PAD = 1.24;
 const LIVE_PAPER_Y_BUCKET = 4;
 const LIVE_PAPER_RENDER_BUCKET_SECONDS = 0.075;
 const LIVE_BINANCE_RENDER_BUCKET_SECONDS = 0.2;
+const POLYMARKET_TRUTH_CURRENT_STALE_MS = 5000;
 const LOCAL_BACKEND_BASE = window.POLYMARKET_BACKEND_BASE || "http://127.0.0.1:8787";
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
 const BACKEND_WS_SNAPSHOT_LIMIT = 3000;
@@ -1080,6 +1081,47 @@ function chainlinkLineLabel(rows) {
   if (text.includes("polymarket_rtds_crypto_prices_chainlink") || text.includes("polymarket_chainlink_proxy")) return "Polymarket Chainlink proxy";
   if (text.includes("polymarket_chainlink")) return "Polymarket Chainlink";
   return "Chainlink";
+}
+
+function truthRowReceiveTimeMicro(row) {
+  return metricNumber(row?.latest_chainlink_receive_time_micro ?? row?.receive_time_micro ?? row?.event_time_micro ?? row?.time_unix);
+}
+
+function normalizedTruthRowReceiveTimeMicro(row) {
+  const receiveMicro = truthRowReceiveTimeMicro(row);
+  if (receiveMicro === null) return null;
+  return receiveMicro < 10_000_000_000 ? receiveMicro * 1_000_000 : receiveMicro;
+}
+
+function truthRowFreshnessMs(row) {
+  const normalizedMicro = normalizedTruthRowReceiveTimeMicro(row);
+  if (normalizedMicro === null) return null;
+  return Math.max(0, Date.now() - normalizedMicro / 1000);
+}
+
+function isFreshTruthRow(row) {
+  const ageMs = truthRowFreshnessMs(row);
+  return ageMs === null || ageMs <= POLYMARKET_TRUTH_CURRENT_STALE_MS;
+}
+
+function freshestTruthDisplaySample(market, latestTruthSample, marketTruthPoint) {
+  const candidates = [
+    latestTruthSample,
+    marketTruthPoint ? {
+      row: marketTruthPoint,
+      btcPrice: metricNumber(marketTruthPoint.btc_price ?? marketTruthPoint.latest_btc_price),
+      elapsedSeconds: paperPointElapsedSeconds(marketTruthPoint),
+      secondsLeft: paperPointSecondsLeft(marketTruthPoint),
+      dollarMove: paperDollarMoveFromStart(marketTruthPoint, metricNumber(market?.start_price)),
+      source: "chainlink",
+    } : null,
+  ].filter((sample) => sample && sample.btcPrice !== null && isFreshTruthRow(sample.row));
+  if (!candidates.length) return null;
+  return candidates.sort((left, right) => {
+    const leftTime = normalizedTruthRowReceiveTimeMicro(left.row) ?? 0;
+    const rightTime = normalizedTruthRowReceiveTimeMicro(right.row) ?? 0;
+    return rightTime - leftTime;
+  })[0];
 }
 
 function isExternalPricePoint(row) {
@@ -2897,10 +2939,8 @@ function renderPaperDecisionGraph() {
   const fairProbability = metricNumber(latestRaw.fair_probability);
   const fairEdge = metricNumber(latestRaw.fair_edge);
   const startPrice = metricNumber(startMeta?.price);
-  const marketTruthCurrentPrice = marketUsesPolymarketTruthPrice(market)
-    ? metricNumber(market.btc_price ?? market.latest_btc_price)
-    : null;
-  const currentPrice = metricNumber(marketTruthCurrentPrice ?? latestTruth?.btcPrice);
+  const truthDisplaySample = freshestTruthDisplaySample(market, latestTruth, marketTruthPoint);
+  const currentPrice = metricNumber(truthDisplaySample?.btcPrice);
   const priceDifference = currentPrice !== null && startPrice !== null ? currentPrice - startPrice : null;
   const moveClass = moveToneClass(priceDifference);
   const upProbability = outcomeBookProbability(latestBookRaw || latestRaw, "up")
