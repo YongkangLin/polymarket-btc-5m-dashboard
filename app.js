@@ -1193,18 +1193,54 @@ function isFreshTruthRow(row) {
   return receiveAge === null || receiveAge <= POLYMARKET_TRUTH_CURRENT_STALE_MS;
 }
 
-function freshestTruthDisplaySample(market, latestTruthSample, marketTruthPoint) {
+function truthSampleWindowStart(sample) {
+  return sample?.row ? marketWindowStartUnix(sample.row) : null;
+}
+
+function truthSampleMatchesMarket(sample, market) {
+  const marketStart = marketWindowStartUnix(market);
+  const sampleStart = truthSampleWindowStart(sample);
+  return marketStart === null || sampleStart === null || marketStart === sampleStart;
+}
+
+function truthDisplayCandidateFromRow(market, row) {
+  if (!row) return null;
+  return {
+    row,
+    btcPrice: metricNumber(row.btc_price ?? row.latest_btc_price),
+    elapsedSeconds: paperPointElapsedSeconds(row),
+    secondsLeft: paperPointSecondsLeft(row),
+    dollarMove: paperDollarMoveFromStart(row, metricNumber(market?.start_price)),
+    source: "chainlink",
+  };
+}
+
+function freshestTruthDisplaySample(market, truthSamples, marketTruthPoint) {
   const candidates = [
-    latestTruthSample,
-    marketTruthPoint ? {
-      row: marketTruthPoint,
-      btcPrice: metricNumber(marketTruthPoint.btc_price ?? marketTruthPoint.latest_btc_price),
-      elapsedSeconds: paperPointElapsedSeconds(marketTruthPoint),
-      secondsLeft: paperPointSecondsLeft(marketTruthPoint),
-      dollarMove: paperDollarMoveFromStart(marketTruthPoint, metricNumber(market?.start_price)),
-      source: "chainlink",
-    } : null,
-  ].filter((sample) => sample && sample.btcPrice !== null && isFreshTruthRow(sample.row));
+    ...(Array.isArray(truthSamples) ? truthSamples : [truthSamples]),
+    truthDisplayCandidateFromRow(market, marketTruthPoint),
+  ].filter((sample) => (
+    sample
+    && sample.btcPrice !== null
+    && truthSampleMatchesMarket(sample, market)
+    && isFreshTruthRow(sample.row)
+  ));
+  if (!candidates.length) return null;
+  return candidates.sort((left, right) => {
+    const leftEventTime = normalizedTruthRowEventTimeMicro(left.row) ?? 0;
+    const rightEventTime = normalizedTruthRowEventTimeMicro(right.row) ?? 0;
+    if (rightEventTime !== leftEventTime) return rightEventTime - leftEventTime;
+    const leftReceiveTime = normalizedTruthRowReceiveTimeMicro(left.row) ?? 0;
+    const rightReceiveTime = normalizedTruthRowReceiveTimeMicro(right.row) ?? 0;
+    return rightReceiveTime - leftReceiveTime;
+  })[0];
+}
+
+function fallbackTruthDisplaySample(market, truthSamples, marketTruthPoint) {
+  const candidates = [
+    ...(Array.isArray(truthSamples) ? truthSamples : [truthSamples]),
+    truthDisplayCandidateFromRow(market, marketTruthPoint),
+  ].filter((sample) => sample && sample.btcPrice !== null && truthSampleMatchesMarket(sample, market));
   if (!candidates.length) return null;
   return candidates.sort((left, right) => {
     const leftEventTime = normalizedTruthRowEventTimeMicro(left.row) ?? 0;
@@ -2911,8 +2947,9 @@ function renderPaperDecisionGraph() {
   const realTruthSamples = truthSamples.filter((point) => point.row?.decision !== "chainlink_anchor");
   const latestTruth = realTruthSamples[realTruthSamples.length - 1] || null;
   const latestExternal = externalSamples[externalSamples.length - 1] || null;
-  const truthDisplaySample = freshestTruthDisplaySample(market, latestTruth, marketTruthPoint);
-  const displayedTruthSample = truthDisplaySample || latestTruth;
+  const truthDisplaySample = freshestTruthDisplaySample(market, realTruthSamples, marketTruthPoint);
+  const staleTruthSample = fallbackTruthDisplaySample(market, realTruthSamples, marketTruthPoint);
+  const displayedTruthSample = truthDisplaySample || staleTruthSample;
   const latest = displayedTruthSample || latestExternal || allSamples[allSamples.length - 1];
   const latestDomainSample = allSamples[allSamples.length - 1];
   const latestElapsed = Number.isFinite(latestDomainSample.elapsedSeconds)
@@ -3062,7 +3099,7 @@ function renderPaperDecisionGraph() {
   const fairProbability = metricNumber(latestRaw.fair_probability);
   const fairEdge = metricNumber(latestRaw.fair_edge);
   const startPrice = metricNumber(startMeta?.price);
-  const currentPrice = metricNumber(displayedTruthSample?.btcPrice);
+  const currentPrice = metricNumber(truthDisplaySample?.btcPrice);
   const priceDifference = currentPrice !== null && startPrice !== null ? currentPrice - startPrice : null;
   const moveClass = moveToneClass(priceDifference);
   const upProbability = outcomeBookProbability(latestBookRaw || latestRaw, "up")
