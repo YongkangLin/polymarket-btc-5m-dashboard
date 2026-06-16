@@ -1,0 +1,328 @@
+{
+  "decision": {
+    "active_historical_gate": {
+      "checks": [
+        {
+          "id": "maker_route_ready",
+          "passed": true
+        },
+        {
+          "id": "test_fill_rate",
+          "passed": true
+        },
+        {
+          "id": "test_roi",
+          "passed": true
+        },
+        {
+          "id": "walkforward_days",
+          "passed": true
+        },
+        {
+          "id": "walkforward_signals",
+          "passed": true
+        },
+        {
+          "id": "walkforward_positive_days",
+          "passed": true
+        },
+        {
+          "id": "walkforward_roi",
+          "passed": true
+        },
+        {
+          "id": "walkforward_lift",
+          "passed": true
+        }
+      ],
+      "ready": true
+    },
+    "challenger_historical_gate": {
+      "checks": [
+        {
+          "id": "maker_route_ready",
+          "passed": true
+        },
+        {
+          "id": "test_fill_rate",
+          "passed": true
+        },
+        {
+          "id": "test_roi",
+          "passed": true
+        },
+        {
+          "id": "walkforward_days",
+          "passed": true
+        },
+        {
+          "id": "walkforward_signals",
+          "passed": true
+        },
+        {
+          "id": "walkforward_positive_days",
+          "passed": true
+        },
+        {
+          "id": "walkforward_roi",
+          "passed": true
+        },
+        {
+          "id": "walkforward_lift",
+          "passed": true
+        }
+      ],
+      "ready": true
+    },
+    "decision": "shadow_challenger",
+    "promotion_gate": {
+      "checks": [
+        {
+          "id": "challenger_historical_ready",
+          "passed": true
+        },
+        {
+          "id": "live_would_quote_events",
+          "passed": false
+        },
+        {
+          "id": "live_would_quote_markets",
+          "passed": false
+        },
+        {
+          "id": "live_quote_rate_lift",
+          "passed": true
+        }
+      ],
+      "quote_rate_lift": 0.016574585635359115,
+      "ready": false
+    },
+    "reasons": [
+      "Active route still passes historical maker route and walkforward gates.",
+      "Challenger route passes historical gates, so it is worth shadowing.",
+      "Live challenger evidence is too small for promotion: 4 would-quote events across 1 markets.",
+      "The broader high-ask depth-relaxed probe fires slightly more live, but it is a probe, not a route, until backtested."
+    ],
+    "recommendation": "Keep the strict active route as the execution route and run the high-ask challenger as a shadow route."
+  },
+  "generated_at": "2026-06-16T09:27:04.872008+00:00",
+  "routes": {
+    "active": {
+      "key": "active_late_depth_fair",
+      "live": {
+        "inband_events": 181,
+        "key": "active_late_depth_fair",
+        "label": "Active: 55c-75c near-strike depth/fair maker",
+        "path": "reports/live_paper_miss_diagnosis.json",
+        "quote_rate": 0.0055248618784530384,
+        "top_reasons": [
+          {
+            "events": 111,
+            "reason": "ask_outside_route"
+          },
+          {
+            "events": 14,
+            "reason": "depth_imbalance_too_low"
+          },
+          {
+            "events": 49,
+            "reason": "distance_outside_route"
+          },
+          {
+            "events": 3,
+            "reason": "external_book_support_too_low"
+          },
+          {
+            "events": 3,
+            "reason": "fair_edge_too_low"
+          },
+          {
+            "events": 987,
+            "reason": "outside_time_window"
+          },
+          {
+            "events": 1,
+            "reason": "would_quote"
+          }
+        ],
+        "would_quote_events": 1,
+        "would_quote_markets": 1
+      },
+      "selected": {
+        "maker_route_ready": true,
+        "path": "reports/btc_5m_late_depth_fair_clean_maker_routes.json",
+        "roi_lift_vs_always_taker": 0.08820321,
+        "route_id": "maker_two_below_ask_h60",
+        "route_label": "Maker 2c below ask for 60s",
+        "strategy_id": "dominant_late_depth_fair_clean",
+        "test_fill_rate": 0.86476868,
+        "test_fills": 243,
+        "test_roi_on_filled_cost": 0.10978566,
+        "test_roi_on_planned_cost": 0.09467902,
+        "test_signals": 281,
+        "walkforward_fills": 593,
+        "walkforward_positive_day_rate": 0.71428571,
+        "walkforward_roi_lift_vs_always_taker": 0.07511504,
+        "walkforward_roi_on_planned_cost": 0.08227768,
+        "walkforward_signals": 653
+      },
+      "walkforward": {
+        "avg_day_roi_on_planned_cost": 0.15554259571428572,
+        "avg_roi_lift_vs_always_taker": 0.10554609285714286,
+        "days": 14,
+        "fill_rate": 0.9081163859111792,
+        "filled_cost": 14808.35161014,
+        "fills": 593,
+        "median_day_roi_on_planned_cost": 0.115339425,
+        "min_day_roi_on_planned_cost": -0.10554633,
+        "path": "reports/btc_5m_late_depth_fair_clean_maker_route_walkforward.csv",
+        "planned_cost": 16325.0,
+        "pnl_dollars": 1343.18313995,
+        "portfolio_roi_lift_vs_always_taker": 0.0751150448949464,
+        "positive_day_rate": 0.7142857142857143,
+        "positive_days": 10,
+        "roi_on_filled_cost": 0.0907044332355167,
+        "roi_on_planned_cost": 0.0822776808545176,
+        "signals": 653
+      }
+    },
+    "best_probe_live": {
+      "inband_events": 181,
+      "key": "high_ask_depth_relaxed_probe",
+      "label": "Probe: 75c-98c high-fair with -25% depth floor",
+      "path": "reports/live_paper_miss_diagnosis.json",
+      "quote_rate": 0.027624309392265192,
+      "top_reasons": [
+        {
+          "events": 34,
+          "reason": "ask_outside_route"
+        },
+        {
+          "events": 6,
+          "reason": "complement_ask_sum_too_high"
+        },
+        {
+          "events": 58,
+          "reason": "depth_imbalance_too_low"
+        },
+        {
+          "events": 34,
+          "reason": "distance_outside_route"
+        },
+        {
+          "events": 4,
+          "reason": "external_book_not_collected"
+        },
+        {
+          "events": 2,
+          "reason": "external_book_support_too_low"
+        },
+        {
+          "events": 23,
+          "reason": "fair_edge_too_low"
+        },
+        {
+          "events": 15,
+          "reason": "missing_entry_price"
+        }
+      ],
+      "would_quote_events": 5,
+      "would_quote_markets": 2
+    },
+    "challenger": {
+      "key": "late_high_ask_fair_probe",
+      "live": {
+        "inband_events": 181,
+        "key": "late_high_ask_fair_probe",
+        "label": "Challenger: 75c-98c high-fair maker probe",
+        "path": "reports/live_paper_miss_diagnosis.json",
+        "quote_rate": 0.022099447513812154,
+        "top_reasons": [
+          {
+            "events": 34,
+            "reason": "ask_outside_route"
+          },
+          {
+            "events": 4,
+            "reason": "complement_ask_sum_too_high"
+          },
+          {
+            "events": 71,
+            "reason": "depth_imbalance_too_low"
+          },
+          {
+            "events": 34,
+            "reason": "distance_outside_route"
+          },
+          {
+            "events": 2,
+            "reason": "external_book_not_collected"
+          },
+          {
+            "events": 1,
+            "reason": "external_book_support_too_low"
+          },
+          {
+            "events": 16,
+            "reason": "fair_edge_too_low"
+          },
+          {
+            "events": 15,
+            "reason": "missing_entry_price"
+          }
+        ],
+        "would_quote_events": 4,
+        "would_quote_markets": 1
+      },
+      "selected": {
+        "maker_route_ready": true,
+        "path": "reports/btc_5m_high_ask_fair_probe_maker_routes.json",
+        "roi_lift_vs_always_taker": 0.05255772,
+        "route_id": "maker_two_below_ask_h60",
+        "route_label": "Maker 2c below ask for 60s",
+        "strategy_id": "dominant_late_high_ask_fair_probe",
+        "test_fill_rate": 0.84511785,
+        "test_fills": 251,
+        "test_roi_on_filled_cost": 0.03788551,
+        "test_roi_on_planned_cost": 0.03194094,
+        "test_signals": 297,
+        "walkforward_fills": 644,
+        "walkforward_positive_day_rate": 0.93333333,
+        "walkforward_roi_lift_vs_always_taker": 0.04706338,
+        "walkforward_roi_on_planned_cost": 0.06178588,
+        "walkforward_signals": 729
+      },
+      "walkforward": {
+        "avg_day_roi_on_planned_cost": 0.11782098066666666,
+        "avg_roi_lift_vs_always_taker": 0.047244815999999995,
+        "days": 15,
+        "fill_rate": 0.8834019204389575,
+        "filled_cost": 16066.80602724,
+        "fills": 644,
+        "median_day_roi_on_planned_cost": 0.10079864,
+        "min_day_roi_on_planned_cost": -0.00148901,
+        "path": "reports/btc_5m_high_ask_fair_probe_maker_route_walkforward.csv",
+        "planned_cost": 18225.0,
+        "pnl_dollars": 1126.04766039,
+        "portfolio_roi_lift_vs_always_taker": 0.04706338225349794,
+        "positive_day_rate": 0.9333333333333333,
+        "positive_days": 14,
+        "roi_on_filled_cost": 0.07008534605327749,
+        "roi_on_planned_cost": 0.06178587985679012,
+        "signals": 729
+      }
+    }
+  },
+  "thresholds": {
+    "min_live_quote_rate_lift": 0.01,
+    "min_live_would_quote_events": 30,
+    "min_live_would_quote_markets": 10,
+    "min_test_fill_rate": 0.6,
+    "min_test_roi_on_planned_cost": 0.03,
+    "min_walkforward_days": 10,
+    "min_walkforward_positive_day_rate": 0.7,
+    "min_walkforward_roi_lift_vs_always_taker": 0.02,
+    "min_walkforward_roi_on_planned_cost": 0.03,
+    "min_walkforward_signals": 300
+  }
+}
