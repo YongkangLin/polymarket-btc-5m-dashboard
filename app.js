@@ -30,6 +30,7 @@ const LIVE_PAPER_Y_BUCKET = 4;
 const LIVE_PAPER_RENDER_BUCKET_SECONDS = 0.075;
 const LIVE_BINANCE_RENDER_BUCKET_SECONDS = 0.2;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 5000;
+const POLYMARKET_TRUTH_EVENT_STALE_MS = 15000;
 const LOCAL_BACKEND_BASE = window.POLYMARKET_BACKEND_BASE || "http://127.0.0.1:8787";
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
 const BACKEND_WS_SNAPSHOT_LIMIT = 3000;
@@ -1097,21 +1098,41 @@ function truthRowReceiveTimeMicro(row) {
   return metricNumber(row?.latest_chainlink_receive_time_micro ?? row?.receive_time_micro ?? row?.event_time_micro ?? row?.time_unix);
 }
 
+function truthRowEventTimeMicro(row) {
+  const explicit = metricNumber(row?.latest_chainlink_time_micro ?? row?.event_time_micro);
+  if (explicit !== null) return explicit;
+  const seconds = metricNumber(row?.time_unix);
+  return seconds === null ? null : seconds * 1_000_000;
+}
+
+function normalizedTruthMicro(value) {
+  if (value === null) return null;
+  return value < 10_000_000_000 ? value * 1_000_000 : value;
+}
+
 function normalizedTruthRowReceiveTimeMicro(row) {
-  const receiveMicro = truthRowReceiveTimeMicro(row);
-  if (receiveMicro === null) return null;
-  return receiveMicro < 10_000_000_000 ? receiveMicro * 1_000_000 : receiveMicro;
+  return normalizedTruthMicro(truthRowReceiveTimeMicro(row));
+}
+
+function normalizedTruthRowEventTimeMicro(row) {
+  return normalizedTruthMicro(truthRowEventTimeMicro(row));
 }
 
 function truthRowFreshnessMs(row) {
-  const normalizedMicro = normalizedTruthRowReceiveTimeMicro(row);
-  if (normalizedMicro === null) return null;
-  return Math.max(0, Date.now() - normalizedMicro / 1000);
+  const eventMicro = normalizedTruthRowEventTimeMicro(row);
+  const receiveMicro = normalizedTruthRowReceiveTimeMicro(row);
+  const eventAge = eventMicro === null ? null : Math.max(0, Date.now() - eventMicro / 1000);
+  const receiveAge = receiveMicro === null ? null : Math.max(0, Date.now() - receiveMicro / 1000);
+  return eventAge ?? receiveAge;
 }
 
 function isFreshTruthRow(row) {
-  const ageMs = truthRowFreshnessMs(row);
-  return ageMs === null || ageMs <= POLYMARKET_TRUTH_CURRENT_STALE_MS;
+  const eventMicro = normalizedTruthRowEventTimeMicro(row);
+  const receiveMicro = normalizedTruthRowReceiveTimeMicro(row);
+  const eventAge = eventMicro === null ? null : Math.max(0, Date.now() - eventMicro / 1000);
+  const receiveAge = receiveMicro === null ? null : Math.max(0, Date.now() - receiveMicro / 1000);
+  if (eventAge !== null && eventAge > POLYMARKET_TRUTH_EVENT_STALE_MS) return false;
+  return receiveAge === null || receiveAge <= POLYMARKET_TRUTH_CURRENT_STALE_MS;
 }
 
 function freshestTruthDisplaySample(market, latestTruthSample, marketTruthPoint) {
@@ -1128,9 +1149,12 @@ function freshestTruthDisplaySample(market, latestTruthSample, marketTruthPoint)
   ].filter((sample) => sample && sample.btcPrice !== null && isFreshTruthRow(sample.row));
   if (!candidates.length) return null;
   return candidates.sort((left, right) => {
-    const leftTime = normalizedTruthRowReceiveTimeMicro(left.row) ?? 0;
-    const rightTime = normalizedTruthRowReceiveTimeMicro(right.row) ?? 0;
-    return rightTime - leftTime;
+    const leftEventTime = normalizedTruthRowEventTimeMicro(left.row) ?? 0;
+    const rightEventTime = normalizedTruthRowEventTimeMicro(right.row) ?? 0;
+    if (rightEventTime !== leftEventTime) return rightEventTime - leftEventTime;
+    const leftReceiveTime = normalizedTruthRowReceiveTimeMicro(left.row) ?? 0;
+    const rightReceiveTime = normalizedTruthRowReceiveTimeMicro(right.row) ?? 0;
+    return rightReceiveTime - leftReceiveTime;
   })[0];
 }
 
@@ -1539,8 +1563,29 @@ function strategyCell(title, body) {
     </div>`;
 }
 
+function paperMissRoute() {
+  const routes = state.workflow?.paper_trade?.miss_diagnosis?.routes || [];
+  return routes.find((route) => route.key === "active_late_depth_fair") || routes[0] || null;
+}
+
+function paperMissFiringText(route) {
+  if (!route) return "Collecting";
+  const inband = Number(route.inband_events || 0);
+  const quotes = Number(route.would_quote_events || 0);
+  if (!inband) return "Waiting";
+  return `${fmt.format(quotes)}/${fmt.format(inband)} in-window`;
+}
+
+function paperMissBlockerText(route) {
+  const blocker = (route?.top_blockers || []).find((row) => row.reason !== "outside_time_window")
+    || (route?.top_blockers || [])[0];
+  if (!blocker) return "Collecting";
+  return `${rejectReasonLabel(blocker.reason)} ${fmt.format(blocker.events || 0)}`;
+}
+
 function renderStrategyPanels() {
   const paperSummary = state.workflow.paper_trade.summary || {};
+  const missRoute = paperMissRoute();
   const policy = state.workflow.live_trade.execution_policy || {};
   const routeLabel = paperSummary.maker_route_label || policy.selected_route_label || "Maker 2c below ask for 60s";
   const bookChecks = Number(paperSummary.external_book_checks || 0);
@@ -1554,9 +1599,9 @@ function renderStrategyPanels() {
     strategyCell("Fill", "$25 ask buy, hold, -2c"),
   ].join("");
   byId("paperStrategy").innerHTML = [
-    strategyCell("Rule", "Same as backtest"),
-    strategyCell("Book", depthSupportText),
     strategyCell("Route", routeLabel),
+    strategyCell("Firing", paperMissFiringText(missRoute)),
+    strategyCell("Blocker", missRoute ? paperMissBlockerText(missRoute) : depthSupportText),
   ].join("");
   byId("liveStrategy").innerHTML = [
     strategyCell("Status", liveStatus),
