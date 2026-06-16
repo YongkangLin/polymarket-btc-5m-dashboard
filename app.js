@@ -1227,6 +1227,14 @@ function schedulePaperTickPersist() {
   }, LIVE_TICK_PERSIST_MS);
 }
 
+function flushPaperTickPersist() {
+  if (liveTickPersistTimer) {
+    window.clearTimeout(liveTickPersistTimer);
+    liveTickPersistTimer = null;
+  }
+  persistPaperTicksNow();
+}
+
 function isCurrentPaperMarket(market) {
   const clockState = marketClockState(market);
   if (clockState !== null) return clockState === "open";
@@ -3255,15 +3263,30 @@ function renderPaperDecisionGraph() {
   const truthLinePoints = compressLinePoints(truthLineSamples.map((point) => ({
     x: xForElapsed(point.elapsedSeconds),
     y: yForDollarMove(point.dollarMove),
+    sample: point,
+    elapsedSeconds: point.elapsedSeconds,
   })));
   const externalLinePoints = compressLinePoints(externalLineSamples.map((point) => ({
     x: xForElapsed(point.elapsedSeconds),
     y: yForDollarMove(point.dollarMove),
+    sample: point,
+    elapsedSeconds: point.elapsedSeconds,
   })));
   const headCandidates = [...truthLineSamples, ...externalLineSamples]
     .filter((point) => point && Number.isFinite(point.elapsedSeconds) && Number.isFinite(point.dollarMove))
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
-  const headSample = selectedCurrent ? (headCandidates[headCandidates.length - 1] || latest) : latest;
+  const renderedHeadCandidates = [...truthLinePoints, ...externalLinePoints]
+    .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y) && point.sample)
+    .sort((left, right) => {
+      if (left.x !== right.x) return left.x - right.x;
+      return Number(left.elapsedSeconds || 0) - Number(right.elapsedSeconds || 0);
+    });
+  const renderedHeadPoint = renderedHeadCandidates[renderedHeadCandidates.length - 1] || null;
+  const headSample = selectedCurrent
+    ? (renderedHeadPoint?.sample || headCandidates[headCandidates.length - 1] || latest)
+    : latest;
+  const headX = renderedHeadPoint?.x ?? xForElapsed(headSample.elapsedSeconds);
+  const headY = renderedHeadPoint?.y ?? yForDollarMove(headSample.dollarMove);
   const rule = activeRule();
   const bandRect = (startElapsed, endElapsed, className) => {
     const left = Math.max(xDomain.min, Math.min(startElapsed, endElapsed));
@@ -3439,8 +3462,8 @@ function renderPaperDecisionGraph() {
       ${truthLegend}
       ${externalLegend}
       ${eventDots}
-      <line class="paper-latest-line" x1="${xForElapsed(headSample.elapsedSeconds)}" y1="${plot.top}" x2="${xForElapsed(headSample.elapsedSeconds)}" y2="${plotBottom}"></line>
-      <circle class="dot latest ${selectedCurrent ? "live-now" : ""}" cx="${xForElapsed(headSample.elapsedSeconds)}" cy="${yForDollarMove(headSample.dollarMove)}" r="6">
+      <line class="paper-latest-line" x1="${headX}" y1="${plot.top}" x2="${headX}" y2="${plotBottom}"></line>
+      <circle class="dot latest ${selectedCurrent ? "live-now" : ""}" cx="${headX}" cy="${headY}" r="6">
         <title>${escapeHtml(latestTitle)}</title>
       </circle>
       ${compact ? "" : '<rect class="note-box" x="696" y="42" width="266" height="584" rx="6"></rect>'}
@@ -3976,6 +3999,11 @@ async function main() {
       refreshWorkflow();
     }
   }, PAPER_REFRESH_MS);
+  window.addEventListener("pagehide", flushPaperTickPersist);
+  window.addEventListener("beforeunload", flushPaperTickPersist);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flushPaperTickPersist();
+  });
 }
 
 main().catch((error) => {
