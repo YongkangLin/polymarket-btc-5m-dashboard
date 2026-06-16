@@ -611,8 +611,17 @@ function browserWindowKeyForMarket(market) {
   return start === null ? "" : `backend-live-btc-5m-${start}`;
 }
 
+function polymarketWindowKeyForMarket(market) {
+  const start = marketWindowStartUnix(market);
+  return start === null ? "" : `btc-updown-5m-${start}`;
+}
+
 function paperStorageKeysForMarket(market) {
-  return [paperGraphKey(market), browserWindowKeyForMarket(market)].filter(Boolean);
+  return [...new Set([
+    paperGraphKey(market),
+    browserWindowKeyForMarket(market),
+    polymarketWindowKeyForMarket(market),
+  ].filter(Boolean))];
 }
 
 function samePaperWindow(left, right) {
@@ -905,7 +914,7 @@ function currentPaperMarket() {
 }
 
 function currentDisplayPaperMarket() {
-  return currentPaperMarket();
+  return currentPaperMarket() || allPaperMarkets()[0] || null;
 }
 
 function isBinanceLivePoint(point) {
@@ -958,6 +967,10 @@ function liveTradePointsForMarket(market) {
     point.backend_event_kind !== "book" &&
     point.backend_event_kind !== "depth"
   ));
+}
+
+function marketUsesPolymarketTruthPrice(market) {
+  return isPolymarketTruthSource(market?.truth_source || market?.start_price_source);
 }
 
 function backendBaseUrl() {
@@ -1035,6 +1048,7 @@ function mergePaperChartRows(baseRows, liveRows) {
 function paperChartPointsFor(market) {
   const points = paperPointsFor(market);
   const ticks = downsamplePoints(liveTickPointsForMarket(market), LIVE_TICK_RENDER_MAX_POINTS);
+  if (isCurrentPaperMarket(market) && marketUsesPolymarketTruthPrice(market)) return points;
   if (isCurrentPaperMarket(market)) return ticks;
   const merged = ticks.length ? mergePaperChartRows(points, ticks) : points;
   return merged;
@@ -2150,11 +2164,13 @@ function renderPaperSelects() {
   if (!select) return;
   const markets = allPaperMarkets();
   const realCurrent = currentPaperMarket();
-  const current = realCurrent;
+  const current = currentDisplayPaperMarket();
   select.disabled = false;
   const historical = historicalPaperMarkets();
-  const currentLabel = current
+  const currentLabel = realCurrent
     ? `Current live Binance window | ${paperMarketTimeLabel(current)} | ${fmt.format(paperStoredPointCount(current))} stored`
+    : current
+      ? `Latest paper market | ${paperMarketTimeLabel(current)} | ${fmt.format(paperStoredPointCount(current))} stored`
     : `Current live Binance window | waiting for backend WebSocket`;
   const marketOptions = historical.map((market) => {
     const key = paperGraphKey(market);
@@ -2198,7 +2214,7 @@ function renderPaperSelects() {
     }
     const updatedAt = market ? paperDisplayUpdatedAt(market) : null;
     const statusClass = selectedCurrent && market && isCurrentPaperMarket(market) ? "is-live" : "is-past";
-    const statusText = selectedCurrent ? "Live" : "Past";
+    const statusText = selectedCurrent && market && isCurrentPaperMarket(market) ? "Live" : (selectedCurrent ? "Latest" : "Past");
     const tickCount = market ? liveTickPointsForMarket(market).length : 0;
     const backendText = state.backendStatus.state === "open"
       ? `Postgres backend ${fmt.format(state.backendStatus.pointsLoaded || 0)} pts`
@@ -2366,19 +2382,34 @@ function outcomeBookProbability(row, side) {
 }
 
 function startMetadataFromSource(source, fallbackSource = "paper_market_start") {
-  const price = metricNumber(source?.start_price);
+  const binancePrice = metricNumber(source?.binance_start_price);
+  const price = binancePrice ?? metricNumber(source?.start_price);
   if (price === null || price <= 0) return null;
+  const sourceName = source?.start_price_source
+    || source?.btc_price_source
+    || (binancePrice !== null ? "binance_ws_trade_at_window_start" : fallbackSource);
   return {
     price,
-    source: source?.start_price_source || source?.btc_price_source || fallbackSource,
+    source: sourceName,
     eventTimeMicro: source?.start_event_time_micro || null,
     capturedAt: source?.generated_at || source?.ts || source?.btc_price_fetched_at || null,
   };
 }
 
+function isBinanceStartSource(source) {
+  const text = String(source || "").toLowerCase();
+  return text.startsWith("binance_") || text.includes("binance");
+}
+
+function isPolymarketTruthSource(source) {
+  const text = String(source || "").toLowerCase();
+  return text.includes("polymarket") || text.includes("chainlink");
+}
+
 function startSourceLabel(source) {
   const text = String(source || "");
   if (!text) return "source unknown";
+  if (isPolymarketTruthSource(text)) return "Polymarket Chainlink";
   if (text === "binance_ws_trade_at_window_start") return "Binance WS start tick";
   if (text === "polymarket_paper_event") return "paper capture";
   if (text.includes("binance.com")) return "Binance REST capture";
@@ -2397,14 +2428,13 @@ function preferredPaperStartMetadata(market) {
     ...keys.map((key) => state.livePersistedMarkets.get(key)),
     ...keys.flatMap((key) => state.liveBtcTicksByMarket.get(key) || []),
   ].filter(Boolean);
-  const realMarketStart = candidates
+  const starts = candidates
     .map((source) => startMetadataFromSource(source))
-    .find((meta) => meta && !String(meta.source || "").startsWith("binance_ws"));
-  if (realMarketStart) return realMarketStart;
-  const backendStart = candidates
-    .map((source) => startMetadataFromSource(source, "binance_ws_trade_at_window_start"))
-    .find(Boolean);
-  return backendStart || null;
+    .filter(Boolean);
+  const polymarketStart = starts.find((meta) => isPolymarketTruthSource(meta.source));
+  if (polymarketStart) return polymarketStart;
+  const binanceStart = starts.find((meta) => isBinanceStartSource(meta.source));
+  return binanceStart || starts[0] || null;
 }
 
 function bookSpreadText(bid, ask, formatter) {
@@ -2530,7 +2560,8 @@ function renderPaperDecisionGraph() {
   }
 
   const startMeta = preferredPaperStartMetadata(market);
-  const lineRows = selectedCurrent
+  const usePolymarketTruthLine = marketUsesPolymarketTruthPrice(market);
+  const lineRows = selectedCurrent && !usePolymarketTruthLine
     ? liveTradePointsForMarket(market)
     : rawPoints.filter((row) => row.decision !== "live_book_tick");
   const allSamples = lineRows
@@ -2654,20 +2685,23 @@ function renderPaperDecisionGraph() {
     : (latestRaw.time_unix ? formatMicroTimestamp(Number(latestRaw.time_unix) * 1_000_000) : "--");
   const fairProbability = metricNumber(latestRaw.fair_probability);
   const fairEdge = metricNumber(latestRaw.fair_edge);
-  const moveClass = moveToneClass(latest.dollarMove);
   const startPrice = metricNumber(startMeta?.price ?? latestRaw.start_price ?? market.start_price ?? market.binance_start_price);
+  const currentPrice = metricNumber(latest.btcPrice ?? latestRaw.btc_price);
+  const priceDifference = currentPrice !== null && startPrice !== null ? currentPrice - startPrice : latest.dollarMove;
+  const moveClass = moveToneClass(priceDifference);
   const upProbability = outcomeBookProbability(latestBookRaw || latestRaw, "up") ?? metricNumber(latestRaw.fair_up);
   const downProbability = outcomeBookProbability(latestBookRaw || latestRaw, "down") ?? metricNumber(latestRaw.fair_down);
   const infoRows = [
-    { label: "Up", value: formatOutcomePercent(upProbability), sub: "Polymarket mid" },
-    { label: "Down", value: formatOutcomePercent(downProbability), sub: "Polymarket mid" },
-    { label: "Start", value: startPrice === null ? "--" : formatBookMoney(startPrice), sub: startSourceLabel(startMeta?.source) },
+    { label: "Start price", value: startPrice === null ? "--" : formatBookMoney(startPrice) },
+    { label: "Current price", value: currentPrice === null ? "--" : formatBookMoney(currentPrice) },
+    { label: "Difference", value: formatDollarMove(priceDifference), tone: moveClass },
+    { label: "Up percent", value: formatOutcomePercent(upProbability) },
+    { label: "Down percent", value: formatOutcomePercent(downProbability) },
   ].map((row, index) => {
-    const y = 232 + index * 90;
+    const y = 94 + index * 100;
     return `
       <text class="paper-side-label" x="718" y="${y}">${escapeHtml(row.label)}</text>
-      <text class="paper-side-value" x="718" y="${y + 34}">${escapeHtml(String(row.value))}</text>
-      <text class="paper-side-source" x="718" y="${y + 55}">${escapeHtml(row.sub)}</text>`;
+      <text class="paper-side-value ${row.tone || ""}" x="718" y="${y + 38}">${escapeHtml(String(row.value))}</text>`;
   }).join("");
   const latestTitle = [
     `latest ${Math.round(latest.elapsedSeconds)}s in`,
@@ -2695,9 +2729,6 @@ function renderPaperDecisionGraph() {
       <text class="axis" x="${plot.left + plotWidth / 2}" y="${plotBottom + 54}" text-anchor="middle">Seconds into market</text>
       <text class="axis" x="22" y="${plot.top + plot.height / 2}" text-anchor="middle" transform="rotate(-90 22 ${plot.top + plot.height / 2})">Dollars from start</text>
       <rect class="note-box" x="696" y="42" width="266" height="584" rx="6"></rect>
-      <text class="paper-move-label" x="718" y="88">BTC vs Start</text>
-      <text class="paper-move-value ${moveClass}" x="718" y="128">${escapeHtml(formatDollarMove(latest.dollarMove))}</text>
-      <text class="paper-move-sub" x="718" y="152">${escapeHtml(startPrice === null ? "waiting for start anchor" : `Start ${formatBookMoney(startPrice)}`)}</text>
       ${infoRows}
     </svg>
     ${renderOrderBookTable(market, rawPoints, latestBookRaw, latestQuote)}`;

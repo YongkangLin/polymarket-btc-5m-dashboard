@@ -507,16 +507,19 @@ svg {
 }
 
 .paper-move-value.move-up,
+.paper-side-value.move-up,
 .bar-value.move-up {
   fill: var(--green);
 }
 
 .paper-move-value.move-down,
+.paper-side-value.move-down,
 .bar-value.move-down {
   fill: var(--red);
 }
 
 .paper-move-value.move-flat,
+.paper-side-value.move-flat,
 .bar-value.move-flat {
   fill: var(--muted);
 }
