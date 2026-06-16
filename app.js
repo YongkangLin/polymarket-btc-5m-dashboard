@@ -2500,17 +2500,6 @@ function outcomeBookProbability(row, side) {
   return null;
 }
 
-function liveDirectionProbability(market, startMeta, truthSample, fallbackSample) {
-  const start = metricNumber(startMeta?.price ?? market?.start_price);
-  const sample = truthSample || fallbackSample;
-  const current = metricNumber(sample?.btcPrice ?? sample?.row?.btc_price ?? market?.btc_price ?? market?.latest_btc_price);
-  if (start === null || current === null) return null;
-  const difference = current - start;
-  if (!Number.isFinite(difference)) return null;
-  if (Math.abs(difference) < 0.005) return { up: 0.5, down: 0.5 };
-  return difference > 0 ? { up: 1, down: 0 } : { up: 0, down: 1 };
-}
-
 function startMetadataFromSource(source, fallbackSource = "paper_market_start") {
   const startPrice = metricNumber(source?.start_price);
   const rawSource = source?.start_price_source
@@ -2859,15 +2848,12 @@ function renderPaperDecisionGraph() {
     ? latestTruth.dollarMove
     : (currentPrice !== null && startPrice !== null ? currentPrice - startPrice : latest.dollarMove);
   const moveClass = moveToneClass(priceDifference);
-  const directionProbability = liveDirectionProbability(market, startMeta, latestTruth, latest);
   const upProbability = outcomeBookProbability(latestBookRaw || latestRaw, "up")
-    ?? directionProbability?.up
-    ?? metricNumber(market.paper_up_probability ?? market.up_probability ?? market.latest_up_probability)
-    ?? metricNumber(latestRaw.fair_up);
+    ?? metricNumber(market.market_up_probability ?? market.paper_up_probability ?? market.up_probability ?? market.latest_up_probability)
+    ?? metricNumber(latestRaw.market_up_probability ?? latestRaw.paper_up_probability ?? latestRaw.up_probability);
   const downProbability = outcomeBookProbability(latestBookRaw || latestRaw, "down")
-    ?? directionProbability?.down
-    ?? metricNumber(market.paper_down_probability ?? market.down_probability ?? market.latest_down_probability)
-    ?? metricNumber(latestRaw.fair_down);
+    ?? metricNumber(market.market_down_probability ?? market.paper_down_probability ?? market.down_probability ?? market.latest_down_probability)
+    ?? metricNumber(latestRaw.market_down_probability ?? latestRaw.paper_down_probability ?? latestRaw.down_probability);
   const infoRows = [
     { label: "Start price", value: startPrice === null ? "--" : formatBookMoney(startPrice) },
     { label: "Current price", value: currentPrice === null ? "--" : formatBookMoney(currentPrice) },
