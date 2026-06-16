@@ -807,6 +807,23 @@ function bestByPaperQuality(markets, predicate) {
     .sort((left, right) => paperMarketQualityScore(right) - paperMarketQualityScore(left))[0] || null;
 }
 
+function bestByTruthPriceTime(markets) {
+  return (markets || [])
+    .filter((market) => (
+      marketUsesPolymarketTruthPrice(market) &&
+      metricNumber(market?.btc_price ?? market?.latest_btc_price) !== null
+    ))
+    .sort((left, right) => {
+      const leftReceive = truthPriceReceiveMicro(left) ?? 0;
+      const rightReceive = truthPriceReceiveMicro(right) ?? 0;
+      if (rightReceive !== leftReceive) return rightReceive - leftReceive;
+      const leftEvent = truthPriceEventMicro(left) ?? 0;
+      const rightEvent = truthPriceEventMicro(right) ?? 0;
+      if (rightEvent !== leftEvent) return rightEvent - leftEvent;
+      return paperMarketQualityScore(right) - paperMarketQualityScore(left);
+    })[0] || null;
+}
+
 function mergePaperMarket(left, right) {
   if (!left) {
     const start = marketWindowStartUnix(right);
@@ -835,10 +852,7 @@ function mergePaperMarket(left, right) {
     merged.start_event_time_micro = startMeta.eventTimeMicro;
     merged.start_price_status = "verified";
   }
-  const priceWinner = bestByPaperQuality(candidates, (market) => (
-    marketUsesPolymarketTruthPrice(market) &&
-    metricNumber(market?.btc_price ?? market?.latest_btc_price) !== null
-  ));
+  const priceWinner = bestByTruthPriceTime(candidates);
   if (priceWinner) {
     const price = metricNumber(priceWinner.btc_price ?? priceWinner.latest_btc_price);
     merged.btc_price = price;

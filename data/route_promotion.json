@@ -168,7 +168,7 @@
           "passed": true
         }
       ],
-      "quote_rate_lift": 0.015503875968992248,
+      "quote_rate_lift": 0.012738853503184712,
       "ready": false
     },
     "reasons": [
@@ -176,23 +176,23 @@
       "Challenger route passes historical gates, so it is worth shadowing.",
       "Live challenger evidence is too small for promotion: 6 would-quote events across 2 markets.",
       "The broader high-ask depth-relaxed probe fires slightly more live, but its historical maker route is not ready: held-out test ROI is 1.63%.",
-      "The early-window capacity probe is not eligible for routing yet: held-out ROI is 11.29% or another historical gate failed."
+      "The early-window capacity probe is not eligible for routing yet: held-out ROI is 11.88% or another historical gate failed."
     ],
     "recommendation": "Keep the strict active route as the execution route and run the high-ask challenger as a shadow route."
   },
-  "generated_at": "2026-06-16T11:50:06.716066+00:00",
+  "generated_at": "2026-06-16T12:22:34.234402+00:00",
   "routes": {
     "active": {
       "key": "active_late_depth_fair",
       "live": {
-        "inband_events": 258,
+        "inband_events": 314,
         "key": "active_late_depth_fair",
         "label": "Active: 55c-75c near-strike depth/fair maker",
         "path": "reports/live_paper_miss_diagnosis.json",
-        "quote_rate": 0.007751937984496124,
+        "quote_rate": 0.006369426751592357,
         "top_reasons": [
           {
-            "events": 166,
+            "events": 206,
             "reason": "ask_outside_route"
           },
           {
@@ -200,15 +200,15 @@
             "reason": "complement_ask_sum_too_high"
           },
           {
-            "events": 18,
+            "events": 20,
             "reason": "depth_imbalance_too_low"
           },
           {
-            "events": 60,
+            "events": 73,
             "reason": "distance_outside_route"
           },
           {
-            "events": 6,
+            "events": 7,
             "reason": "external_book_support_too_low"
           },
           {
@@ -216,7 +216,7 @@
             "reason": "fair_edge_too_low"
           },
           {
-            "events": 1329,
+            "events": 1599,
             "reason": "outside_time_window"
           },
           {
@@ -268,26 +268,26 @@
     "best_probe": {
       "key": "high_ask_depth_relaxed_probe",
       "live": {
-        "inband_events": 258,
+        "inband_events": 314,
         "key": "high_ask_depth_relaxed_probe",
         "label": "Probe: 75c-98c high-fair with -25% depth floor",
         "path": "reports/live_paper_miss_diagnosis.json",
-        "quote_rate": 0.03875968992248062,
+        "quote_rate": 0.03184713375796178,
         "top_reasons": [
           {
-            "events": 60,
+            "events": 68,
             "reason": "ask_outside_route"
           },
           {
-            "events": 9,
+            "events": 12,
             "reason": "complement_ask_sum_too_high"
           },
           {
-            "events": 78,
+            "events": 104,
             "reason": "depth_imbalance_too_low"
           },
           {
-            "events": 38,
+            "events": 39,
             "reason": "distance_outside_route"
           },
           {
@@ -295,15 +295,15 @@
             "reason": "external_book_not_collected"
           },
           {
-            "events": 5,
+            "events": 7,
             "reason": "external_book_support_too_low"
           },
           {
-            "events": 32,
+            "events": 36,
             "reason": "fair_edge_too_low"
           },
           {
-            "events": 22,
+            "events": 34,
             "reason": "missing_entry_price"
           }
         ],
@@ -349,26 +349,26 @@
       }
     },
     "best_probe_live": {
-      "inband_events": 258,
+      "inband_events": 314,
       "key": "high_ask_depth_relaxed_probe",
       "label": "Probe: 75c-98c high-fair with -25% depth floor",
       "path": "reports/live_paper_miss_diagnosis.json",
-      "quote_rate": 0.03875968992248062,
+      "quote_rate": 0.03184713375796178,
       "top_reasons": [
         {
-          "events": 60,
+          "events": 68,
           "reason": "ask_outside_route"
         },
         {
-          "events": 9,
+          "events": 12,
           "reason": "complement_ask_sum_too_high"
         },
         {
-          "events": 78,
+          "events": 104,
           "reason": "depth_imbalance_too_low"
         },
         {
-          "events": 38,
+          "events": 39,
           "reason": "distance_outside_route"
         },
         {
@@ -376,15 +376,15 @@
           "reason": "external_book_not_collected"
         },
         {
-          "events": 5,
+          "events": 7,
           "reason": "external_book_support_too_low"
         },
         {
-          "events": 32,
+          "events": 36,
           "reason": "fair_edge_too_low"
         },
         {
-          "events": 22,
+          "events": 34,
           "reason": "missing_entry_price"
         }
       ],
@@ -394,18 +394,30 @@
     "capacity_probe": {
       "key": "early_midask_distance_fair_probe",
       "live": {
-        "inband_events": 317,
+        "inband_events": 381,
         "key": "early_midask_distance_fair_probe",
         "label": "Probe: 181-240s, 65c-90c, 10-20 bps distance",
         "path": "reports/live_paper_miss_diagnosis.json",
         "quote_rate": 0.0,
         "top_reasons": [
           {
-            "events": 317,
+            "events": 4,
+            "reason": "ask_outside_route"
+          },
+          {
+            "events": 1,
+            "reason": "depth_imbalance_too_low"
+          },
+          {
+            "events": 33,
+            "reason": "distance_outside_route"
+          },
+          {
+            "events": 343,
             "reason": "missing_distance"
           },
           {
-            "events": 1270,
+            "events": 1532,
             "reason": "outside_time_window"
           }
         ],
@@ -415,64 +427,64 @@
       "selected": {
         "maker_route_ready": true,
         "path": "reports/btc_5m_early_midask_distance_fair_probe_maker_routes.json",
-        "roi_lift_vs_always_taker": 0.03105993,
+        "roi_lift_vs_always_taker": 0.03069399,
         "route_id": "maker_join_bid_h30",
         "route_label": "Maker join best bid for 30s",
         "strategy_id": "dominant_early_midask_distance_fair_probe",
-        "test_fill_rate": 0.95555556,
-        "test_fills": 86,
-        "test_roi_on_filled_cost": 0.11853748,
-        "test_roi_on_planned_cost": 0.11287376,
-        "test_signals": 90,
-        "walkforward_fills": 143,
+        "test_fill_rate": 0.95294118,
+        "test_fills": 81,
+        "test_roi_on_filled_cost": 0.12508477,
+        "test_roi_on_planned_cost": 0.11875666,
+        "test_signals": 85,
+        "walkforward_fills": 134,
         "walkforward_positive_day_rate": 0.89473684,
-        "walkforward_roi_lift_vs_always_taker": 0.04397308,
-        "walkforward_roi_on_planned_cost": 0.12841417,
-        "walkforward_signals": 156
+        "walkforward_roi_lift_vs_always_taker": 0.04344425,
+        "walkforward_roi_on_planned_cost": 0.12586291,
+        "walkforward_signals": 147
       },
       "walkforward": {
-        "avg_day_roi_on_planned_cost": 0.14647237894736842,
-        "avg_roi_lift_vs_always_taker": 0.06195005842105263,
+        "avg_day_roi_on_planned_cost": 0.1401841836842105,
+        "avg_roi_lift_vs_always_taker": 0.061122474210526315,
         "days": 19,
-        "fill_rate": 0.9166666666666666,
-        "filled_cost": 3565.63514748,
-        "fills": 143,
-        "median_day_roi_on_planned_cost": 0.1986793,
+        "fill_rate": 0.9115646258503401,
+        "filled_cost": 3340.63514748,
+        "fills": 134,
+        "median_day_roi_on_planned_cost": 0.19047619,
         "min_day_roi_on_planned_cost": -0.5,
         "path": "reports/btc_5m_early_midask_distance_fair_probe_maker_route_walkforward.csv",
-        "planned_cost": 3900.0,
-        "pnl_dollars": 500.81525676,
-        "portfolio_roi_lift_vs_always_taker": 0.043973078379487184,
+        "planned_cost": 3675.0,
+        "pnl_dollars": 462.54620115,
+        "portfolio_roi_lift_vs_always_taker": 0.04344425364897959,
         "positive_day_rate": 0.8947368421052632,
         "positive_days": 17,
-        "roi_on_filled_cost": 0.1404561140008813,
-        "roi_on_planned_cost": 0.1284141684,
-        "signals": 156
+        "roi_on_filled_cost": 0.13846055637022217,
+        "roi_on_planned_cost": 0.12586291187755103,
+        "signals": 147
       }
     },
     "challenger": {
       "key": "late_high_ask_fair_probe",
       "live": {
-        "inband_events": 258,
+        "inband_events": 314,
         "key": "late_high_ask_fair_probe",
         "label": "Challenger: 75c-98c high-fair maker probe",
         "path": "reports/live_paper_miss_diagnosis.json",
-        "quote_rate": 0.023255813953488372,
+        "quote_rate": 0.01910828025477707,
         "top_reasons": [
           {
-            "events": 60,
+            "events": 68,
             "reason": "ask_outside_route"
           },
           {
-            "events": 7,
+            "events": 10,
             "reason": "complement_ask_sum_too_high"
           },
           {
-            "events": 98,
+            "events": 129,
             "reason": "depth_imbalance_too_low"
           },
           {
-            "events": 38,
+            "events": 39,
             "reason": "distance_outside_route"
           },
           {
@@ -484,11 +496,11 @@
             "reason": "external_book_support_too_low"
           },
           {
-            "events": 21,
+            "events": 22,
             "reason": "fair_edge_too_low"
           },
           {
-            "events": 22,
+            "events": 34,
             "reason": "missing_entry_price"
           }
         ],
