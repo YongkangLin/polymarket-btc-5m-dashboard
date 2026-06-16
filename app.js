@@ -4,8 +4,8 @@ const moneyCents = new Intl.NumberFormat("en-US", { style: "currency", currency:
 const ACTIVE_BACKTEST_KEY = "late_depth_fair_clean";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
 const PAPER_CURRENT_VALUE = "__current__";
-const PAPER_REFRESH_MS = 5000;
-const LIVE_TICK_RENDER_THROTTLE_MS = 50;
+const PAPER_REFRESH_MS = 30000;
+const LIVE_TICK_RENDER_THROTTLE_MS = 16;
 const LIVE_TICK_STALE_MS = 10000;
 const LIVE_TICK_RECONNECT_MS = 2000;
 const LIVE_SOCKET_CONNECT_TIMEOUT_MS = 3500;
@@ -33,7 +33,7 @@ const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const LOCAL_BACKEND_BASE = window.POLYMARKET_BACKEND_BASE || "http://127.0.0.1:8788";
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
-const BACKEND_WS_SNAPSHOT_LIMIT = 3000;
+const BACKEND_WS_SNAPSHOT_LIMIT = 1200;
 const POLYMARKET_TRUTH_SOURCE = "polymarket_chainlink_crypto_prices";
 
 const state = {
@@ -82,6 +82,10 @@ let liveTickPersistTimer = null;
 
 function byId(id) {
   return document.getElementById(id);
+}
+
+function isCompactPaperChart() {
+  return window.matchMedia("(max-width: 760px)").matches;
 }
 
 function loadJson(path) {
@@ -3005,8 +3009,11 @@ function renderPaperDecisionGraph() {
     return;
   }
 
-  const view = { width: 980, height: 720 };
-  const plot = { left: 76, right: 306, top: 42, height: 420 };
+  const compact = isCompactPaperChart();
+  const view = compact ? { width: 390, height: 430 } : { width: 980, height: 720 };
+  const plot = compact
+    ? { left: 58, right: 16, top: 36, height: 280 }
+    : { left: 76, right: 306, top: 42, height: 420 };
   const plotWidth = view.width - plot.left - plot.right;
   const plotBottom = plot.top + plot.height;
   const realTruthSamples = truthSamples.filter((point) => point.row?.decision !== "chainlink_anchor");
@@ -3173,18 +3180,26 @@ function renderPaperDecisionGraph() {
   const downProbability = outcomeBookProbability(latestBookRaw || latestRaw, "down")
     ?? metricNumber(market.market_down_probability ?? market.paper_down_probability ?? market.down_probability ?? market.latest_down_probability)
     ?? metricNumber(latestRaw.market_down_probability ?? latestRaw.paper_down_probability ?? latestRaw.down_probability);
-  const infoRows = [
+  const sideMetrics = [
     { label: "Start price", value: startPrice === null ? "Waiting" : formatBookMoney(startPrice) },
     { label: "Current price", value: currentPrice === null ? "Waiting" : formatBookMoney(currentPrice) },
     { label: "Difference", value: priceDifference === null ? "Waiting" : formatDollarMove(priceDifference), tone: moveClass },
     { label: "Up percent", value: formatOutcomePercent(upProbability) },
     { label: "Down percent", value: formatOutcomePercent(downProbability) },
-  ].map((row, index) => {
+  ];
+  const infoRows = compact ? "" : sideMetrics.map((row, index) => {
     const y = 94 + index * 100;
     return `
       <text class="paper-side-label" x="718" y="${y}">${escapeHtml(row.label)}</text>
       <text class="paper-side-value ${row.tone || ""}" x="718" y="${y + 38}">${escapeHtml(String(row.value))}</text>`;
   }).join("");
+  const compactInfoRows = compact
+    ? `<div class="paper-mobile-stats">${sideMetrics.map((row) => `
+        <div class="paper-mobile-stat">
+          <span>${escapeHtml(row.label)}</span>
+          <strong class="${escapeHtml(row.tone || "")}">${escapeHtml(String(row.value))}</strong>
+        </div>`).join("")}</div>`
+    : "";
   const latestTitle = [
     `latest ${Math.round(latest.elapsedSeconds)}s in`,
     latest.source === "chainlink" ? truthLabel : externalLabel,
@@ -3197,7 +3212,7 @@ function renderPaperDecisionGraph() {
   ].join(" | ");
 
   chart.innerHTML = `
-    <svg viewBox="0 0 ${view.width} ${view.height}" role="img" aria-label="Paper trade BTC path and events">
+    <svg class="paper-live-svg" viewBox="0 0 ${view.width} ${view.height}" role="img" aria-label="Paper trade BTC path and events">
       <title>${escapeHtml(`${paperMarketLabel(market)} | ${latestTitle}`)}</title>
       <rect class="plot" x="${plot.left}" y="${plot.top}" width="${plotWidth}" height="${plot.height}"></rect>
       ${decisionBand}
@@ -3216,9 +3231,10 @@ function renderPaperDecisionGraph() {
       <circle class="dot latest ${selectedCurrent ? "live-now" : ""}" cx="${xForElapsed(latest.elapsedSeconds)}" cy="${yForDollarMove(latest.dollarMove)}" r="6">
         <title>${escapeHtml(latestTitle)}</title>
       </circle>
-      <rect class="note-box" x="696" y="42" width="266" height="584" rx="6"></rect>
+      ${compact ? "" : '<rect class="note-box" x="696" y="42" width="266" height="584" rx="6"></rect>'}
       ${infoRows}
     </svg>
+    ${compactInfoRows}
     ${renderOrderBookTable(market, rawPoints, latestBookRaw, latestQuote)}`;
 }
 
@@ -3743,8 +3759,9 @@ async function main() {
   });
   window.setInterval(() => {
     if (state.activeTab === "paper") {
+      ensureLiveTickStream();
+    } else {
       refreshWorkflow();
-      refreshLivePaperFeeds();
     }
   }, PAPER_REFRESH_MS);
 }
