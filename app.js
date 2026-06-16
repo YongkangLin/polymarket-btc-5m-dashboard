@@ -2010,11 +2010,11 @@ function renderStrategyPanels() {
     strategyCell("Signals", "BTC price + PM book"),
     strategyCell("Fill", "$25 ask buy, hold, -2c"),
   ].join("");
-  byId("paperStrategy").innerHTML = [
-    strategyCell("Route", routeLabel),
-    strategyCell("Firing", paperMissFiringText(missRoute)),
-    strategyCell("Probe", missRoute ? paperMissBestProbeText() : depthSupportText),
-  ].join("");
+  const paperStrategy = byId("paperStrategy");
+  if (paperStrategy) {
+    paperStrategy.innerHTML = "";
+    paperStrategy.hidden = true;
+  }
   byId("liveStrategy").innerHTML = [
     strategyCell("Status", liveStatus),
     strategyCell("Orders", "Post-only only"),
@@ -3068,7 +3068,14 @@ function paperPositionLabel(position) {
 function paperSessionPnlHistoryText(session) {
   const history = Array.isArray(session?.pnl_history) ? session.pnl_history : [];
   if (!history.length) return "No settled PnL";
-  return history.slice(-3).map((row) => formatSignedMoney(row.pnl_dollars)).join(" / ");
+  return history.slice(-3).map((row) => {
+    const position = row.position_label || paperPositionLabel({
+      side: row.position_side || row.side,
+      shares: row.position_shares,
+      entry_price: row.position_entry_price,
+    });
+    return `${compactNote(position, 17)} ${formatSignedMoney(row.pnl_dollars)}`;
+  }).join(" / ");
 }
 
 function renderPaperSessionHistory(session) {
@@ -3078,10 +3085,15 @@ function renderPaperSessionHistory(session) {
     const pnl = metricNumber(row.pnl_dollars);
     const tone = pnl === null ? "" : pnl < 0 ? "is-loss" : "is-win";
     const slug = String(row.slug || "--").replace(/^btc-updown-5m-/, "");
+    const position = row.position_label || paperPositionLabel({
+      side: row.position_side || row.side,
+      shares: row.position_shares,
+      entry_price: row.position_entry_price,
+    });
     return `
       <tr class="paper-session-row ${tone}">
         <td>${escapeHtml(slug)}</td>
-        <td>${escapeHtml(row.side || "--")}</td>
+        <td>${escapeHtml(position)}</td>
         <td>${escapeHtml(row.winner || "--")}</td>
         <td>${escapeHtml(formatSignedMoney(pnl))}</td>
         <td>${escapeHtml(moneyCents.format(metricNumber(row.capital_after) ?? 0))}</td>
@@ -3097,7 +3109,7 @@ function renderPaperSessionHistory(session) {
         <thead>
           <tr>
             <th scope="col">Market</th>
-            <th scope="col">Buy</th>
+            <th scope="col">Held Position</th>
             <th scope="col">Winner</th>
             <th scope="col">P&L</th>
             <th scope="col">Capital</th>
@@ -3275,7 +3287,6 @@ function paperActionName(row) {
   if (row?.event_type === "maker_paper_fill") return `Fill ${side || ""}`.trim();
   if (row?.event_type === "maker_paper_cancel") return `Cancel ${side || ""}`.trim();
   if (String(row?.event_type || "").includes("settlement")) return "Settle";
-  if (row?.decision === "no_signal") return "No buy";
   return paperDecisionText(row);
 }
 
@@ -3290,14 +3301,16 @@ function paperActionWhy(row) {
     pieces.push(row?.fill_reason ? `filled: ${rejectReasonLabel(row.fill_reason)}` : "paper fill inferred");
   } else if (type === "cancel") {
     pieces.push(`canceled: ${rejectReasonLabel(row?.reason)}`);
-  } else if (row?.decision === "no_signal" || type === "fail") {
-    pieces.push(rejectReasonLabel(row?.reason));
   } else if (type === "settlement") {
     pieces.push(row?.outcome_win === true ? "winner paid out" : row?.outcome_win === false ? "settled at zero" : "market settled");
   }
   const quotePrice = metricNumber(row?.maker_quote_price ?? row?.quote_price ?? row?.bid_price ?? row?.price);
   if (quotePrice !== null && ["quote", "fill", "cancel", "signal"].includes(type)) {
     pieces.push(`price ${formatPrice(quotePrice)}`);
+  }
+  const notional = metricNumber(row?.filled_cost ?? row?.order_notional ?? row?.paper_session_order_notional);
+  if (notional !== null && ["quote", "fill", "cancel", "signal"].includes(type)) {
+    pieces.push(`size ${moneyCents.format(notional)}`);
   }
   const fairEdge = metricNumber(row?.fair_edge ?? row?.fair_edge_vs_signal_bid);
   if (fairEdge !== null) pieces.push(`edge ${formatCents(fairEdge)}`);
@@ -3323,12 +3336,15 @@ function isPaperActionLogRow(row) {
   if (!row) return false;
   const eventType = String(row.event_type || "");
   return row.decision === "paper_signal"
-    || row.decision === "no_signal"
     || eventType === "maker_paper_quote"
     || eventType === "maker_paper_fill"
     || eventType === "maker_paper_cancel"
-    || eventType === "maker_paper_settlement"
-    || eventType === "paper_settlement";
+    || eventType === "maker_paper_settlement";
+}
+
+function paperActionBuyText(row) {
+  const type = paperMarkerType(row);
+  return (row?.decision === "paper_signal" || ["signal", "quote", "fill"].includes(type)) ? "yes" : "--";
 }
 
 function paperActionLogRows(market, rawPoints) {
@@ -3347,34 +3363,23 @@ function paperActionLogRows(market, rawPoints) {
       return true;
     })
     .sort((left, right) => paperRowTimeMicro(left) - paperRowTimeMicro(right));
-  const compressed = [];
-  sorted.forEach((row) => {
-    const isNoBuy = paperBuyDecision(row) === "no" && row.decision === "no_signal";
-    const key = `${paperBuyDecision(row)}:${paperActionName(row)}:${row.reason || ""}:${row.side || ""}`;
-    const previous = compressed[compressed.length - 1];
-    if (isNoBuy && previous?._compressKey === key) {
-      compressed[compressed.length - 1] = { ...row, _compressKey: key };
-    } else {
-      compressed.push({ ...row, _compressKey: key });
-    }
-  });
-  return compressed.slice(-14).reverse();
+  return sorted.slice(-14).reverse();
 }
 
 function renderPaperActionLog(market, rawPoints) {
   const rows = paperActionLogRows(market, rawPoints);
   const body = rows.length
     ? rows.map((row) => {
-      const buy = paperBuyDecision(row);
+      const buy = paperActionBuyText(row);
       return `
-        <tr class="paper-action-row is-${escapeHtml(buy === "yes" ? "yes" : buy === "no" ? "no" : "neutral")}">
+        <tr class="paper-action-row is-${escapeHtml(buy === "yes" ? "yes" : "neutral")}">
           <td>${escapeHtml(paperActionTimeText(row))}</td>
-          <td><span class="paper-action-pill is-${escapeHtml(buy === "yes" ? "yes" : buy === "no" ? "no" : "neutral")}">${escapeHtml(buy)}</span></td>
+          <td><span class="paper-action-pill is-${escapeHtml(buy === "yes" ? "yes" : "neutral")}">${escapeHtml(buy)}</span></td>
           <td>${escapeHtml(paperActionName(row))}</td>
           <td>${escapeHtml(paperActionWhy(row))}</td>
         </tr>`;
     }).join("")
-    : `<tr><td colspan="4">Waiting for the algorithm to evaluate this window.</td></tr>`;
+    : `<tr><td colspan="4">No performed actions yet.</td></tr>`;
   return `
     <div class="paper-action-log">
       <div class="paper-book-heading">

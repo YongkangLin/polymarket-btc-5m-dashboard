@@ -206,6 +206,10 @@ select {
   background: #ffffff;
 }
 
+.strategy-strip[hidden] {
+  display: none;
+}
+
 .strategy-cell {
   min-width: 0;
   padding: 12px 16px;
