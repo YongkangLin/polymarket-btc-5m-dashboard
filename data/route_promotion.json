@@ -217,12 +217,12 @@
       "ready": false
     }
   },
-  "generated_at": "2026-06-16T23:23:37.278011+00:00",
+  "generated_at": "2026-06-16T23:30:17.833895+00:00",
   "routes": {
     "active": {
       "key": "active_late_depth_fair",
       "live": {
-        "inband_events": 19,
+        "inband_events": 23,
         "key": "active_late_depth_fair",
         "label": "Active: 55c-75c near-strike depth/fair maker",
         "path": "reports/live_paper_miss_diagnosis.json",
@@ -233,11 +233,11 @@
             "reason": "distance_outside_route"
           },
           {
-            "events": 9,
+            "events": 13,
             "reason": "missing_entry_price"
           },
           {
-            "events": 74,
+            "events": 85,
             "reason": "outside_time_window"
           }
         ],
@@ -285,7 +285,7 @@
     "best_probe": {
       "key": "high_ask_depth_relaxed_probe",
       "live": {
-        "inband_events": 19,
+        "inband_events": 23,
         "key": "high_ask_depth_relaxed_probe",
         "label": "Probe: 75c-98c high-fair with -25% depth floor",
         "path": "reports/live_paper_miss_diagnosis.json",
@@ -296,11 +296,11 @@
             "reason": "distance_outside_route"
           },
           {
-            "events": 9,
+            "events": 13,
             "reason": "missing_entry_price"
           },
           {
-            "events": 74,
+            "events": 85,
             "reason": "outside_time_window"
           }
         ],
@@ -346,7 +346,7 @@
       }
     },
     "best_probe_live": {
-      "inband_events": 19,
+      "inband_events": 23,
       "key": "high_ask_depth_relaxed_probe",
       "label": "Probe: 75c-98c high-fair with -25% depth floor",
       "path": "reports/live_paper_miss_diagnosis.json",
@@ -357,11 +357,11 @@
           "reason": "distance_outside_route"
         },
         {
-          "events": 9,
+          "events": 13,
           "reason": "missing_entry_price"
         },
         {
-          "events": 74,
+          "events": 85,
           "reason": "outside_time_window"
         }
       ],
@@ -382,7 +382,7 @@
             "reason": "distance_outside_route"
           },
           {
-            "events": 87,
+            "events": 102,
             "reason": "outside_time_window"
           }
         ],
@@ -430,7 +430,7 @@
     "challenger": {
       "key": "late_high_ask_fair_probe",
       "live": {
-        "inband_events": 19,
+        "inband_events": 23,
         "key": "late_high_ask_fair_probe",
         "label": "Challenger: 75c-98c high-fair maker probe",
         "path": "reports/live_paper_miss_diagnosis.json",
@@ -441,11 +441,11 @@
             "reason": "distance_outside_route"
           },
           {
-            "events": 9,
+            "events": 13,
             "reason": "missing_entry_price"
           },
           {
-            "events": 74,
+            "events": 85,
             "reason": "outside_time_window"
           }
         ],
@@ -504,7 +504,7 @@
             "reason": "distance_outside_route"
           },
           {
-            "events": 87,
+            "events": 102,
             "reason": "outside_time_window"
           }
         ],
