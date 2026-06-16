@@ -2912,7 +2912,8 @@ function renderPaperDecisionGraph() {
   const latestTruth = realTruthSamples[realTruthSamples.length - 1] || null;
   const latestExternal = externalSamples[externalSamples.length - 1] || null;
   const truthDisplaySample = freshestTruthDisplaySample(market, latestTruth, marketTruthPoint);
-  const latest = truthDisplaySample || latestExternal || latestTruth || allSamples[allSamples.length - 1];
+  const displayedTruthSample = truthDisplaySample || latestTruth;
+  const latest = displayedTruthSample || latestExternal || allSamples[allSamples.length - 1];
   const latestDomainSample = allSamples[allSamples.length - 1];
   const latestElapsed = Number.isFinite(latestDomainSample.elapsedSeconds)
     ? latestDomainSample.elapsedSeconds
@@ -3061,7 +3062,7 @@ function renderPaperDecisionGraph() {
   const fairProbability = metricNumber(latestRaw.fair_probability);
   const fairEdge = metricNumber(latestRaw.fair_edge);
   const startPrice = metricNumber(startMeta?.price);
-  const currentPrice = metricNumber(truthDisplaySample?.btcPrice);
+  const currentPrice = metricNumber(displayedTruthSample?.btcPrice);
   const priceDifference = currentPrice !== null && startPrice !== null ? currentPrice - startPrice : null;
   const moveClass = moveToneClass(priceDifference);
   const upProbability = outcomeBookProbability(latestBookRaw || latestRaw, "up")
