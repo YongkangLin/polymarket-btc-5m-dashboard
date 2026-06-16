@@ -29,9 +29,9 @@ const LIVE_PAPER_Y_EXPANSION_PAD = 1.24;
 const LIVE_PAPER_Y_BUCKET = 4;
 const LIVE_PAPER_RENDER_BUCKET_SECONDS = 0.075;
 const LIVE_BINANCE_RENDER_BUCKET_SECONDS = 0.2;
-const POLYMARKET_TRUTH_CURRENT_STALE_MS = 5000;
-const POLYMARKET_TRUTH_EVENT_STALE_MS = 15000;
-const LOCAL_BACKEND_BASE = window.POLYMARKET_BACKEND_BASE || "http://127.0.0.1:8787";
+const POLYMARKET_TRUTH_CURRENT_STALE_MS = 30000;
+const POLYMARKET_TRUTH_EVENT_STALE_MS = 45000;
+const LOCAL_BACKEND_BASE = window.POLYMARKET_BACKEND_BASE || "http://127.0.0.1:8788";
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
 const BACKEND_WS_SNAPSHOT_LIMIT = 3000;
 const POLYMARKET_TRUTH_SOURCE = "polymarket_chainlink_crypto_prices";
@@ -1232,17 +1232,17 @@ function isExternalTradePricePoint(row) {
 }
 
 function externalLineRows(rows) {
-  const bookRows = (rows || []).filter((row) => isExternalBookPricePoint(row) && row?.backend_event_kind === "book");
-  if (bookRows.length >= 2) return bookRows;
   const depthRows = (rows || []).filter((row) => isExternalBookPricePoint(row) && row?.backend_event_kind === "depth");
   if (depthRows.length >= 2) return depthRows;
-  return (rows || []).filter(isExternalTradePricePoint);
+  const tradeRows = (rows || []).filter(isExternalTradePricePoint);
+  if (tradeRows.length >= 2) return tradeRows;
+  return (rows || []).filter((row) => isExternalBookPricePoint(row) && row?.backend_event_kind === "book");
 }
 
 function externalLineLabel(rows) {
   const kinds = new Set((rows || []).map((row) => row?.backend_event_kind).filter(Boolean));
-  if (kinds.has("book")) return "Binance WSS book";
   if (kinds.has("depth")) return "Binance WSS depth";
+  if (kinds.has("book")) return "Binance WSS book";
   return "Binance WSS trades";
 }
 
