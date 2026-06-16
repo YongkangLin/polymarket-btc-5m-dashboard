@@ -9,7 +9,8 @@ const LIVE_TICK_RENDER_THROTTLE_MS = 16;
 const LIVE_TICK_STALE_MS = 10000;
 const LIVE_TICK_RECONNECT_MS = 2000;
 const LIVE_SOCKET_CONNECT_TIMEOUT_MS = 3500;
-const REMOTE_LIVE_SOCKET_CONNECT_TIMEOUT_MS = 10000;
+const REMOTE_LIVE_SOCKET_CONNECT_TIMEOUT_MS = 25000;
+const PUBLIC_BACKEND_BASE = "https://busy-lies-kick.loca.lt";
 const LIVE_TICK_RENDER_MAX_POINTS = 900;
 const LIVE_TICK_PERSIST_MS = 3000;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 4000;
@@ -29,6 +30,7 @@ const LIVE_PAPER_Y_MIN_RADIUS = 8;
 const LIVE_PAPER_Y_EXPANSION_PAD = 1.24;
 const LIVE_PAPER_Y_BUCKET = 4;
 const LIVE_PAPER_RENDER_BUCKET_SECONDS = 0.075;
+const LIVE_CHAINLINK_RENDER_BUCKET_SECONDS = 1.0;
 const LIVE_BINANCE_RENDER_BUCKET_SECONDS = 0.12;
 const CHAINLINK_MAX_UNCONFIRMED_STEP_DOLLARS = 10;
 const CHAINLINK_MAX_STEP_RESIDUAL_DOLLARS = 8;
@@ -37,7 +39,7 @@ const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const LOCAL_BACKEND_BASE = configuredBackendBase();
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
-const BACKEND_WS_SNAPSHOT_LIMIT = backendBaseIsRemote(LOCAL_BACKEND_BASE) ? 180 : 1200;
+const BACKEND_WS_SNAPSHOT_LIMIT = backendBaseIsRemote(LOCAL_BACKEND_BASE) ? 40 : 1200;
 const POLYMARKET_TRUTH_SOURCE = "polymarket_chainlink_crypto_prices";
 
 const state = {
@@ -95,10 +97,12 @@ function isCompactPaperChart() {
 function configuredBackendBase() {
   const params = new URLSearchParams(window.location.search || "");
   const explicit = window.POLYMARKET_BACKEND_BASE
-    || params.get("backend")
-    || window.localStorage?.getItem("POLYMARKET_BACKEND_BASE");
+    || params.get("backend");
   if (explicit) return String(explicit).replace(/\/+$/, "");
   const host = window.location.hostname;
+  if (host === "yongkanglin.github.io") return PUBLIC_BACKEND_BASE;
+  const saved = window.localStorage?.getItem("POLYMARKET_BACKEND_BASE");
+  if (saved) return String(saved).replace(/\/+$/, "");
   const protocol = window.location.protocol === "https:" ? "https:" : "http:";
   if (host && !["127.0.0.1", "localhost", "yongkanglin.github.io"].includes(host)) {
     return `${protocol}//${host}:8788`;
@@ -1226,9 +1230,31 @@ function marketUsesPolymarketTruthPrice(market) {
     || market?.truth_current_price_missing === false;
 }
 
+function rowPriceSourceText(row) {
+  return [
+    row?.btc_price_source,
+    row?.btc_price_venue,
+    row?.external_btc_source,
+    row?.external_btc_venue,
+    row?.price_source,
+    row?.price_role,
+    row?.decision,
+    row?.backend_event_kind,
+  ].filter(Boolean).join(" ").toLowerCase();
+}
+
+function rowUsesExternalBinancePrice(row) {
+  const text = rowPriceSourceText(row);
+  return text.includes("local_backend_binance_ws")
+    || text.includes("binance")
+    || text.includes("external_live_estimate")
+    || ["live_tick", "live_book_tick"].includes(row?.decision)
+    || ["trade", "depth", "book"].includes(row?.backend_event_kind);
+}
+
 function hasStrictPolymarketTruthPrice(row) {
-  const source = String(row?.btc_price_source || row?.btc_price_venue || row?.price_source || row?.price_role || "").toLowerCase();
-  if (source.includes("binance") || source.includes("external_live_estimate")) return false;
+  if (rowUsesExternalBinancePrice(row)) return false;
+  const source = rowPriceSourceText(row);
   return source.includes("polymarket")
     || source.includes("chainlink")
     || row?.price_role === "polymarket_truth"
@@ -1236,10 +1262,7 @@ function hasStrictPolymarketTruthPrice(row) {
 }
 
 function isPolymarketTruthPoint(row) {
-  const source = String(row?.btc_price_source || row?.btc_price_venue || row?.price_source || "").toLowerCase();
-  return hasStrictPolymarketTruthPrice(row)
-    || source.includes("polymarket")
-    || source.includes("chainlink");
+  return hasStrictPolymarketTruthPrice(row);
 }
 
 function isChainlinkDataStreamsSource(source) {
@@ -1258,8 +1281,9 @@ function chainlinkVenueFromSource(source) {
 }
 
 function isChainlinkPriceRow(row) {
-  const source = String(row?.btc_price_source || row?.btc_price_venue || row?.price_source || "").toLowerCase();
-  return row?.decision === "chainlink_tick" || source.includes("chainlink");
+  if (rowUsesExternalBinancePrice(row)) return false;
+  const source = rowPriceSourceText(row);
+  return row?.backend_event_kind === "chainlink" || row?.decision === "chainlink_tick" || source.includes("chainlink");
 }
 
 function chainlinkLineLabel(rows) {
@@ -3112,7 +3136,7 @@ function renderPaperDecisionGraph() {
   const visibleSamples = samples.length ? samples : allSamples.slice(-1);
   const visibleTruthSamples = truthSamples.filter((point) => point.elapsedSeconds >= xDomain.min && point.elapsedSeconds <= xDomain.max);
   const visibleExternalSamples = externalSamples.filter((point) => point.elapsedSeconds >= xDomain.min && point.elapsedSeconds <= xDomain.max);
-  const truthLineSamples = selectedCurrent ? stableLiveLineSamples(visibleTruthSamples) : visibleTruthSamples;
+  const truthLineSamples = selectedCurrent ? stableLiveLineSamples(visibleTruthSamples, LIVE_CHAINLINK_RENDER_BUCKET_SECONDS) : visibleTruthSamples;
   const externalLineSamples = selectedCurrent ? stableLiveLineSamples(visibleExternalSamples, LIVE_BINANCE_RENDER_BUCKET_SECONDS) : visibleExternalSamples;
   const xForElapsed = (elapsedSeconds) => {
     const clamped = Math.max(xDomain.min, Math.min(xDomain.max, Number(elapsedSeconds)));
