@@ -165,6 +165,8 @@ function normalizeWorkflow(workflow) {
         condition_id: row.condition_id || graph.condition_id,
         slug: row.slug || graph.slug,
         question: row.question || graph.question,
+        window_start_unix: row.window_start_unix ?? graph.window_start_unix,
+        window_end_unix: row.window_end_unix ?? graph.window_end_unix,
       }));
       graph.markers = inflateRows(graphColumns.markers || graph.marker_columns, graph.markers).map((row) => ({
         ...row,
@@ -172,6 +174,8 @@ function normalizeWorkflow(workflow) {
         condition_id: row.condition_id || graph.condition_id,
         slug: row.slug || graph.slug,
         question: row.question || graph.question,
+        window_start_unix: row.window_start_unix ?? graph.window_start_unix,
+        window_end_unix: row.window_end_unix ?? graph.window_end_unix,
       }));
     });
     paperTrade._graphMarkets = graphs;
@@ -388,9 +392,13 @@ function rejectReasonLabel(value) {
     edge_below_threshold: "fair edge too small",
     external_book_missing: "BTC book missing",
     external_book_support_too_low: "BTC book support too weak",
+    external_microprice_support_too_low: "BTC microprice against buy",
     missing_best_ask: "missing best ask",
     outside_time_window: "outside decision window",
+    public_trade_sell_flow_or_visible_book_queue: "sell flow reached our bid",
+    quote_horizon_expired: "quote time limit expired",
     selected_table_match: "buy rule matched",
+    visible_book_queue_depleted: "visible queue was depleted",
   };
   return labels[value] || String(value || "no rule match");
 }
@@ -1826,16 +1834,17 @@ function paperMarkerType(row) {
 }
 
 function paperMarkerLabel(row) {
-  const labels = {
-    signal: "signal",
-    quote: "quote",
-    fill: "fill",
-    cancel: "cancel",
-    settlement: "settle",
-    fail: "no",
-    latest: "now",
-  };
-  return labels[paperMarkerType(row)] || "event";
+  const buy = paperBuyDecision(row);
+  if (buy === "yes" || buy === "no") return buy;
+  if (paperMarkerType(row) === "settlement") return "settle";
+  return "";
+}
+
+function paperBuyDecision(row) {
+  const type = paperMarkerType(row);
+  if (["signal", "quote", "fill"].includes(type) || row?.decision === "paper_signal") return "yes";
+  if (["cancel", "fail"].includes(type) || row?.decision === "no_signal") return "no";
+  return "--";
 }
 
 function inRange(value, min, max) {
@@ -2929,6 +2938,7 @@ function latestBookRowForMarket(market, rawPoints) {
     "side_depth_imbalance",
     "signal_depth_imbalance",
     "external_book_imbalance",
+    "external_book_microprice_support_bps",
   ];
   for (let index = candidates.length - 1; index >= 0; index -= 1) {
     const row = candidates[index];
@@ -2978,6 +2988,7 @@ function orderBookSummaryRows(market, rawPoints, latestRaw, latestQuote) {
   const bookSpread = metricNumber(row.book_spread_bps ?? latestRaw?.book_spread_bps ?? row.external_book_spread_bps);
   const bookMicro = metricNumber(row.book_microprice ?? latestRaw?.book_microprice);
   const externalMicroEdge = metricNumber(row.external_book_microprice_edge_bps ?? latestRaw?.external_book_microprice_edge_bps);
+  const externalMicroSupport = metricNumber(row.external_book_microprice_support_bps ?? latestRaw?.external_book_microprice_support_bps);
   const externalImbalance = metricNumber(row.external_book_imbalance ?? latestRaw?.external_book_imbalance);
 
   const selectedBid = sideField(row, selectedSide, "bid") ?? metricNumber(row.signal_bid);
@@ -2988,7 +2999,9 @@ function orderBookSummaryRows(market, rawPoints, latestRaw, latestQuote) {
   const selectedLean = metricNumber(row[`${selectedSide}_depth_imbalance`] ?? row.signal_depth_imbalance ?? row.side_depth_imbalance);
   const complementAskSum = metricNumber(row.complement_ask_sum ?? latestRaw?.complement_ask_sum);
 
-  const microText = bookMicro === null
+  const microText = externalMicroSupport !== null
+    ? `${formatBpsDeep(externalMicroSupport)} support`
+    : bookMicro === null
     ? (externalMicroEdge === null ? "--" : formatBpsDeep(externalMicroEdge))
     : formatPrice(bookMicro);
   return [
@@ -3187,6 +3200,133 @@ function paperMarkerTitle(row) {
   return pieces.filter(Boolean).join(" | ");
 }
 
+function paperActionName(row) {
+  const side = row?.side || row?.intended_outcome || row?.outcome || "";
+  if (row?.decision === "paper_signal") return `Buy setup ${side || ""}`.trim();
+  if (row?.event_type === "maker_paper_quote") return `Quote ${side || ""}`.trim();
+  if (row?.event_type === "maker_paper_fill") return `Fill ${side || ""}`.trim();
+  if (row?.event_type === "maker_paper_cancel") return `Cancel ${side || ""}`.trim();
+  if (String(row?.event_type || "").includes("settlement")) return "Settle";
+  if (row?.decision === "no_signal") return "No buy";
+  return paperDecisionText(row);
+}
+
+function paperActionWhy(row) {
+  const type = paperMarkerType(row);
+  const pieces = [];
+  if (row?.decision === "paper_signal") {
+    pieces.push("rule matched");
+  } else if (type === "quote") {
+    pieces.push("posted paper maker bid");
+  } else if (type === "fill") {
+    pieces.push(row?.fill_reason ? `filled: ${rejectReasonLabel(row.fill_reason)}` : "paper fill inferred");
+  } else if (type === "cancel") {
+    pieces.push(`canceled: ${rejectReasonLabel(row?.reason)}`);
+  } else if (row?.decision === "no_signal" || type === "fail") {
+    pieces.push(rejectReasonLabel(row?.reason));
+  } else if (type === "settlement") {
+    pieces.push(row?.outcome_win === true ? "winner paid out" : row?.outcome_win === false ? "settled at zero" : "market settled");
+  }
+  const quotePrice = metricNumber(row?.maker_quote_price ?? row?.quote_price ?? row?.bid_price ?? row?.price);
+  if (quotePrice !== null && ["quote", "fill", "cancel", "signal"].includes(type)) {
+    pieces.push(`price ${formatPrice(quotePrice)}`);
+  }
+  const fairEdge = metricNumber(row?.fair_edge ?? row?.fair_edge_vs_signal_bid);
+  if (fairEdge !== null) pieces.push(`edge ${formatCents(fairEdge)}`);
+  const support = metricNumber(row?.external_book_support);
+  if (support !== null) pieces.push(`BTC book ${percentText(support)}`);
+  const microSupport = metricNumber(row?.external_book_microprice_support_bps);
+  if (microSupport !== null) pieces.push(`micro ${formatBpsDeep(microSupport)}`);
+  const pnl = metricNumber(row?.pnl_dollars);
+  if (pnl !== null) pieces.push(`PnL ${formatSignedMoney(pnl)}`);
+  return pieces.filter(Boolean).join(" | ") || "--";
+}
+
+function paperActionTimeText(row) {
+  const elapsed = paperPointElapsedSeconds(row);
+  if (Number.isFinite(elapsed)) return `${Math.round(elapsed)}s`;
+  const parsed = Date.parse(row?.generated_at || row?.ts || "");
+  return Number.isFinite(parsed)
+    ? new Date(parsed).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" })
+    : "--";
+}
+
+function isPaperActionLogRow(row) {
+  if (!row) return false;
+  const eventType = String(row.event_type || "");
+  return row.decision === "paper_signal"
+    || row.decision === "no_signal"
+    || eventType === "maker_paper_quote"
+    || eventType === "maker_paper_fill"
+    || eventType === "maker_paper_cancel"
+    || eventType === "maker_paper_settlement"
+    || eventType === "paper_settlement";
+}
+
+function paperActionLogRows(market, rawPoints) {
+  const rows = [
+    ...(rawPoints || []),
+    ...paperMarkersFor(market),
+  ].filter(isPaperActionLogRow);
+  const seen = new Set();
+  const sorted = rows
+    .filter((row, index) => {
+      const key = row.point_id
+        || row.event_id
+        || `${row.event_type || row.decision}:${row.quote_id || ""}:${row.signal_id || ""}:${paperRowTimeMicro(row, index)}:${row.reason || ""}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((left, right) => paperRowTimeMicro(left) - paperRowTimeMicro(right));
+  const compressed = [];
+  sorted.forEach((row) => {
+    const isNoBuy = paperBuyDecision(row) === "no" && row.decision === "no_signal";
+    const key = `${paperBuyDecision(row)}:${paperActionName(row)}:${row.reason || ""}:${row.side || ""}`;
+    const previous = compressed[compressed.length - 1];
+    if (isNoBuy && previous?._compressKey === key) {
+      compressed[compressed.length - 1] = { ...row, _compressKey: key };
+    } else {
+      compressed.push({ ...row, _compressKey: key });
+    }
+  });
+  return compressed.slice(-14).reverse();
+}
+
+function renderPaperActionLog(market, rawPoints) {
+  const rows = paperActionLogRows(market, rawPoints);
+  const body = rows.length
+    ? rows.map((row) => {
+      const buy = paperBuyDecision(row);
+      return `
+        <tr class="paper-action-row is-${escapeHtml(buy === "yes" ? "yes" : buy === "no" ? "no" : "neutral")}">
+          <td>${escapeHtml(paperActionTimeText(row))}</td>
+          <td><span class="paper-action-pill is-${escapeHtml(buy === "yes" ? "yes" : buy === "no" ? "no" : "neutral")}">${escapeHtml(buy)}</span></td>
+          <td>${escapeHtml(paperActionName(row))}</td>
+          <td>${escapeHtml(paperActionWhy(row))}</td>
+        </tr>`;
+    }).join("")
+    : `<tr><td colspan="4">Waiting for the algorithm to evaluate this window.</td></tr>`;
+  return `
+    <div class="paper-action-log">
+      <div class="paper-book-heading">
+        <span>Algorithm Action Log</span>
+        <span>latest first</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Time</th>
+            <th scope="col">Buy?</th>
+            <th scope="col">Action</th>
+            <th scope="col">Why</th>
+          </tr>
+        </thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>`;
+}
+
 function renderPaperDecisionGraph() {
   const market = selectedPaperMarket();
   const rawPoints = market ? paperChartPointsFor(market) : [];
@@ -3332,18 +3472,22 @@ function renderPaperDecisionGraph() {
     return `<line class="${Math.abs(tick) < 0.005 ? "axis-zero" : "grid"}" x1="${plot.left}" y1="${y}" x2="${plot.left + plotWidth}" y2="${y}"></line><text class="tick" x="${plot.left - 10}" y="${y + 4}" text-anchor="end">${formatDollarMove(tick)}</text>`;
   }).join("");
 
-  const nearestSample = (row) => {
-    const markerSeconds = paperPointSecondsLeft(row);
-    let best = allSamples[0];
-    let bestDelta = Math.abs(allSamples[0].secondsLeft - markerSeconds);
-    allSamples.forEach((sample) => {
-      const delta = Math.abs(sample.secondsLeft - markerSeconds);
+  const nearestTruthSample = (row) => {
+    const markerElapsed = paperPointElapsedSeconds(row);
+    const candidates = truthSamples
+      .filter((sample) => sample.row?.decision !== "chainlink_anchor")
+      .filter((sample) => Number.isFinite(sample.elapsedSeconds) && Number.isFinite(sample.dollarMove));
+    if (!candidates.length || !Number.isFinite(markerElapsed)) return null;
+    let best = candidates[0];
+    let bestDelta = Math.abs(candidates[0].elapsedSeconds - markerElapsed);
+    candidates.forEach((sample) => {
+      const delta = Math.abs(sample.elapsedSeconds - markerElapsed);
       if (delta < bestDelta) {
         best = sample;
         bestDelta = delta;
       }
     });
-    return best;
+    return bestDelta <= Math.max(5, CHAINLINK_NEAREST_EXTERNAL_SECONDS * 2) ? best : null;
   };
   const seenMarkers = new Set();
   const pointSignals = rawPoints.filter((row) => row.decision === "paper_signal");
@@ -3357,11 +3501,11 @@ function renderPaperDecisionGraph() {
     })
     .slice(-90);
   const eventDots = markerRows.map((row) => {
-    const markerMove = paperDollarMoveFromStart(row, startMeta?.price);
-    const markerSample = markerMove === null ? nearestSample(row) : null;
-    const elapsedSeconds = paperPointElapsedSeconds(row, markerSample?.index || 0, allSamples.length);
+    const markerSample = nearestTruthSample(row);
+    if (!markerSample) return "";
+    const elapsedSeconds = markerSample.elapsedSeconds;
     const secondsLeft = Math.max(0, 300 - elapsedSeconds);
-    const dollarMove = markerMove ?? markerSample?.dollarMove;
+    const dollarMove = markerSample.dollarMove;
     if (!Number.isFinite(secondsLeft) || !Number.isFinite(dollarMove)) return "";
     if (elapsedSeconds < xDomain.min || elapsedSeconds > xDomain.max) return "";
     const x = xForElapsed(elapsedSeconds);
@@ -3478,6 +3622,7 @@ function renderPaperDecisionGraph() {
       ${infoRows}
     </svg>
     ${compactInfoRows}
+    ${renderPaperActionLog(market, rawPoints)}
     ${renderOrderBookTable(market, rawPoints, latestBookRaw, latestQuote)}`;
 }
 

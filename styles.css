@@ -569,6 +569,13 @@ svg {
   overflow-x: auto;
 }
 
+.paper-action-log {
+  min-width: 820px;
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+  overflow-x: auto;
+}
+
 .paper-book-heading {
   display: flex;
   justify-content: space-between;
@@ -585,12 +592,15 @@ svg {
   font-weight: 800;
 }
 
+.paper-action-log table,
 .paper-book-table table {
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
 }
 
+.paper-action-log th,
+.paper-action-log td,
 .paper-book-table th,
 .paper-book-table td {
   padding: 10px 8px;
@@ -599,11 +609,20 @@ svg {
   white-space: nowrap;
 }
 
+.paper-action-log th:first-child,
+.paper-action-log td:first-child,
 .paper-book-table th:first-child,
 .paper-book-table td:first-child {
   text-align: left;
 }
 
+.paper-action-log th:last-child,
+.paper-action-log td:last-child {
+  text-align: left;
+  white-space: normal;
+}
+
+.paper-action-log thead th,
 .paper-book-table thead th {
   color: var(--muted);
   font-size: 11px;
@@ -616,9 +635,43 @@ svg {
   font-weight: 900;
 }
 
+.paper-action-log tbody td,
 .paper-book-table tbody td {
   color: var(--ink);
   font-weight: 700;
+}
+
+.paper-action-row.is-yes {
+  background: linear-gradient(90deg, rgba(20, 130, 86, 0.13), rgba(20, 130, 86, 0.04));
+}
+
+.paper-action-row.is-no {
+  background: linear-gradient(90deg, rgba(190, 61, 61, 0.12), rgba(190, 61, 61, 0.04));
+}
+
+.paper-action-pill {
+  display: inline-flex;
+  justify-content: center;
+  min-width: 42px;
+  border-radius: 999px;
+  padding: 4px 9px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.paper-action-pill.is-yes {
+  background: var(--green);
+}
+
+.paper-action-pill.is-no {
+  background: var(--red);
+}
+
+.paper-action-pill.is-neutral {
+  background: var(--muted);
 }
 
 .paper-book-row.is-buy {
@@ -811,6 +864,7 @@ svg {
     color: var(--muted);
   }
 
+  .paper-action-log,
   .paper-book-table {
     min-width: 0;
     overflow-x: auto;
@@ -821,6 +875,7 @@ svg {
     gap: 4px;
   }
 
+  .paper-action-log table,
   .paper-book-table table {
     min-width: 520px;
   }
