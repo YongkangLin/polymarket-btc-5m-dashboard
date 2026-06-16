@@ -9,6 +9,7 @@ const LIVE_TICK_RENDER_THROTTLE_MS = 16;
 const LIVE_TICK_STALE_MS = 10000;
 const LIVE_TICK_RECONNECT_MS = 2000;
 const LIVE_SOCKET_CONNECT_TIMEOUT_MS = 3500;
+const REMOTE_LIVE_SOCKET_CONNECT_TIMEOUT_MS = 10000;
 const LIVE_TICK_RENDER_MAX_POINTS = 900;
 const LIVE_TICK_PERSIST_MS = 3000;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 4000;
@@ -36,7 +37,7 @@ const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const LOCAL_BACKEND_BASE = configuredBackendBase();
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
-const BACKEND_WS_SNAPSHOT_LIMIT = 1200;
+const BACKEND_WS_SNAPSHOT_LIMIT = backendBaseIsRemote(LOCAL_BACKEND_BASE) ? 180 : 1200;
 const POLYMARKET_TRUTH_SOURCE = "polymarket_chainlink_crypto_prices";
 
 const state = {
@@ -103,6 +104,15 @@ function configuredBackendBase() {
     return `${protocol}//${host}:8788`;
   }
   return "http://127.0.0.1:8788";
+}
+
+function backendBaseIsRemote(base) {
+  try {
+    const url = new URL(base, window.location.href);
+    return url.protocol === "https:" && !["127.0.0.1", "localhost"].includes(url.hostname);
+  } catch (error) {
+    return false;
+  }
 }
 
 function loadJson(path) {
@@ -3690,7 +3700,7 @@ function ensureLiveTickStream() {
         // ignored
       }
     }
-  }, LIVE_SOCKET_CONNECT_TIMEOUT_MS);
+  }, backendBaseIsRemote(backendBaseUrl()) ? REMOTE_LIVE_SOCKET_CONNECT_TIMEOUT_MS : LIVE_SOCKET_CONNECT_TIMEOUT_MS);
   liveTickSocket.onopen = () => {
     if (liveTickSocket?._connectTimer) {
       window.clearTimeout(liveTickSocket._connectTimer);
