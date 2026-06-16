@@ -23,11 +23,12 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
 ];
 const LIVE_PAPER_X_WINDOW_SECONDS = 30;
 const LIVE_PAPER_X_LEAD_SECONDS = 5;
-const LIVE_PAPER_X_SCROLL_STEP_SECONDS = 1;
+const LIVE_PAPER_X_SCROLL_STEP_SECONDS = 0.1;
 const LIVE_PAPER_Y_MIN_RADIUS = 8;
 const LIVE_PAPER_Y_EXPANSION_PAD = 1.24;
 const LIVE_PAPER_Y_BUCKET = 4;
 const LIVE_PAPER_RENDER_BUCKET_SECONDS = 0.075;
+const LIVE_BINANCE_RENDER_BUCKET_SECONDS = 0.2;
 const LOCAL_BACKEND_BASE = window.POLYMARKET_BACKEND_BASE || "http://127.0.0.1:8787";
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
 const BACKEND_WS_SNAPSHOT_LIMIT = 3000;
@@ -548,12 +549,15 @@ function livePaperDollarDomain(market, samples) {
   return { min: -radius, max: radius };
 }
 
-function stableLiveLineSamples(samples) {
-  if (!Array.isArray(samples) || samples.length <= LIVE_TICK_RENDER_MAX_POINTS) return samples || [];
+function stableLiveLineSamples(samples, bucketSeconds = null) {
+  if (!Array.isArray(samples)) return [];
+  const shouldBucket = bucketSeconds !== null || samples.length > LIVE_TICK_RENDER_MAX_POINTS;
+  if (!shouldBucket) return samples;
+  const bucketSize = bucketSeconds ?? LIVE_PAPER_RENDER_BUCKET_SECONDS;
   const buckets = new Map();
   samples.forEach((sample) => {
     if (!Number.isFinite(sample.elapsedSeconds)) return;
-    const bucket = Math.floor(sample.elapsedSeconds / LIVE_PAPER_RENDER_BUCKET_SECONDS);
+    const bucket = Math.floor(sample.elapsedSeconds / bucketSize);
     const existing = buckets.get(bucket);
     if (!existing || sample.elapsedSeconds >= existing.elapsedSeconds) buckets.set(bucket, sample);
   });
@@ -1153,8 +1157,23 @@ function paperDistanceBps(row) {
   return Math.log(btc / start) * 10000;
 }
 
+function pointPlotTimestampMicro(row, source) {
+  const receiveMicro = metricNumber(row?.receive_time_micro);
+  if (source === "chainlink" && row?.decision === "chainlink_tick" && receiveMicro !== null) return receiveMicro;
+  return pointTimestampMicro(row);
+}
+
+function paperGraphElapsedSeconds(row, index, total, source) {
+  const start = metricNumber(row?.window_start_unix);
+  const timestampMicro = pointPlotTimestampMicro(row, source);
+  if (start !== null && timestampMicro !== null) {
+    return Math.max(0, Math.min(300, timestampMicro / 1_000_000 - start));
+  }
+  return paperPointElapsedSeconds(row, index, total);
+}
+
 function paperGraphSample(row, index, total, startPrice, source) {
-  const elapsedSeconds = paperPointElapsedSeconds(row, index, total);
+  const elapsedSeconds = paperGraphElapsedSeconds(row, index, total, source);
   const dollarMove = paperDollarMoveFromStart(row, startPrice);
   const btcPrice = metricNumber(row?.btc_price);
   if (!Number.isFinite(elapsedSeconds) || !Number.isFinite(dollarMove)) return null;
@@ -2674,7 +2693,7 @@ function renderPaperDecisionGraph() {
   const visibleTruthSamples = truthSamples.filter((point) => point.elapsedSeconds >= xDomain.min && point.elapsedSeconds <= xDomain.max);
   const visibleExternalSamples = externalSamples.filter((point) => point.elapsedSeconds >= xDomain.min && point.elapsedSeconds <= xDomain.max);
   const truthLineSamples = selectedCurrent ? stableLiveLineSamples(visibleTruthSamples) : visibleTruthSamples;
-  const externalLineSamples = selectedCurrent ? stableLiveLineSamples(visibleExternalSamples) : visibleExternalSamples;
+  const externalLineSamples = selectedCurrent ? stableLiveLineSamples(visibleExternalSamples, LIVE_BINANCE_RENDER_BUCKET_SECONDS) : visibleExternalSamples;
   const xForElapsed = (elapsedSeconds) => {
     const clamped = Math.max(xDomain.min, Math.min(xDomain.max, Number(elapsedSeconds)));
     return plot.left + ((clamped - xDomain.min) / (xDomain.max - xDomain.min)) * plotWidth;
@@ -2826,7 +2845,9 @@ function renderPaperDecisionGraph() {
     latest.source === "chainlink" ? "Chainlink" : "Binance external",
     `BTC ${formatBookMoney(latest.btcPrice)}`,
     formatDollarMove(latest.dollarMove),
-    latestTradeTime,
+    latest.source === "chainlink" && latestRaw.receive_time_micro
+      ? `event ${latestTradeTime}, received ${formatMicroTimestamp(latestRaw.receive_time_micro)}`
+      : latestTradeTime,
     paperDecisionText(latestRaw),
   ].join(" | ");
 
