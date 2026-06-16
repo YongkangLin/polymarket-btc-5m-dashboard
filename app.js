@@ -39,7 +39,7 @@ const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const LOCAL_BACKEND_BASE = configuredBackendBase();
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
-const BACKEND_WS_SNAPSHOT_LIMIT = backendBaseIsRemote(LOCAL_BACKEND_BASE) ? 40 : 1200;
+const BACKEND_WS_SNAPSHOT_LIMIT = 5000;
 const POLYMARKET_TRUTH_SOURCE = "polymarket_chainlink_crypto_prices";
 
 const state = {
@@ -1058,6 +1058,7 @@ function rememberLiveMarket(market) {
     });
   }
   if (!hadKey) state.paperSelectSignature = "";
+  schedulePaperTickPersist();
   return stored;
 }
 
@@ -1091,32 +1092,139 @@ function rememberObservedPaperMarket(market, points = [], markers = []) {
     }
   });
   state.paperSelectSignature = "";
+  schedulePaperTickPersist();
 }
 
 function rememberWorkflowPaperRows(paperTrade) {
   void paperTrade;
 }
 
+function compactPersistedRow(row, keepBook = false) {
+  const output = {};
+  Object.entries(row || {}).forEach(([key, value]) => {
+    if (value === undefined || typeof value === "function") return;
+    if (key === "raw") return;
+    if (!keepBook && (key === "book_bids" || key === "book_asks")) return;
+    output[key] = value;
+  });
+  return output;
+}
+
+function currentWindowRow(row, fallbackKey = "") {
+  const start = marketWindowStartUnix({
+    market_key: fallbackKey,
+    slug: fallbackKey,
+    condition_id: fallbackKey,
+    ...(row || {}),
+  });
+  return start !== null && start === currentWindowStartUnixNow();
+}
+
+function compactPersistedRows(rows, maxRows) {
+  const currentRows = (rows || []).filter((row) => currentWindowRow(row)).slice(-maxRows);
+  let keepBookIndex = -1;
+  currentRows.forEach((row, index) => {
+    if (Array.isArray(row?.book_bids) || Array.isArray(row?.book_asks)) keepBookIndex = index;
+  });
+  return currentRows.map((row, index) => compactPersistedRow(row, index === keepBookIndex));
+}
+
+function currentMarketEntries(map) {
+  return [...map.entries()]
+    .filter(([key, market]) => currentWindowRow(market, key))
+    .map(([key, market]) => [key, compactPersistedRow(market)]);
+}
+
+function currentRowsEntries(map, maxRows) {
+  return [...map.entries()]
+    .map(([key, rows]) => [key, compactPersistedRows(rows, maxRows)])
+    .filter(([, rows]) => rows.length);
+}
+
 function loadPersistedPaperTicks() {
   try {
-    [...LEGACY_LIVE_TICK_STORE_KEYS, LIVE_TICK_STORE_KEY].forEach((key) => window.localStorage?.removeItem(key));
+    LEGACY_LIVE_TICK_STORE_KEYS.forEach((key) => window.localStorage?.removeItem(key));
+    const raw = window.localStorage?.getItem(LIVE_TICK_STORE_KEY);
+    if (!raw) {
+      state.paperStorageStatus = { state: "empty", lastError: null, restoredMarkets: 0, savedAt: null };
+      return;
+    }
+    const payload = JSON.parse(raw);
+    if (Number(payload?.window_start_unix) !== currentWindowStartUnixNow()) {
+      state.paperStorageStatus = { state: "stale", lastError: null, restoredMarkets: 0, savedAt: payload?.saved_at || null };
+      return;
+    }
+    state.livePersistedMarkets = new Map(payload.live_markets || []);
+    state.paperObservedMarkets = new Map(payload.observed_markets || []);
+    state.paperObservedPointsByMarket = new Map(payload.observed_points || []);
+    state.paperObservedMarkersByMarket = new Map(payload.observed_markers || []);
+    state.liveBtcTicksByMarket = new Map(payload.live_ticks || []);
+    state.liveBtcTickKeysByMarket = new Map(
+      [...state.liveBtcTicksByMarket.entries()].map(([key, rows]) => [key, new Set((rows || []).map(liveBtcPointKey))]),
+    );
+    const restoredMarkets = new Set([
+      ...state.livePersistedMarkets.keys(),
+      ...state.paperObservedMarkets.keys(),
+      ...state.liveBtcTicksByMarket.keys(),
+    ]).size;
+    state.paperStorageStatus = { state: "restored", lastError: null, restoredMarkets, savedAt: payload.saved_at || null };
   } catch (error) {
-    console.warn("paper tick storage cleanup failed", error);
+    console.warn("paper tick restore failed", error);
+    state.paperStorageStatus = { state: "error", lastError: error.message, restoredMarkets: 0, savedAt: null };
   }
-  state.paperStorageStatus = { state: "disabled", lastError: null, restoredMarkets: 0, savedAt: null };
 }
 
 function persistPaperTicksNow() {
+  const payload = {
+    version: 8,
+    saved_at: new Date().toISOString(),
+    window_start_unix: currentWindowStartUnixNow(),
+    live_markets: currentMarketEntries(state.livePersistedMarkets),
+    observed_markets: currentMarketEntries(state.paperObservedMarkets),
+    observed_points: currentRowsEntries(state.paperObservedPointsByMarket, LIVE_TICK_STORE_MAX_POINTS_PER_MARKET),
+    observed_markers: currentRowsEntries(state.paperObservedMarkersByMarket, 400),
+    live_ticks: currentRowsEntries(
+      state.liveBtcTicksByMarket,
+      LIVE_TICK_STORE_MAX_POINTS_PER_MARKET + LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET,
+    ),
+  };
   try {
-    window.localStorage?.removeItem(LIVE_TICK_STORE_KEY);
+    window.localStorage?.setItem(LIVE_TICK_STORE_KEY, JSON.stringify(payload));
+    state.paperStorageStatus = {
+      state: "saved",
+      lastError: null,
+      restoredMarkets: state.paperStorageStatus.restoredMarkets || 0,
+      savedAt: payload.saved_at,
+    };
   } catch (error) {
-    console.warn("paper tick storage cleanup failed", error);
+    try {
+      payload.live_ticks = currentRowsEntries(state.liveBtcTicksByMarket, 1200);
+      payload.observed_points = currentRowsEntries(state.paperObservedPointsByMarket, 1200);
+      window.localStorage?.setItem(LIVE_TICK_STORE_KEY, JSON.stringify(payload));
+      state.paperStorageStatus = {
+        state: "saved_compact",
+        lastError: null,
+        restoredMarkets: state.paperStorageStatus.restoredMarkets || 0,
+        savedAt: payload.saved_at,
+      };
+    } catch (secondError) {
+      console.warn("paper tick persist failed", secondError);
+      state.paperStorageStatus = {
+        state: "error",
+        lastError: secondError.message,
+        restoredMarkets: state.paperStorageStatus.restoredMarkets || 0,
+        savedAt: null,
+      };
+    }
   }
-  state.paperStorageStatus = { state: "disabled", lastError: null, restoredMarkets: 0, savedAt: null };
 }
 
 function schedulePaperTickPersist() {
-  persistPaperTicksNow();
+  if (liveTickPersistTimer) return;
+  liveTickPersistTimer = window.setTimeout(() => {
+    liveTickPersistTimer = null;
+    persistPaperTicksNow();
+  }, LIVE_TICK_PERSIST_MS);
 }
 
 function isCurrentPaperMarket(market) {
@@ -1175,7 +1283,7 @@ function isPaperEventPoint(point) {
 }
 
 function shouldPersistLivePoint(point) {
-  return isBinanceLivePoint(point) && !isBackendLivePoint(point);
+  return isBinanceLivePoint(point);
 }
 
 function liveTickPointsForMarket(market) {
@@ -3152,6 +3260,10 @@ function renderPaperDecisionGraph() {
     x: xForElapsed(point.elapsedSeconds),
     y: yForDollarMove(point.dollarMove),
   })));
+  const headCandidates = [...truthLineSamples, ...externalLineSamples]
+    .filter((point) => point && Number.isFinite(point.elapsedSeconds) && Number.isFinite(point.dollarMove))
+    .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
+  const headSample = selectedCurrent ? (headCandidates[headCandidates.length - 1] || latest) : latest;
   const rule = activeRule();
   const bandRect = (startElapsed, endElapsed, className) => {
     const left = Math.max(xDomain.min, Math.min(startElapsed, endElapsed));
@@ -3254,7 +3366,7 @@ function renderPaperDecisionGraph() {
   const chainlinkStartDot = anchorDot(truthLinePoints, "chainlink-anchor", `${truthLabel} open anchor`);
   const externalStartDot = anchorDot(externalLinePoints, "external-anchor", `${externalLabel} open anchor`);
 
-  const latestRaw = latest.row;
+  const latestRaw = headSample.row;
   const latestBookRaw = latestBookRowForMarket(market, rawPoints) || latestRaw;
   const latestQuote = [...paperMarkersFor(market)].reverse().find((row) => ["quote", "fill"].includes(paperMarkerType(row)));
   const settlement = [...paperMarkersFor(market)].reverse().find((row) => paperMarkerType(row) === "settlement");
@@ -3301,11 +3413,11 @@ function renderPaperDecisionGraph() {
         </div>`).join("")}</div>`
     : "";
   const latestTitle = [
-    `latest ${Math.round(latest.elapsedSeconds)}s in`,
-    latest.source === "chainlink" ? truthLabel : externalLabel,
-    `BTC ${formatBookMoney(latest.btcPrice)}`,
-    formatDollarMove(latest.dollarMove),
-    latest.source === "chainlink" && latestRaw.receive_time_micro
+    `latest ${Math.round(headSample.elapsedSeconds)}s in`,
+    headSample.source === "chainlink" ? truthLabel : externalLabel,
+    `BTC ${formatBookMoney(headSample.btcPrice)}`,
+    formatDollarMove(headSample.dollarMove),
+    headSample.source === "chainlink" && latestRaw.receive_time_micro
       ? `event ${latestTradeTime}, received ${formatMicroTimestamp(latestRaw.receive_time_micro)}`
       : latestTradeTime,
     paperDecisionText(latestRaw),
@@ -3327,8 +3439,8 @@ function renderPaperDecisionGraph() {
       ${truthLegend}
       ${externalLegend}
       ${eventDots}
-      <line class="paper-latest-line" x1="${xForElapsed(latest.elapsedSeconds)}" y1="${plot.top}" x2="${xForElapsed(latest.elapsedSeconds)}" y2="${plotBottom}"></line>
-      <circle class="dot latest ${selectedCurrent ? "live-now" : ""}" cx="${xForElapsed(latest.elapsedSeconds)}" cy="${yForDollarMove(latest.dollarMove)}" r="6">
+      <line class="paper-latest-line" x1="${xForElapsed(headSample.elapsedSeconds)}" y1="${plot.top}" x2="${xForElapsed(headSample.elapsedSeconds)}" y2="${plotBottom}"></line>
+      <circle class="dot latest ${selectedCurrent ? "live-now" : ""}" cx="${xForElapsed(headSample.elapsedSeconds)}" cy="${yForDollarMove(headSample.dollarMove)}" r="6">
         <title>${escapeHtml(latestTitle)}</title>
       </circle>
       ${compact ? "" : '<rect class="note-box" x="696" y="42" width="266" height="584" rx="6"></rect>'}
