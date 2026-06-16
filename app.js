@@ -732,6 +732,61 @@ function definedFields(source) {
   return output;
 }
 
+const TRUTH_PRICE_FIELDS = [
+  "btc_price",
+  "latest_btc_price",
+  "btc_price_source",
+  "btc_price_venue",
+  "price_role",
+  "btc_price_is_truth",
+  "truth_current_price_missing",
+  "latest_chainlink_time_micro",
+  "latest_chainlink_receive_time_micro",
+];
+
+function truthPriceValue(market) {
+  return metricNumber(market?.btc_price ?? market?.latest_btc_price);
+}
+
+function marketHasCurrentTruthPrice(market) {
+  return marketUsesPolymarketTruthPrice(market) && truthPriceValue(market) !== null;
+}
+
+function truthPriceEventMicro(market) {
+  return normalizedTruthRowEventTimeMicro(market) ?? pointTimestampMicro(market);
+}
+
+function truthPriceReceiveMicro(market) {
+  return normalizedTruthRowReceiveTimeMicro(market) ?? truthPriceEventMicro(market);
+}
+
+function shouldKeepExistingTruthPrice(existing, incoming) {
+  if (!marketHasCurrentTruthPrice(existing)) return false;
+  if (!marketHasCurrentTruthPrice(incoming)) return true;
+  const existingEvent = truthPriceEventMicro(existing);
+  const incomingEvent = truthPriceEventMicro(incoming);
+  if (existingEvent !== null && incomingEvent === null) return true;
+  if (existingEvent !== null && incomingEvent !== null && incomingEvent < existingEvent) return true;
+  if (existingEvent !== null && incomingEvent !== null && incomingEvent > existingEvent) return false;
+  const existingReceive = truthPriceReceiveMicro(existing);
+  const incomingReceive = truthPriceReceiveMicro(incoming);
+  return existingReceive !== null && incomingReceive !== null && incomingReceive < existingReceive;
+}
+
+function preserveExistingTruthPrice(target, existing) {
+  TRUTH_PRICE_FIELDS.forEach((field) => {
+    if (existing?.[field] !== undefined && existing?.[field] !== null) target[field] = existing[field];
+  });
+  const price = truthPriceValue(existing);
+  if (price !== null) {
+    target.btc_price = price;
+    target.latest_btc_price = price;
+    target.btc_price_is_truth = true;
+    target.truth_current_price_missing = false;
+  }
+  return target;
+}
+
 function paperMarketQualityScore(market) {
   const startMeta = startMetadataFromSource(market);
   const hasCurrentPrice = metricNumber(market?.btc_price ?? market?.latest_btc_price) !== null;
@@ -883,6 +938,7 @@ function rememberLiveMarket(market) {
     points: [],
     markers: market.markers || existing.markers || [],
   };
+  if (shouldKeepExistingTruthPrice(existing, market)) preserveExistingTruthPrice(stored, existing);
   delete stored[["is", "synthetic", "live"].join("_")];
   state.livePersistedMarkets.set(key, stored);
   if (windowKey && windowKey !== key) {
@@ -906,13 +962,15 @@ function rememberObservedPaperMarket(market, points = [], markers = []) {
   if (!keys.length) return;
   keys.forEach((key) => {
     const existingMarket = state.paperObservedMarkets.get(key) || {};
-    state.paperObservedMarkets.set(key, {
+    const storedMarket = {
       ...existingMarket,
       ...market,
       market_key: key,
       points: [],
       markers: [],
-    });
+    };
+    if (shouldKeepExistingTruthPrice(existingMarket, market)) preserveExistingTruthPrice(storedMarket, existingMarket);
+    state.paperObservedMarkets.set(key, storedMarket);
     if (Array.isArray(points) && points.length) {
       const existingPoints = state.paperObservedPointsByMarket.get(key) || [];
       state.paperObservedPointsByMarket.set(
@@ -1583,6 +1641,13 @@ function paperMissBlockerText(route) {
   return `${rejectReasonLabel(blocker.reason)} ${fmt.format(blocker.events || 0)}`;
 }
 
+function paperMissBestProbeText() {
+  const probe = state.workflow?.paper_trade?.miss_diagnosis?.best_probe;
+  if (!probe) return "Collecting";
+  const label = String(probe.label || probe.key || "Probe").replace(/^Probe:\s*/i, "");
+  return `${label}: ${paperMissFiringText(probe)}`;
+}
+
 function renderStrategyPanels() {
   const paperSummary = state.workflow.paper_trade.summary || {};
   const missRoute = paperMissRoute();
@@ -1601,7 +1666,7 @@ function renderStrategyPanels() {
   byId("paperStrategy").innerHTML = [
     strategyCell("Route", routeLabel),
     strategyCell("Firing", paperMissFiringText(missRoute)),
-    strategyCell("Blocker", missRoute ? paperMissBlockerText(missRoute) : depthSupportText),
+    strategyCell("Probe", missRoute ? paperMissBestProbeText() : depthSupportText),
   ].join("");
   byId("liveStrategy").innerHTML = [
     strategyCell("Status", liveStatus),
