@@ -21,8 +21,8 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v5",
   "polymarketPaperLiveTicks.v6",
 ];
-const LIVE_PAPER_X_WINDOW_SECONDS = 30;
-const LIVE_PAPER_X_LEAD_SECONDS = 5;
+const LIVE_PAPER_X_WINDOW_SECONDS = 75;
+const LIVE_PAPER_X_LEAD_SECONDS = 8;
 const LIVE_PAPER_X_SCROLL_STEP_SECONDS = 0.1;
 const LIVE_PAPER_Y_MIN_RADIUS = 8;
 const LIVE_PAPER_Y_EXPANSION_PAD = 1.24;
@@ -1192,7 +1192,10 @@ function paperDistanceBps(row) {
 
 function pointPlotTimestampMicro(row, source) {
   const receiveMicro = metricNumber(row?.receive_time_micro);
-  if (source === "chainlink" && isChainlinkPriceRow(row) && receiveMicro !== null) return receiveMicro;
+  const priceSource = row?.btc_price_source || row?.btc_price_venue || row?.price_source;
+  if (source === "chainlink" && isChainlinkPriceRow(row) && isChainlinkDataStreamsSource(priceSource) && receiveMicro !== null) {
+    return receiveMicro;
+  }
   return pointTimestampMicro(row);
 }
 
@@ -2684,8 +2687,8 @@ function renderPaperDecisionGraph() {
     truthRows = [anchor, ...truthRows];
   }
   const externalCandidates = priceRows.filter((row) => isExternalPricePoint(row) && !isPolymarketTruthPoint(row));
-  const externalBookRows = externalCandidates.filter((row) => row.decision === "live_book_tick");
-  const externalRows = externalBookRows.length ? externalBookRows : externalCandidates;
+  const externalTradeRows = externalCandidates.filter((row) => row.decision === "live_tick");
+  const externalRows = externalTradeRows;
   const truthSamples = paperGraphSamples(truthRows, startMeta?.price, "chainlink")
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
   const externalSamples = paperGraphSamples(externalRows, startMeta?.price, "binance")
@@ -2703,7 +2706,8 @@ function renderPaperDecisionGraph() {
   const plot = { left: 76, right: 306, top: 42, height: 420 };
   const plotWidth = view.width - plot.left - plot.right;
   const plotBottom = plot.top + plot.height;
-  const latestTruth = truthSamples[truthSamples.length - 1] || null;
+  const realTruthSamples = truthSamples.filter((point) => point.row?.decision !== "chainlink_anchor");
+  const latestTruth = realTruthSamples[realTruthSamples.length - 1] || null;
   const latestExternal = externalSamples[externalSamples.length - 1] || null;
   const latest = latestTruth || latestExternal || allSamples[allSamples.length - 1];
   const latestDomainSample = allSamples[allSamples.length - 1];
@@ -2843,10 +2847,11 @@ function renderPaperDecisionGraph() {
   const fairProbability = metricNumber(latestRaw.fair_probability);
   const fairEdge = metricNumber(latestRaw.fair_edge);
   const startPrice = metricNumber(startMeta?.price ?? latestRaw.start_price ?? market.start_price);
-  const currentPrice = metricNumber(latestTruth?.btcPrice ?? latest.btcPrice ?? latestRaw.btc_price);
-  const priceDifference = latestTruth
-    ? latestTruth.dollarMove
-    : (currentPrice !== null && startPrice !== null ? currentPrice - startPrice : latest.dollarMove);
+  const marketTruthCurrentPrice = marketUsesPolymarketTruthPrice(market)
+    ? metricNumber(market.btc_price ?? market.latest_btc_price)
+    : null;
+  const currentPrice = metricNumber(latestTruth?.btcPrice ?? marketTruthCurrentPrice);
+  const priceDifference = currentPrice !== null && startPrice !== null ? currentPrice - startPrice : null;
   const moveClass = moveToneClass(priceDifference);
   const upProbability = outcomeBookProbability(latestBookRaw || latestRaw, "up")
     ?? metricNumber(market.market_up_probability ?? market.paper_up_probability ?? market.up_probability ?? market.latest_up_probability)
