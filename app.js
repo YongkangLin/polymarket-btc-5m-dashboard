@@ -12,7 +12,8 @@ const LIVE_SOCKET_CONNECT_TIMEOUT_MS = 3500;
 const LIVE_TICK_RENDER_MAX_POINTS = 1200;
 const LIVE_TICK_PERSIST_MS = 1000;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 50000;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v2";
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v3";
+const LEGACY_LIVE_TICK_STORE_KEYS = ["polymarketPaperLiveTicks.v2"];
 const LIVE_PAPER_X_WINDOW_SECONDS = 90;
 const LIVE_PAPER_X_LEAD_SECONDS = 12;
 const LIVE_PAPER_X_SCROLL_STEP_SECONDS = 1;
@@ -792,6 +793,7 @@ function rememberWorkflowPaperRows(paperTrade) {
 
 function loadPersistedPaperTicks() {
   try {
+    LEGACY_LIVE_TICK_STORE_KEYS.forEach((key) => window.localStorage?.removeItem(key));
     const raw = window.localStorage?.getItem(LIVE_TICK_STORE_KEY);
     if (!raw) {
       state.paperStorageStatus = { state: "empty", lastError: null, restoredMarkets: 0, savedAt: null };
@@ -859,7 +861,7 @@ function persistPaperTicksNow() {
     const savedAt = new Date().toISOString();
     window.localStorage.setItem(
       LIVE_TICK_STORE_KEY,
-      JSON.stringify({ version: 2, saved_at: savedAt, markets }),
+      JSON.stringify({ version: 3, saved_at: savedAt, markets }),
     );
     state.paperStorageStatus = {
       state: "saved",
@@ -2382,15 +2384,18 @@ function outcomeBookProbability(row, side) {
 }
 
 function startMetadataFromSource(source, fallbackSource = "paper_market_start") {
+  const startPrice = metricNumber(source?.start_price);
   const binancePrice = metricNumber(source?.binance_start_price);
-  const price = binancePrice ?? metricNumber(source?.start_price);
-  if (price === null || price <= 0) return null;
-  const sourceName = source?.start_price_source
+  const rawSource = source?.start_price_source
     || source?.btc_price_source
     || (binancePrice !== null ? "binance_ws_trade_at_window_start" : fallbackSource);
+  const price = isPolymarketTruthSource(rawSource)
+    ? (startPrice ?? binancePrice)
+    : (binancePrice ?? startPrice);
+  if (price === null || price <= 0) return null;
   return {
     price,
-    source: sourceName,
+    source: rawSource,
     eventTimeMicro: source?.start_event_time_micro || null,
     capturedAt: source?.generated_at || source?.ts || source?.btc_price_fetched_at || null,
   };
@@ -2689,8 +2694,12 @@ function renderPaperDecisionGraph() {
   const currentPrice = metricNumber(latest.btcPrice ?? latestRaw.btc_price);
   const priceDifference = currentPrice !== null && startPrice !== null ? currentPrice - startPrice : latest.dollarMove;
   const moveClass = moveToneClass(priceDifference);
-  const upProbability = outcomeBookProbability(latestBookRaw || latestRaw, "up") ?? metricNumber(latestRaw.fair_up);
-  const downProbability = outcomeBookProbability(latestBookRaw || latestRaw, "down") ?? metricNumber(latestRaw.fair_down);
+  const upProbability = metricNumber(market.paper_up_probability ?? market.up_probability ?? market.latest_up_probability)
+    ?? outcomeBookProbability(latestBookRaw || latestRaw, "up")
+    ?? metricNumber(latestRaw.fair_up);
+  const downProbability = metricNumber(market.paper_down_probability ?? market.down_probability ?? market.latest_down_probability)
+    ?? outcomeBookProbability(latestBookRaw || latestRaw, "down")
+    ?? metricNumber(latestRaw.fair_down);
   const infoRows = [
     { label: "Start price", value: startPrice === null ? "--" : formatBookMoney(startPrice) },
     { label: "Current price", value: currentPrice === null ? "--" : formatBookMoney(currentPrice) },
