@@ -3312,6 +3312,14 @@ function paperActionWhy(row) {
   if (notional !== null && ["quote", "fill", "cancel", "signal"].includes(type)) {
     pieces.push(`size ${moneyCents.format(notional)}`);
   }
+  const bankrollMax = metricNumber(row?.bankroll_max_order);
+  if (bankrollMax !== null && ["quote", "signal"].includes(type)) {
+    pieces.push(`bankroll max ${moneyCents.format(bankrollMax)}`);
+  }
+  const kelly = metricNumber(row?.bankroll_fractional_kelly_fraction);
+  if (kelly !== null && ["quote", "signal"].includes(type)) {
+    pieces.push(`Kelly ${(kelly * 100).toFixed(1)}%`);
+  }
   const fairEdge = metricNumber(row?.fair_edge ?? row?.fair_edge_vs_signal_bid);
   if (fairEdge !== null) pieces.push(`edge ${formatCents(fairEdge)}`);
   const support = metricNumber(row?.external_book_support);
