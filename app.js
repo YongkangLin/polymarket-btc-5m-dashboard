@@ -5,14 +5,14 @@ const ACTIVE_BACKTEST_KEY = "late_depth_fair_clean";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_REFRESH_MS = 5000;
-const LIVE_TICK_RENDER_THROTTLE_MS = 50;
+const LIVE_TICK_RENDER_THROTTLE_MS = 16;
 const LIVE_TICK_STALE_MS = 10000;
 const LIVE_TICK_RECONNECT_MS = 2000;
 const LIVE_SOCKET_CONNECT_TIMEOUT_MS = 3500;
-const LIVE_TICK_RENDER_MAX_POINTS = 600;
+const LIVE_TICK_RENDER_MAX_POINTS = 3000;
 const LIVE_TICK_PERSIST_MS = 3000;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 12000;
-const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 60;
+const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 6000;
 const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v7";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
@@ -21,8 +21,8 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v5",
   "polymarketPaperLiveTicks.v6",
 ];
-const LIVE_PAPER_X_WINDOW_SECONDS = 90;
-const LIVE_PAPER_X_LEAD_SECONDS = 12;
+const LIVE_PAPER_X_WINDOW_SECONDS = 30;
+const LIVE_PAPER_X_LEAD_SECONDS = 5;
 const LIVE_PAPER_X_SCROLL_STEP_SECONDS = 1;
 const LIVE_PAPER_Y_MIN_RADIUS = 8;
 const LIVE_PAPER_Y_EXPANSION_PAD = 1.24;
@@ -30,7 +30,7 @@ const LIVE_PAPER_Y_BUCKET = 4;
 const LIVE_PAPER_RENDER_BUCKET_SECONDS = 0.075;
 const LOCAL_BACKEND_BASE = window.POLYMARKET_BACKEND_BASE || "http://127.0.0.1:8787";
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
-const BACKEND_WS_SNAPSHOT_LIMIT = 600;
+const BACKEND_WS_SNAPSHOT_LIMIT = 6000;
 const POLYMARKET_TRUTH_SOURCE = "polymarket_chainlink_crypto_prices";
 
 const state = {
@@ -2448,6 +2448,17 @@ function outcomeBookProbability(row, side) {
   return null;
 }
 
+function liveDirectionProbability(market, startMeta, truthSample, fallbackSample) {
+  const start = metricNumber(startMeta?.price ?? market?.start_price);
+  const sample = truthSample || fallbackSample;
+  const current = metricNumber(sample?.btcPrice ?? sample?.row?.btc_price ?? market?.btc_price ?? market?.latest_btc_price);
+  if (start === null || current === null) return null;
+  const difference = current - start;
+  if (!Number.isFinite(difference)) return null;
+  if (Math.abs(difference) < 0.005) return { up: 0.5, down: 0.5 };
+  return difference > 0 ? { up: 1, down: 0 } : { up: 0, down: 1 };
+}
+
 function startMetadataFromSource(source, fallbackSource = "paper_market_start") {
   const startPrice = metricNumber(source?.start_price);
   const rawSource = source?.start_price_source
@@ -2623,13 +2634,15 @@ function renderPaperDecisionGraph() {
   }
 
   const startMeta = preferredPaperStartMetadata(market);
-  const priceRows = rawPoints.filter((row) => row.decision !== "live_book_tick");
+  const priceRows = rawPoints;
   const anchor = chainlinkAnchorRow(market, startMeta, 0);
   let truthRows = priceRows.filter(isPolymarketTruthPoint);
   if (anchor && !truthRows.some((row) => Math.abs(paperPointElapsedSeconds(row, 0, 1)) < 0.001)) {
     truthRows = [anchor, ...truthRows];
   }
-  const externalRows = priceRows.filter((row) => isExternalPricePoint(row) && !isPolymarketTruthPoint(row));
+  const externalCandidates = priceRows.filter((row) => isExternalPricePoint(row) && !isPolymarketTruthPoint(row));
+  const externalBookRows = externalCandidates.filter((row) => row.decision === "live_book_tick");
+  const externalRows = externalBookRows.length ? externalBookRows : externalCandidates;
   const truthSamples = paperGraphSamples(truthRows, startMeta?.price, "chainlink")
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
   const externalSamples = paperGraphSamples(externalRows, startMeta?.price, "binance")
@@ -2687,11 +2700,24 @@ function renderPaperDecisionGraph() {
   };
   const decisionBand = bandRect(300 - (rule.max_seconds_left ?? 120), 300 - (rule.min_seconds_left ?? 61), "decision-band");
   const closeBand = bandRect(280, 300, "paper-close-band");
-  const xTickCount = 5;
-  const xTicks = Array.from({ length: xTickCount }, (_, index) => {
-    const tick = xDomain.min + ((xDomain.max - xDomain.min) * index) / (xTickCount - 1);
+  const xMinorStart = Math.ceil(xDomain.min);
+  const xMinorEnd = Math.floor(xDomain.max);
+  const xMinorTicks = Array.from({ length: Math.max(0, xMinorEnd - xMinorStart + 1) }, (_, index) => xMinorStart + index)
+    .map((tick) => {
+      const x = xForElapsed(tick);
+      return `<line class="grid grid-minor" x1="${x}" y1="${plot.top}" x2="${x}" y2="${plotBottom}"></line>`;
+    }).join("");
+  const xMajorStep = selectedCurrent ? 5 : 60;
+  const xMajorStart = Math.ceil(xDomain.min / xMajorStep) * xMajorStep;
+  const xMajorTicks = [];
+  for (let tick = xMajorStart; tick <= xDomain.max + 0.001; tick += xMajorStep) {
+    xMajorTicks.push(tick);
+  }
+  if (!xMajorTicks.some((tick) => Math.abs(tick - xDomain.min) < 0.001)) xMajorTicks.unshift(xDomain.min);
+  if (!xMajorTicks.some((tick) => Math.abs(tick - xDomain.max) < 0.001)) xMajorTicks.push(xDomain.max);
+  const xTicks = xMajorTicks.map((tick) => {
     const x = xForElapsed(tick);
-    return `<line class="grid" x1="${x}" y1="${plot.top}" x2="${x}" y2="${plotBottom}"></line><text class="tick" x="${x}" y="${plotBottom + 24}" text-anchor="middle">${Math.round(tick)}s</text>`;
+    return `<line class="grid grid-major" x1="${x}" y1="${plot.top}" x2="${x}" y2="${plotBottom}"></line><text class="tick" x="${x}" y="${plotBottom + 24}" text-anchor="middle">${Math.round(tick)}s</text>`;
   }).join("");
   const yTickValues = [dollarDomain.min, (dollarDomain.min + dollarDomain.max) / 2, dollarDomain.max];
   if (dollarDomain.min < 0 && dollarDomain.max > 0) yTickValues.push(0);
@@ -2774,11 +2800,14 @@ function renderPaperDecisionGraph() {
     ? latestTruth.dollarMove
     : (currentPrice !== null && startPrice !== null ? currentPrice - startPrice : latest.dollarMove);
   const moveClass = moveToneClass(priceDifference);
-  const upProbability = metricNumber(market.paper_up_probability ?? market.up_probability ?? market.latest_up_probability)
-    ?? outcomeBookProbability(latestBookRaw || latestRaw, "up")
+  const directionProbability = liveDirectionProbability(market, startMeta, latestTruth, latest);
+  const upProbability = outcomeBookProbability(latestBookRaw || latestRaw, "up")
+    ?? directionProbability?.up
+    ?? metricNumber(market.paper_up_probability ?? market.up_probability ?? market.latest_up_probability)
     ?? metricNumber(latestRaw.fair_up);
-  const downProbability = metricNumber(market.paper_down_probability ?? market.down_probability ?? market.latest_down_probability)
-    ?? outcomeBookProbability(latestBookRaw || latestRaw, "down")
+  const downProbability = outcomeBookProbability(latestBookRaw || latestRaw, "down")
+    ?? directionProbability?.down
+    ?? metricNumber(market.paper_down_probability ?? market.down_probability ?? market.latest_down_probability)
     ?? metricNumber(latestRaw.fair_down);
   const infoRows = [
     { label: "Start price", value: startPrice === null ? "--" : formatBookMoney(startPrice) },
@@ -2807,6 +2836,7 @@ function renderPaperDecisionGraph() {
       <rect class="plot" x="${plot.left}" y="${plot.top}" width="${plotWidth}" height="${plot.height}"></rect>
       ${decisionBand}
       ${closeBand}
+      ${xMinorTicks}
       ${xTicks}
       ${yTicks}
       ${truthPath}

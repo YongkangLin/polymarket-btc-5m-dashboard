@@ -324,6 +324,16 @@ svg {
   stroke-width: 1;
 }
 
+.grid-minor {
+  stroke: #eef2f4;
+  stroke-width: 0.7;
+}
+
+.grid-major {
+  stroke: #d6dde2;
+  stroke-width: 1.1;
+}
+
 .axis-zero {
   stroke: #9aa7af;
   stroke-width: 1.4;
@@ -348,9 +358,9 @@ svg {
 
 .line-external {
   stroke: var(--blue);
-  stroke-dasharray: 4 5;
-  stroke-width: 1.8;
-  opacity: 0.82;
+  stroke-dasharray: 7 5;
+  stroke-width: 2.8;
+  opacity: 1;
 }
 
 .line-ask {
