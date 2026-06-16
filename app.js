@@ -1001,6 +1001,16 @@ function isBackendLivePoint(point) {
   return venue.startsWith("local_backend_binance_ws");
 }
 
+function isPaperEventPoint(point) {
+  const eventType = String(point?.event_type || "");
+  const pointId = String(point?.point_id || "");
+  return point?.backend_event_kind === "paper"
+    || pointId.startsWith("backend:paper:")
+    || eventType.startsWith("paper_")
+    || eventType.startsWith("maker_paper_")
+    || point?.decision === "paper_signal";
+}
+
 function shouldPersistLivePoint(point) {
   return isBinanceLivePoint(point) && !isBackendLivePoint(point);
 }
@@ -1387,6 +1397,7 @@ function paperStorageWarningText() {
 }
 
 function paperMarkerType(row) {
+  if (row?.decision === "no_signal") return "fail";
   const value = String(row?.event_type || row?.type || row?.decision || "");
   if (value.includes("settlement")) return "settlement";
   if (value.includes("fill")) return "fill";
@@ -3251,6 +3262,23 @@ function handleBackendStreamMessage(payload) {
       state: "open",
       lastError: null,
       lastStreamAt: new Date(),
+      url: backendWebSocketUrl(),
+    };
+    scheduleLiveTickRender();
+    return;
+  }
+  if (payload.type === "paper_event") {
+    const point = payload.point;
+    const market = rememberBackendStreamMarket(payload.market || point) || point;
+    if (point && isPaperEventPoint(point)) {
+      rememberObservedPaperMarket(market, [point], [point]);
+    }
+    state.backendStatus = {
+      ...state.backendStatus,
+      state: "open",
+      lastError: null,
+      lastStreamAt: new Date(),
+      pointsLoaded: (state.backendStatus.pointsLoaded || 0) + 1,
       url: backendWebSocketUrl(),
     };
     scheduleLiveTickRender();
