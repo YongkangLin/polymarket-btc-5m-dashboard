@@ -1115,9 +1115,18 @@ function marketUsesPolymarketTruthPrice(market) {
     || market?.truth_current_price_missing === false;
 }
 
+function hasStrictPolymarketTruthPrice(row) {
+  const source = String(row?.btc_price_source || row?.btc_price_venue || row?.price_source || row?.price_role || "").toLowerCase();
+  if (source.includes("binance") || source.includes("external_live_estimate")) return false;
+  return source.includes("polymarket")
+    || source.includes("chainlink")
+    || row?.price_role === "polymarket_truth"
+    || row?.btc_price_is_truth === true;
+}
+
 function isPolymarketTruthPoint(row) {
   const source = String(row?.btc_price_source || row?.btc_price_venue || row?.price_source || "").toLowerCase();
-  return marketUsesPolymarketTruthPrice(row)
+  return hasStrictPolymarketTruthPrice(row)
     || source.includes("polymarket")
     || source.includes("chainlink");
 }
@@ -1205,6 +1214,7 @@ function truthSampleMatchesMarket(sample, market) {
 
 function truthDisplayCandidateFromRow(market, row) {
   if (!row) return null;
+  if (!hasStrictPolymarketTruthPrice(row)) return null;
   return {
     row,
     btcPrice: metricNumber(row.btc_price ?? row.latest_btc_price),
@@ -1215,8 +1225,43 @@ function truthDisplayCandidateFromRow(market, row) {
   };
 }
 
+function liveTruthSnapshotCandidates(market) {
+  const marketStart = marketWindowStartUnix(market);
+  if (marketStart === null) return [];
+  const snapshots = [
+    market,
+    ...state.livePersistedMarkets.values(),
+    ...state.paperObservedMarkets.values(),
+  ];
+  const seen = new Set();
+  return snapshots
+    .filter((row) => row && marketWindowStartUnix(row) === marketStart)
+    .map((row) => truthDisplayCandidateFromRow(market, row))
+    .filter((sample) => {
+      if (!sample || sample.btcPrice === null) return false;
+      const eventTime = normalizedTruthRowEventTimeMicro(sample.row) ?? "";
+      const receiveTime = normalizedTruthRowReceiveTimeMicro(sample.row) ?? "";
+      const key = `${eventTime}:${receiveTime}:${sample.btcPrice}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function sortTruthDisplayCandidates(candidates) {
+  return candidates.sort((left, right) => {
+    const leftReceiveTime = normalizedTruthRowReceiveTimeMicro(left.row) ?? 0;
+    const rightReceiveTime = normalizedTruthRowReceiveTimeMicro(right.row) ?? 0;
+    if (rightReceiveTime !== leftReceiveTime) return rightReceiveTime - leftReceiveTime;
+    const leftEventTime = normalizedTruthRowEventTimeMicro(left.row) ?? 0;
+    const rightEventTime = normalizedTruthRowEventTimeMicro(right.row) ?? 0;
+    return rightEventTime - leftEventTime;
+  });
+}
+
 function freshestTruthDisplaySample(market, truthSamples, marketTruthPoint) {
   const candidates = [
+    ...liveTruthSnapshotCandidates(market),
     ...(Array.isArray(truthSamples) ? truthSamples : [truthSamples]),
     truthDisplayCandidateFromRow(market, marketTruthPoint),
   ].filter((sample) => (
@@ -1226,30 +1271,17 @@ function freshestTruthDisplaySample(market, truthSamples, marketTruthPoint) {
     && isFreshTruthRow(sample.row)
   ));
   if (!candidates.length) return null;
-  return candidates.sort((left, right) => {
-    const leftEventTime = normalizedTruthRowEventTimeMicro(left.row) ?? 0;
-    const rightEventTime = normalizedTruthRowEventTimeMicro(right.row) ?? 0;
-    if (rightEventTime !== leftEventTime) return rightEventTime - leftEventTime;
-    const leftReceiveTime = normalizedTruthRowReceiveTimeMicro(left.row) ?? 0;
-    const rightReceiveTime = normalizedTruthRowReceiveTimeMicro(right.row) ?? 0;
-    return rightReceiveTime - leftReceiveTime;
-  })[0];
+  return sortTruthDisplayCandidates(candidates)[0];
 }
 
 function fallbackTruthDisplaySample(market, truthSamples, marketTruthPoint) {
   const candidates = [
+    ...liveTruthSnapshotCandidates(market),
     ...(Array.isArray(truthSamples) ? truthSamples : [truthSamples]),
     truthDisplayCandidateFromRow(market, marketTruthPoint),
   ].filter((sample) => sample && sample.btcPrice !== null && truthSampleMatchesMarket(sample, market));
   if (!candidates.length) return null;
-  return candidates.sort((left, right) => {
-    const leftEventTime = normalizedTruthRowEventTimeMicro(left.row) ?? 0;
-    const rightEventTime = normalizedTruthRowEventTimeMicro(right.row) ?? 0;
-    if (rightEventTime !== leftEventTime) return rightEventTime - leftEventTime;
-    const leftReceiveTime = normalizedTruthRowReceiveTimeMicro(left.row) ?? 0;
-    const rightReceiveTime = normalizedTruthRowReceiveTimeMicro(right.row) ?? 0;
-    return rightReceiveTime - leftReceiveTime;
-  })[0];
+  return sortTruthDisplayCandidates(candidates)[0];
 }
 
 function isExternalPricePoint(row) {
