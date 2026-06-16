@@ -74,6 +74,43 @@
       ],
       "ready": false
     },
+    "capacity_probe_historical_gate": {
+      "checks": [
+        {
+          "id": "maker_route_ready",
+          "passed": true
+        },
+        {
+          "id": "test_fill_rate",
+          "passed": true
+        },
+        {
+          "id": "test_roi",
+          "passed": true
+        },
+        {
+          "id": "walkforward_days",
+          "passed": true
+        },
+        {
+          "id": "walkforward_signals",
+          "passed": false
+        },
+        {
+          "id": "walkforward_positive_days",
+          "passed": true
+        },
+        {
+          "id": "walkforward_roi",
+          "passed": true
+        },
+        {
+          "id": "walkforward_lift",
+          "passed": true
+        }
+      ],
+      "ready": false
+    },
     "challenger_historical_gate": {
       "checks": [
         {
@@ -131,30 +168,31 @@
           "passed": true
         }
       ],
-      "quote_rate_lift": 0.02100840336134454,
+      "quote_rate_lift": 0.015503875968992248,
       "ready": false
     },
     "reasons": [
       "Active route still passes historical maker route and walkforward gates.",
       "Challenger route passes historical gates, so it is worth shadowing.",
       "Live challenger evidence is too small for promotion: 6 would-quote events across 2 markets.",
-      "The broader high-ask depth-relaxed probe fires slightly more live, but its historical maker route is not ready: held-out test ROI is 1.63%."
+      "The broader high-ask depth-relaxed probe fires slightly more live, but its historical maker route is not ready: held-out test ROI is 1.63%.",
+      "The early-window capacity probe is not eligible for routing yet: held-out ROI is 11.29% or another historical gate failed."
     ],
     "recommendation": "Keep the strict active route as the execution route and run the high-ask challenger as a shadow route."
   },
-  "generated_at": "2026-06-16T11:03:41.763591+00:00",
+  "generated_at": "2026-06-16T11:50:06.716066+00:00",
   "routes": {
     "active": {
       "key": "active_late_depth_fair",
       "live": {
-        "inband_events": 238,
+        "inband_events": 258,
         "key": "active_late_depth_fair",
         "label": "Active: 55c-75c near-strike depth/fair maker",
         "path": "reports/live_paper_miss_diagnosis.json",
-        "quote_rate": 0.004201680672268907,
+        "quote_rate": 0.007751937984496124,
         "top_reasons": [
           {
-            "events": 153,
+            "events": 166,
             "reason": "ask_outside_route"
           },
           {
@@ -162,15 +200,15 @@
             "reason": "complement_ask_sum_too_high"
           },
           {
-            "events": 15,
+            "events": 18,
             "reason": "depth_imbalance_too_low"
           },
           {
-            "events": 58,
+            "events": 60,
             "reason": "distance_outside_route"
           },
           {
-            "events": 5,
+            "events": 6,
             "reason": "external_book_support_too_low"
           },
           {
@@ -178,16 +216,16 @@
             "reason": "fair_edge_too_low"
           },
           {
-            "events": 1253,
+            "events": 1329,
             "reason": "outside_time_window"
           },
           {
-            "events": 1,
+            "events": 2,
             "reason": "would_quote"
           }
         ],
-        "would_quote_events": 1,
-        "would_quote_markets": 1
+        "would_quote_events": 2,
+        "would_quote_markets": 2
       },
       "selected": {
         "maker_route_ready": true,
@@ -230,14 +268,14 @@
     "best_probe": {
       "key": "high_ask_depth_relaxed_probe",
       "live": {
-        "inband_events": 238,
+        "inband_events": 258,
         "key": "high_ask_depth_relaxed_probe",
         "label": "Probe: 75c-98c high-fair with -25% depth floor",
         "path": "reports/live_paper_miss_diagnosis.json",
-        "quote_rate": 0.037815126050420166,
+        "quote_rate": 0.03875968992248062,
         "top_reasons": [
           {
-            "events": 51,
+            "events": 60,
             "reason": "ask_outside_route"
           },
           {
@@ -245,11 +283,11 @@
             "reason": "complement_ask_sum_too_high"
           },
           {
-            "events": 74,
+            "events": 78,
             "reason": "depth_imbalance_too_low"
           },
           {
-            "events": 36,
+            "events": 38,
             "reason": "distance_outside_route"
           },
           {
@@ -257,11 +295,11 @@
             "reason": "external_book_not_collected"
           },
           {
-            "events": 4,
+            "events": 5,
             "reason": "external_book_support_too_low"
           },
           {
-            "events": 29,
+            "events": 32,
             "reason": "fair_edge_too_low"
           },
           {
@@ -269,8 +307,8 @@
             "reason": "missing_entry_price"
           }
         ],
-        "would_quote_events": 9,
-        "would_quote_markets": 3
+        "would_quote_events": 10,
+        "would_quote_markets": 4
       },
       "selected": {
         "maker_route_ready": false,
@@ -311,14 +349,14 @@
       }
     },
     "best_probe_live": {
-      "inband_events": 238,
+      "inband_events": 258,
       "key": "high_ask_depth_relaxed_probe",
       "label": "Probe: 75c-98c high-fair with -25% depth floor",
       "path": "reports/live_paper_miss_diagnosis.json",
-      "quote_rate": 0.037815126050420166,
+      "quote_rate": 0.03875968992248062,
       "top_reasons": [
         {
-          "events": 51,
+          "events": 60,
           "reason": "ask_outside_route"
         },
         {
@@ -326,11 +364,11 @@
           "reason": "complement_ask_sum_too_high"
         },
         {
-          "events": 74,
+          "events": 78,
           "reason": "depth_imbalance_too_low"
         },
         {
-          "events": 36,
+          "events": 38,
           "reason": "distance_outside_route"
         },
         {
@@ -338,11 +376,11 @@
           "reason": "external_book_not_collected"
         },
         {
-          "events": 4,
+          "events": 5,
           "reason": "external_book_support_too_low"
         },
         {
-          "events": 29,
+          "events": 32,
           "reason": "fair_edge_too_low"
         },
         {
@@ -350,20 +388,79 @@
           "reason": "missing_entry_price"
         }
       ],
-      "would_quote_events": 9,
-      "would_quote_markets": 3
+      "would_quote_events": 10,
+      "would_quote_markets": 4
+    },
+    "capacity_probe": {
+      "key": "early_midask_distance_fair_probe",
+      "live": {
+        "inband_events": 317,
+        "key": "early_midask_distance_fair_probe",
+        "label": "Probe: 181-240s, 65c-90c, 10-20 bps distance",
+        "path": "reports/live_paper_miss_diagnosis.json",
+        "quote_rate": 0.0,
+        "top_reasons": [
+          {
+            "events": 317,
+            "reason": "missing_distance"
+          },
+          {
+            "events": 1270,
+            "reason": "outside_time_window"
+          }
+        ],
+        "would_quote_events": 0,
+        "would_quote_markets": 0
+      },
+      "selected": {
+        "maker_route_ready": true,
+        "path": "reports/btc_5m_early_midask_distance_fair_probe_maker_routes.json",
+        "roi_lift_vs_always_taker": 0.03105993,
+        "route_id": "maker_join_bid_h30",
+        "route_label": "Maker join best bid for 30s",
+        "strategy_id": "dominant_early_midask_distance_fair_probe",
+        "test_fill_rate": 0.95555556,
+        "test_fills": 86,
+        "test_roi_on_filled_cost": 0.11853748,
+        "test_roi_on_planned_cost": 0.11287376,
+        "test_signals": 90,
+        "walkforward_fills": 143,
+        "walkforward_positive_day_rate": 0.89473684,
+        "walkforward_roi_lift_vs_always_taker": 0.04397308,
+        "walkforward_roi_on_planned_cost": 0.12841417,
+        "walkforward_signals": 156
+      },
+      "walkforward": {
+        "avg_day_roi_on_planned_cost": 0.14647237894736842,
+        "avg_roi_lift_vs_always_taker": 0.06195005842105263,
+        "days": 19,
+        "fill_rate": 0.9166666666666666,
+        "filled_cost": 3565.63514748,
+        "fills": 143,
+        "median_day_roi_on_planned_cost": 0.1986793,
+        "min_day_roi_on_planned_cost": -0.5,
+        "path": "reports/btc_5m_early_midask_distance_fair_probe_maker_route_walkforward.csv",
+        "planned_cost": 3900.0,
+        "pnl_dollars": 500.81525676,
+        "portfolio_roi_lift_vs_always_taker": 0.043973078379487184,
+        "positive_day_rate": 0.8947368421052632,
+        "positive_days": 17,
+        "roi_on_filled_cost": 0.1404561140008813,
+        "roi_on_planned_cost": 0.1284141684,
+        "signals": 156
+      }
     },
     "challenger": {
       "key": "late_high_ask_fair_probe",
       "live": {
-        "inband_events": 238,
+        "inband_events": 258,
         "key": "late_high_ask_fair_probe",
         "label": "Challenger: 75c-98c high-fair maker probe",
         "path": "reports/live_paper_miss_diagnosis.json",
-        "quote_rate": 0.025210084033613446,
+        "quote_rate": 0.023255813953488372,
         "top_reasons": [
           {
-            "events": 51,
+            "events": 60,
             "reason": "ask_outside_route"
           },
           {
@@ -371,11 +468,11 @@
             "reason": "complement_ask_sum_too_high"
           },
           {
-            "events": 92,
+            "events": 98,
             "reason": "depth_imbalance_too_low"
           },
           {
-            "events": 36,
+            "events": 38,
             "reason": "distance_outside_route"
           },
           {
@@ -383,11 +480,11 @@
             "reason": "external_book_not_collected"
           },
           {
-            "events": 3,
+            "events": 4,
             "reason": "external_book_support_too_low"
           },
           {
-            "events": 19,
+            "events": 21,
             "reason": "fair_edge_too_low"
           },
           {
