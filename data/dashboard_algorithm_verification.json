@@ -1,0 +1,282 @@
+{
+  "generated_at": "2026-06-16T23:23:10.078743+00:00",
+  "status": "passed",
+  "feature_summary": {
+    "markets": 2571,
+    "rows": 773871,
+    "complete_markets": 2571,
+    "min_rows_per_market": 301,
+    "max_rows_per_market": 301,
+    "bad_rows": 0
+  },
+  "decision_summary": {
+    "rows": 133346,
+    "markets": 2186,
+    "signal_rows": 2170,
+    "signal_markets": 865
+  },
+  "algorithm_summary": {
+    "paper_status": "backtest_collect_more",
+    "live_status": "live_disabled",
+    "signals": 865,
+    "win_rate": 0.6878612716763006,
+    "roi_after_slippage_haircut": 0.016495167146392077
+  },
+  "workflow_summary": {
+    "strategy": "dominant_late_depth_fair_clean",
+    "status": "thin_edge_sample",
+    "clean_markets": 2186,
+    "decision_rows": 133346,
+    "wallet_profile_strategies": [
+      "profile_cheap_pair",
+      "profile_paper_gate",
+      "profile_skew"
+    ]
+  },
+  "engine_summary": {
+    "config": "live-engine/config/btc_5m_cheap_pair_shadow.json",
+    "mode": "shadow",
+    "symbols": [
+      "BTC"
+    ],
+    "table_gate": {
+      "strategy_kind": "profile_cheap_pair",
+      "max_pair_quote": 0.98,
+      "min_quote": 0.01,
+      "max_quote": 0.99
+    },
+    "maker_route": {
+      "mode": "two_below_ask",
+      "quote_horizon_seconds": 15
+    },
+    "quote_notional_dollars": 5.0
+  },
+  "checks": [
+    {
+      "id": "features_exist",
+      "label": "Clean feature table exists",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "id": "decisions_exist",
+      "label": "Decision table exists",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "id": "algorithm_exists",
+      "label": "Algorithm JSON exists",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "id": "workflow_exists",
+      "label": "Workflow JSON exists",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "id": "wallet_profile_brief_exists",
+      "label": "Wallet profile strategy brief exists",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "id": "feature_markets_complete",
+      "label": "Every feature market has 301 clean seconds",
+      "actual": 2571,
+      "expected": 2571,
+      "passed": true
+    },
+    {
+      "id": "feature_bad_rows_zero",
+      "label": "No stale/null core feature rows",
+      "actual": 0,
+      "expected": 0,
+      "passed": true
+    },
+    {
+      "id": "algorithm_clean_count_matches_features",
+      "label": "Algorithm clean count matches selected data gate",
+      "actual": 2186,
+      "expected": 2186,
+      "passed": true
+    },
+    {
+      "id": "workflow_clean_count_matches_algorithm",
+      "label": "Workflow clean count matches algorithm",
+      "actual": 2186,
+      "expected": 2186,
+      "passed": true
+    },
+    {
+      "id": "workflow_decision_rows_match_decisions",
+      "label": "Workflow decision row count matches decision table",
+      "actual": 133346,
+      "expected": 133346,
+      "passed": true
+    },
+    {
+      "id": "workflow_signals_match_algorithm",
+      "label": "Workflow signal count matches algorithm",
+      "actual": 865,
+      "expected": 865,
+      "passed": true
+    },
+    {
+      "id": "workflow_win_rate_matches_algorithm",
+      "label": "Workflow win rate matches algorithm",
+      "actual": 0.687861,
+      "expected": 0.6878612716763006,
+      "passed": true
+    },
+    {
+      "id": "workflow_route_matches_algorithm",
+      "label": "Workflow execution policy matches active strategy",
+      "actual": {
+        "status": "paper_collecting",
+        "maker_route_ready": false,
+        "selected_route_id": "maker_two_below_ask_h15",
+        "selected_route_type": "maker"
+      },
+      "expected": {
+        "status": "paper_collecting",
+        "maker_route_ready": false,
+        "selected_route_id": "maker_two_below_ask_h15",
+        "selected_route_type": "maker"
+      },
+      "passed": true
+    },
+    {
+      "id": "public_workflow_synced",
+      "label": "Public dashboard workflow is synced",
+      "actual": "0f038c7480491602e6c5ae2cb24c7d8e6efa4bf7a96204063ce81de26005b7fc",
+      "expected": "0f038c7480491602e6c5ae2cb24c7d8e6efa4bf7a96204063ce81de26005b7fc",
+      "passed": true
+    },
+    {
+      "id": "wallet_profile_brief_synced",
+      "label": "Public wallet profile brief is synced",
+      "actual": "29a0e80f36b25ebe18ec50bd1174b2d900355c9e92c64d04d16e2c5bdf265a4c",
+      "expected": "29a0e80f36b25ebe18ec50bd1174b2d900355c9e92c64d04d16e2c5bdf265a4c",
+      "passed": true
+    },
+    {
+      "id": "workflow_contains_wallet_profiles",
+      "label": "Workflow contains wallet profile strategy evidence",
+      "actual": [
+        "gabagool22",
+        "slip-me"
+      ],
+      "expected": [
+        "gabagool22",
+        "slip-me"
+      ],
+      "passed": true
+    },
+    {
+      "id": "wallet_profile_brief_has_strategy_map",
+      "label": "Wallet brief maps profiles to dashboard strategies",
+      "actual": [
+        "profile_cheap_pair",
+        "profile_paper_gate",
+        "profile_skew"
+      ],
+      "expected": [
+        "profile_cheap_pair",
+        "profile_paper_gate",
+        "profile_skew"
+      ],
+      "passed": true
+    },
+    {
+      "id": "engine_config_exists",
+      "label": "Rust shadow config exists",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "id": "engine_mode_shadow",
+      "label": "Rust config is paper shadow mode",
+      "actual": "shadow",
+      "expected": "shadow",
+      "passed": true
+    },
+    {
+      "id": "engine_live_orders_disabled",
+      "label": "Rust config cannot place live orders",
+      "actual": "shadow",
+      "expected": "not dust_live",
+      "passed": true
+    },
+    {
+      "id": "engine_symbols_btc_only",
+      "label": "Rust config matches BTC-only backtest",
+      "actual": [
+        "BTC"
+      ],
+      "expected": [
+        "BTC"
+      ],
+      "passed": true
+    },
+    {
+      "id": "engine_table_gate_matches_algorithm",
+      "label": "Rust table gate matches selected algorithm",
+      "actual": {
+        "strategy_kind": "profile_cheap_pair",
+        "max_pair_quote": 0.98,
+        "min_quote": 0.01,
+        "max_quote": 0.99
+      },
+      "expected": {
+        "strategy_kind": "profile_cheap_pair",
+        "max_pair_quote": 0.98,
+        "min_quote": 0.01,
+        "max_quote": 0.99
+      },
+      "passed": true
+    },
+    {
+      "id": "engine_external_book_gate_enabled_for_paper",
+      "label": "Rust paper config requires live external book support",
+      "actual": null,
+      "expected": null,
+      "passed": true
+    },
+    {
+      "id": "engine_external_microprice_gate_enabled_for_paper",
+      "label": "Rust paper config requires live external microprice support",
+      "actual": null,
+      "expected": null,
+      "passed": true
+    },
+    {
+      "id": "engine_maker_route_matches_algorithm",
+      "label": "Rust maker route matches selected maker policy",
+      "actual": {
+        "mode": "two_below_ask",
+        "quote_horizon_seconds": 15
+      },
+      "expected": {
+        "mode": "two_below_ask",
+        "quote_horizon_seconds": 15
+      },
+      "passed": true
+    },
+    {
+      "id": "engine_quote_notional_matches_algorithm",
+      "label": "Rust quote notional matches backtest order notional",
+      "actual": 5.0,
+      "expected": 5.0,
+      "passed": true
+    }
+  ]
+}

@@ -543,7 +543,12 @@ svg {
 }
 
 .paper-side-value.is-compact {
-  font-size: 20px;
+  font-size: 19px;
+}
+
+.paper-side-divider {
+  stroke: var(--line);
+  stroke-width: 1;
 }
 
 .paper-side-source {

@@ -1,7 +1,7 @@
 const fmt = new Intl.NumberFormat("en-US");
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const moneyCents = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const ACTIVE_BACKTEST_KEY = "late_depth_fair_clean";
+const ACTIVE_BACKTEST_KEY = "profile_cheap_pair";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_REFRESH_MS = 30000;
@@ -30,7 +30,7 @@ const LIVE_PAPER_Y_MIN_RADIUS = 8;
 const LIVE_PAPER_Y_EXPANSION_PAD = 1.24;
 const LIVE_PAPER_Y_BUCKET = 4;
 const LIVE_PAPER_RENDER_BUCKET_SECONDS = 0.075;
-const LIVE_CHAINLINK_RENDER_BUCKET_SECONDS = 1.0;
+const LIVE_CHAINLINK_RENDER_BUCKET_SECONDS = 0.12;
 const LIVE_BINANCE_RENDER_BUCKET_SECONDS = 0.12;
 const CHAINLINK_MAX_UNCONFIRMED_STEP_DOLLARS = 10;
 const CHAINLINK_MAX_STEP_RESIDUAL_DOLLARS = 8;
@@ -616,6 +616,15 @@ function stableLiveLineSamples(samples, bucketSeconds = null) {
   if (first && output[0] !== first) output.unshift(first);
   if (last && output[output.length - 1] !== last) output.push(last);
   return output;
+}
+
+function visibleSamplesWithCarry(samples, xDomain) {
+  const rows = (samples || [])
+    .filter((sample) => sample && Number.isFinite(sample.elapsedSeconds) && Number.isFinite(sample.dollarMove))
+    .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
+  const visible = rows.filter((point) => point.elapsedSeconds >= xDomain.min && point.elapsedSeconds <= xDomain.max);
+  const prior = [...rows].reverse().find((point) => point.elapsedSeconds < xDomain.min);
+  return prior && visible[0] !== prior ? [prior, ...visible] : visible;
 }
 
 function latestRenderedLinePoint(...linePointGroups) {
@@ -1391,6 +1400,7 @@ function rowPriceSourceText(row) {
 }
 
 function rowUsesExternalBinancePrice(row) {
+  if (hasChainlinkDataStreamsPrice(row)) return false;
   const text = rowPriceSourceText(row);
   return text.includes("local_backend_binance_ws")
     || text.includes("binance")
@@ -1400,14 +1410,9 @@ function rowUsesExternalBinancePrice(row) {
 }
 
 function hasStrictPolymarketTruthPrice(row) {
+  if (!hasChainlinkDataStreamsPrice(row)) return false;
   if (rowUsesExternalBinancePrice(row)) return false;
-  const source = rowPriceSourceText(row);
-  return isChainlinkDataStreamsSource(source)
-    && (
-      row?.btc_price_is_truth === true
-      || row?.backend_event_kind === "chainlink"
-      || row?.decision === "chainlink_tick"
-    );
+  return row?.btc_price_is_truth !== false && row?.truth_current_price_missing !== true;
 }
 
 function isPolymarketTruthPoint(row) {
@@ -1418,15 +1423,20 @@ function isChainlinkDataStreamsSource(source) {
   return String(source || "").toLowerCase().includes("chainlink_data_streams");
 }
 
+function hasChainlinkDataStreamsPrice(row) {
+  const source = rowPriceSourceText(row);
+  return isChainlinkDataStreamsSource(source)
+    || row?.backend_event_kind === "chainlink"
+    || row?.decision === "chainlink_tick";
+}
+
 function chainlinkVenueFromSource(source) {
   if (isChainlinkDataStreamsSource(source)) return "chainlink_data_streams";
   return "unknown_chainlink_source";
 }
 
 function isChainlinkPriceRow(row) {
-  if (rowUsesExternalBinancePrice(row)) return false;
-  const source = rowPriceSourceText(row);
-  return row?.backend_event_kind === "chainlink" || row?.decision === "chainlink_tick" || source.includes("chainlink");
+  return hasChainlinkDataStreamsPrice(row) && !rowUsesExternalBinancePrice(row);
 }
 
 function chainlinkLineLabel(rows) {
@@ -3051,31 +3061,157 @@ function paperSession() {
 }
 
 function paperSessionPositionsForMarket(market) {
-  if (!market) return [];
-  const slug = market.slug || market.condition_id;
-  const positions = Array.isArray(paperSession().positions) ? paperSession().positions : [];
-  return positions.filter((position) => String(position.slug || "") === String(slug || ""));
+  return paperPositionsForMarket(market, []);
 }
 
 function paperPositionLabel(position) {
   const shares = metricNumber(position?.shares);
   const side = position?.side || "--";
-  const price = metricNumber(position?.entry_price ?? position?.quote_price);
+  const price = metricNumber(position?.entry_price ?? position?.quote_price ?? position?.price);
+  const status = String(position?.status || "");
   if (shares === null || price === null) return compactNote(position?.label || "position", 26);
-  return `${shares.toFixed(shares >= 100 ? 0 : 2)} shares ${side} @ ${formatPrice(price)}`;
+  const suffix = status === "settled" ? " closed" : "";
+  return `${shares.toFixed(shares >= 100 ? 0 : 2)} ${side} @ ${formatPrice(price)}${suffix}`;
 }
 
-function paperSessionPnlHistoryText(session) {
-  const history = Array.isArray(session?.pnl_history) ? session.pnl_history : [];
-  if (!history.length) return "No settled PnL";
-  return history.slice(-3).map((row) => {
-    const position = row.position_label || paperPositionLabel({
-      side: row.position_side || row.side,
-      shares: row.position_shares,
-      entry_price: row.position_entry_price,
-    });
-    return `${compactNote(position, 17)} ${formatSignedMoney(row.pnl_dollars)}`;
-  }).join(" / ");
+function paperOpenQuoteLabel(position) {
+  const side = position?.side || "--";
+  const price = metricNumber(position?.quote_price ?? position?.entry_price ?? position?.price);
+  if (price === null) return `Quote ${side}`;
+  return `Quote ${side} @ ${formatPrice(price)}`;
+}
+
+function marketIdentityParts(market) {
+  const start = marketWindowStartUnix(market);
+  return new Set([
+    paperGraphKey(market),
+    market?.slug,
+    market?.condition_id,
+    market?.market_key,
+    start === null ? null : `btc-updown-5m-${start}`,
+    start === null ? null : `backend-live-btc-5m-${start}`,
+    start === null ? null : String(start),
+  ].filter(Boolean).map(String));
+}
+
+function rowMatchesPaperMarket(row, market) {
+  if (!row || !market) return false;
+  if (samePaperWindow(row, market)) return true;
+  const parts = marketIdentityParts(market);
+  const rowText = [
+    row.slug,
+    row.condition_id,
+    row.market_key,
+    row.signal_id,
+    row.quote_id,
+  ].filter(Boolean).map(String).join(" ");
+  return [...parts].some((part) => rowText.includes(part));
+}
+
+function mergePositionRow(base, update) {
+  const merged = { ...(base || {}), ...(update || {}) };
+  const price = metricNumber(merged.entry_price ?? merged.quote_price ?? merged.price);
+  const filledCost = metricNumber(merged.filled_cost);
+  if ((metricNumber(merged.shares) === null || Number(merged.shares) <= 0) && price !== null && price > 0 && filledCost !== null) {
+    merged.shares = filledCost / price;
+  }
+  return merged;
+}
+
+function paperEventPositionsForMarket(market, rawPoints = []) {
+  const rows = [
+    ...(rawPoints || []),
+    ...paperMarkersFor(market),
+  ].filter((row) => rowMatchesPaperMarket(row, market));
+  const positions = new Map();
+  rows.forEach((row) => {
+    const eventType = String(row?.event_type || "");
+    if (!eventType.startsWith("maker_paper_")) return;
+    const quoteId = String(row.quote_id || `${row.slug || paperGraphKey(market)}:${row.side || ""}:event`);
+    const existing = positions.get(quoteId) || { quote_id: quoteId };
+    const update = {
+      quote_id: quoteId,
+      signal_id: row.signal_id || existing.signal_id,
+      slug: row.slug || existing.slug,
+      side: row.side || existing.side,
+      entry_price: row.entry_price ?? row.quote_price ?? row.price ?? existing.entry_price,
+      quote_price: row.quote_price ?? row.entry_price ?? row.price ?? existing.quote_price,
+      price: row.price ?? existing.price,
+      order_notional: row.order_notional ?? row.paper_session_order_notional ?? existing.order_notional,
+      filled_cost: existing.filled_cost ?? 0,
+      shares: existing.shares ?? 0,
+      status: existing.status || "open_quote",
+    };
+    if (eventType === "maker_paper_quote") {
+      update.status = "open_quote";
+      update.reserved_notional = row.order_notional ?? row.paper_session_order_notional ?? existing.reserved_notional;
+    } else if (eventType === "maker_paper_fill") {
+      update.status = "filled";
+      update.filled_cost = Math.max(
+        metricNumber(existing.filled_cost) ?? 0,
+        metricNumber(row.filled_cost ?? row.cumulative_filled_cost ?? row.order_notional) ?? 0,
+      );
+      update.shares = metricNumber(row.shares) ?? existing.shares;
+    } else if (eventType === "maker_paper_cancel") {
+      update.status = (metricNumber(existing.filled_cost) ?? 0) > 0 ? "filled" : "canceled";
+      update.cancel_reason = row.reason;
+      update.reserved_notional = metricNumber(existing.filled_cost) ?? 0;
+    } else if (eventType === "maker_paper_settlement") {
+      update.status = "settled";
+      update.filled_cost = row.filled_cost ?? existing.filled_cost;
+      update.pnl_dollars = row.pnl_dollars;
+      update.winner = row.winner;
+      update.outcome_win = row.outcome_win;
+      update.reserved_notional = 0;
+    }
+    positions.set(quoteId, mergePositionRow(existing, update));
+  });
+  return [...positions.values()];
+}
+
+function paperPositionsForMarket(market, rawPoints = []) {
+  if (!market) return [];
+  const session = paperSession();
+  const sessionPositions = Array.isArray(session.positions)
+    ? session.positions
+    : Object.values(session.positions || {});
+  const merged = new Map();
+  sessionPositions
+    .filter((position) => rowMatchesPaperMarket(position, market))
+    .forEach((position) => merged.set(String(position.quote_id || position.signal_id || position.label || merged.size), position));
+  paperEventPositionsForMarket(market, rawPoints)
+    .forEach((position) => merged.set(String(position.quote_id || position.signal_id || position.label || merged.size), mergePositionRow(merged.get(String(position.quote_id || position.signal_id || position.label || merged.size)), position)));
+  return [...merged.values()].sort((left, right) => String(left.side || "").localeCompare(String(right.side || "")));
+}
+
+function paperPositionSummaryText(positions) {
+  const held = (positions || []).filter((position) => (
+    (metricNumber(position.filled_cost) ?? 0) > 0
+    && !["canceled", "settled"].includes(String(position.status || ""))
+  ));
+  if (held.length) return held.map(paperPositionLabel).join(" | ");
+  const openQuotes = (positions || []).filter((position) => String(position.status || "") === "open_quote");
+  if (openQuotes.length) return openQuotes.map(paperOpenQuoteLabel).join(" | ");
+  return "No position";
+}
+
+function latestSessionMetric(market, rawPoints, session, keys) {
+  for (const key of keys) {
+    const value = metricNumber(session?.[key]);
+    if (value !== null) return value;
+  }
+  const rows = [
+    ...(rawPoints || []),
+    ...paperMarkersFor(market),
+  ].filter((row) => rowMatchesPaperMarket(row, market));
+  for (let index = rows.length - 1; index >= 0; index -= 1) {
+    for (const key of keys) {
+      if (!key.startsWith("paper_session_")) continue;
+      const value = metricNumber(rows[index]?.[key]);
+      if (value !== null) return value;
+    }
+  }
+  return null;
 }
 
 function renderPaperSessionHistory(session) {
@@ -3477,14 +3613,11 @@ function renderPaperDecisionGraph() {
     ? latestDomainSample.elapsedSeconds
     : Math.max(0, 300 - latestDomainSample.secondsLeft);
   const xDomain = selectedCurrent ? livePaperXDomain(market, latestElapsed) : { min: 0, max: 300 };
-  if (selectedCurrent && Number.isFinite(latestTruth?.elapsedSeconds) && latestTruth.elapsedSeconds < xDomain.min) {
-    xDomain.min = Math.max(0, latestTruth.elapsedSeconds - 5);
-  }
   if (xDomain.max - xDomain.min < 1) xDomain.max = xDomain.min + 1;
   const samples = allSamples.filter((point) => point.elapsedSeconds >= xDomain.min && point.elapsedSeconds <= xDomain.max);
   const visibleSamples = samples.length ? samples : allSamples.slice(-1);
-  const visibleTruthSamples = truthSamples.filter((point) => point.elapsedSeconds >= xDomain.min && point.elapsedSeconds <= xDomain.max);
-  const visibleExternalSamples = externalSamples.filter((point) => point.elapsedSeconds >= xDomain.min && point.elapsedSeconds <= xDomain.max);
+  const visibleTruthSamples = visibleSamplesWithCarry(truthSamples, xDomain);
+  const visibleExternalSamples = visibleSamplesWithCarry(externalSamples, xDomain);
   const truthLineSamples = selectedCurrent ? stableLiveLineSamples(visibleTruthSamples, LIVE_CHAINLINK_RENDER_BUCKET_SECONDS) : visibleTruthSamples;
   const externalLineSamples = selectedCurrent ? stableLiveLineSamples(visibleExternalSamples, LIVE_BINANCE_RENDER_BUCKET_SECONDS) : visibleExternalSamples;
   const xForElapsed = (elapsedSeconds) => {
@@ -3649,24 +3782,25 @@ function renderPaperDecisionGraph() {
     ?? metricNumber(market.market_down_probability ?? market.paper_down_probability ?? market.down_probability ?? market.latest_down_probability)
     ?? metricNumber(latestRaw.market_down_probability ?? latestRaw.paper_down_probability ?? latestRaw.down_probability);
   const session = paperSession();
-  const currentPositions = paperSessionPositionsForMarket(market);
-  const positionText = currentPositions.length ? currentPositions.map(paperPositionLabel).join(" | ") : "No position";
-  const sessionCapital = metricNumber(session.current_capital);
-  const sessionPnl = metricNumber(session.total_pnl_dollars ?? session.realized_pnl_dollars);
+  const currentPositions = paperPositionsForMarket(market, rawPoints);
+  const positionText = paperPositionSummaryText(currentPositions);
+  const sessionCapital = latestSessionMetric(market, rawPoints, session, ["paper_session_current_capital", "current_capital"]);
+  const sessionPnl = latestSessionMetric(market, rawPoints, session, ["paper_session_total_pnl", "paper_session_total_pnl_dollars", "total_pnl_dollars", "realized_pnl_dollars"]);
   const sideMetrics = [
     { label: "Start price", value: startPrice === null ? "Waiting" : formatBookMoney(startPrice) },
     { label: "Current price", value: currentPrice === null ? "Waiting" : formatBookMoney(currentPrice) },
     { label: "Difference", value: priceDifference === null ? "Waiting" : formatDollarMove(priceDifference), tone: moveClass },
     { label: "Up percent", value: formatOutcomePercent(upProbability) },
     { label: "Down percent", value: formatOutcomePercent(downProbability) },
-    { label: "Position", value: compactNote(positionText, 29), compact: true },
+    { label: "Position", value: compactNote(positionText, 34), compact: true },
     { label: "Capital", value: sessionCapital === null ? "--" : moneyCents.format(sessionCapital) },
     { label: "Session P&L", value: formatSignedMoney(sessionPnl), tone: sessionPnl === null ? "" : sessionPnl < 0 ? "move-down" : "move-up" },
-    { label: "P&L history", value: compactNote(paperSessionPnlHistoryText(session), 29), compact: true },
   ];
   const infoRows = compact ? "" : sideMetrics.map((row, index) => {
-    const y = 76 + index * 58;
+    const y = 76 + index * 52 + (index >= 6 ? 16 : 0);
+    const divider = index === 6 ? `<line class="paper-side-divider" x1="718" x2="952" y1="${y - 30}" y2="${y - 30}"></line>` : "";
     return `
+      ${divider}
       <text class="paper-side-label" x="718" y="${y}">${escapeHtml(row.label)}</text>
       <text class="paper-side-value ${row.tone || ""} ${row.compact ? "is-compact" : ""}" x="718" y="${y + 30}">${escapeHtml(String(row.value))}</text>`;
   }).join("");
@@ -4240,6 +4374,7 @@ async function main() {
   window.setInterval(() => {
     if (state.activeTab === "paper") {
       ensureLiveTickStream();
+      refreshWorkflow();
     } else {
       refreshWorkflow();
     }
