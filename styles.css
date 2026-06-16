@@ -341,6 +341,18 @@ svg {
   stroke: var(--blue);
 }
 
+.line-chainlink {
+  stroke: var(--green);
+  stroke-width: 2.8;
+}
+
+.line-external {
+  stroke: var(--blue);
+  stroke-dasharray: 4 5;
+  stroke-width: 1.8;
+  opacity: 0.82;
+}
+
 .line-ask {
   stroke: var(--green);
 }
@@ -468,6 +480,14 @@ svg {
   fill: var(--amber);
 }
 
+.legend.chainlink {
+  fill: var(--green);
+}
+
+.legend.external {
+  fill: var(--blue);
+}
+
 .paper-move-label {
   fill: var(--muted);
   font-size: 11px;
@@ -581,6 +601,22 @@ svg {
 .paper-book-table tbody td {
   color: var(--ink);
   font-weight: 700;
+}
+
+.paper-book-row.is-buy {
+  background: linear-gradient(90deg, rgba(20, 130, 86, 0.15), rgba(20, 130, 86, 0.05));
+}
+
+.paper-book-row.is-sell {
+  background: linear-gradient(90deg, rgba(190, 61, 61, 0.15), rgba(190, 61, 61, 0.05));
+}
+
+.paper-book-row.is-buy th:first-child {
+  color: #126a48;
+}
+
+.paper-book-row.is-sell th:first-child {
+  color: #a83a3a;
 }
 
 .fail-text {

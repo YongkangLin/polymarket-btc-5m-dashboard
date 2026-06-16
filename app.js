@@ -5,15 +5,22 @@ const ACTIVE_BACKTEST_KEY = "late_depth_fair_clean";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_REFRESH_MS = 5000;
-const LIVE_TICK_RENDER_THROTTLE_MS = 16;
+const LIVE_TICK_RENDER_THROTTLE_MS = 50;
 const LIVE_TICK_STALE_MS = 10000;
 const LIVE_TICK_RECONNECT_MS = 2000;
 const LIVE_SOCKET_CONNECT_TIMEOUT_MS = 3500;
-const LIVE_TICK_RENDER_MAX_POINTS = 1200;
-const LIVE_TICK_PERSIST_MS = 1000;
-const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 50000;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v4";
-const LEGACY_LIVE_TICK_STORE_KEYS = ["polymarketPaperLiveTicks.v2", "polymarketPaperLiveTicks.v3"];
+const LIVE_TICK_RENDER_MAX_POINTS = 600;
+const LIVE_TICK_PERSIST_MS = 3000;
+const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 12000;
+const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 60;
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v7";
+const LEGACY_LIVE_TICK_STORE_KEYS = [
+  "polymarketPaperLiveTicks.v2",
+  "polymarketPaperLiveTicks.v3",
+  "polymarketPaperLiveTicks.v4",
+  "polymarketPaperLiveTicks.v5",
+  "polymarketPaperLiveTicks.v6",
+];
 const LIVE_PAPER_X_WINDOW_SECONDS = 90;
 const LIVE_PAPER_X_LEAD_SECONDS = 12;
 const LIVE_PAPER_X_SCROLL_STEP_SECONDS = 1;
@@ -23,7 +30,8 @@ const LIVE_PAPER_Y_BUCKET = 4;
 const LIVE_PAPER_RENDER_BUCKET_SECONDS = 0.075;
 const LOCAL_BACKEND_BASE = window.POLYMARKET_BACKEND_BASE || "http://127.0.0.1:8787";
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
-const BACKEND_WS_SNAPSHOT_LIMIT = 50000;
+const BACKEND_WS_SNAPSHOT_LIMIT = 600;
+const POLYMARKET_TRUTH_SOURCE = "polymarket_chainlink_crypto_prices";
 
 const state = {
   workflow: null,
@@ -45,7 +53,7 @@ const state = {
     url: null,
   },
   paperStorageStatus: {
-    state: "unknown",
+    state: "disabled",
     lastError: null,
     restoredMarkets: 0,
     savedAt: null,
@@ -57,6 +65,7 @@ const state = {
     pointsLoaded: 0,
     url: null,
   },
+  paperSelectSignature: "",
   liveGate: "paper_to_live",
 };
 
@@ -86,7 +95,15 @@ function inflateRows(columns, rows) {
 function normalizeWorkflow(workflow) {
   const backtest = workflow.backtest || {};
   backtest.markets = inflateRows(backtest.market_columns, backtest.markets);
-  backtest.series = inflateRows(backtest.series_columns, backtest.series);
+  const marketByIndex = backtest.markets || [];
+  backtest.series = inflateRows(backtest.series_columns, backtest.series).map((row) => {
+    if (row.condition_id === undefined && row.market_index !== undefined) {
+      const market = marketByIndex[Number(row.market_index)];
+      if (market) row.condition_id = market.condition_id;
+      delete row.market_index;
+    }
+    return row;
+  });
   backtest.signals = inflateRows(backtest.signal_columns, backtest.signals);
   const profileSkew = workflow.profile_skew || {};
   profileSkew.markets = inflateRows(profileSkew.market_columns, profileSkew.markets);
@@ -462,8 +479,14 @@ function paperDistanceDomain(samples) {
 
 function paperDollarMove(row) {
   const btc = metricNumber(row?.btc_price);
-  const start = metricNumber(row?.start_price ?? row?.binance_start_price);
-  if (btc === null || start === null) return null;
+  const start = metricNumber(row?.start_price);
+  if (btc === null) return null;
+  if (start === null) {
+    const distanceBps = metricNumber(row?.distance_bps);
+    if (distanceBps === null) return null;
+    const impliedStart = btc / Math.exp(distanceBps / 10000);
+    return Number.isFinite(impliedStart) ? btc - impliedStart : null;
+  }
   return btc - start;
 }
 
@@ -563,7 +586,7 @@ function activeRule() {
 }
 
 function paperGraphKey(row) {
-  return String(row?.market_key || row?.condition_id || row?.slug || row?.question || "");
+  return String(row?.market_key || row?.slug || row?.condition_id || row?.question || "");
 }
 
 function isBackendLiveMarket(market) {
@@ -597,14 +620,19 @@ function marketWindowStartUnix(market) {
   const explicit = metricNumber(market?.window_start_unix);
   if (explicit !== null) return Math.floor(explicit);
   const parsed = Date.parse(market?.window_start || "");
-  return Number.isFinite(parsed) ? Math.floor(parsed / 1000) : null;
+  if (Number.isFinite(parsed)) return Math.floor(parsed / 1000);
+  const text = String(market?.slug || market?.market_key || market?.condition_id || market?.question || "");
+  const match = text.match(/(?:btc-updown-5m-|backend-live-btc-5m-)(\d{10})/);
+  return match ? Number(match[1]) : null;
 }
 
 function marketWindowEndUnix(market) {
   const explicit = metricNumber(market?.window_end_unix);
   if (explicit !== null) return Math.floor(explicit);
   const parsed = Date.parse(market?.window_end || "");
-  return Number.isFinite(parsed) ? Math.floor(parsed / 1000) : null;
+  if (Number.isFinite(parsed)) return Math.floor(parsed / 1000);
+  const start = marketWindowStartUnix(market);
+  return start === null ? null : start + 300;
 }
 
 function browserWindowKeyForMarket(market) {
@@ -642,15 +670,146 @@ function browserLiveMarkets() {
   });
 }
 
+function observedPaperMarkets() {
+  return [...state.paperObservedMarkets.values()];
+}
+
+function currentWindowStartUnixNow() {
+  return Math.floor(Date.now() / 1000 / 300) * 300;
+}
+
+function isCurrentBtcWindowMarket(market) {
+  return marketWindowStartUnix(market) === currentWindowStartUnixNow();
+}
+
+function pruneNonCurrentPaperState() {
+  const currentStart = currentWindowStartUnixNow();
+  const keepMarket = (market) => marketWindowStartUnix(market) === currentStart;
+  [
+    state.livePersistedMarkets,
+    state.paperObservedMarkets,
+  ].forEach((map) => {
+    [...map.entries()].forEach(([key, market]) => {
+      if (!keepMarket(market)) map.delete(key);
+    });
+  });
+  [
+    state.paperObservedPointsByMarket,
+    state.paperObservedMarkersByMarket,
+    state.liveBtcTicksByMarket,
+  ].forEach((map) => {
+    [...map.entries()].forEach(([key, rows]) => {
+      const firstRow = Array.isArray(rows) ? rows.find((row) => marketWindowStartUnix(row) !== null) : null;
+      const rowStart = marketWindowStartUnix(firstRow || { market_key: key, slug: key, condition_id: key });
+      if (rowStart !== currentStart) map.delete(key);
+    });
+  });
+  [...state.paperLiveChartScales.keys()].forEach((key) => {
+    if (!key.includes(String(currentStart))) state.paperLiveChartScales.delete(key);
+  });
+}
+
+function paperMarketWindowKey(market) {
+  const start = marketWindowStartUnix(market);
+  return start === null ? `key:${paperGraphKey(market)}` : `window:${start}`;
+}
+
+function definedFields(source) {
+  const output = {};
+  Object.entries(source || {}).forEach(([key, value]) => {
+    if (["points", "markers"].includes(key)) return;
+    if (value !== null && value !== undefined) output[key] = value;
+  });
+  return output;
+}
+
+function paperMarketQualityScore(market) {
+  const startMeta = startMetadataFromSource(market);
+  const hasCurrentPrice = metricNumber(market?.btc_price ?? market?.latest_btc_price) !== null;
+  const updatedAt = paperMarketLastUpdatedAt(market)?.getTime() || Date.parse(market?.window_start || "") || 0;
+  return (
+    (startMeta ? 2000 : 0) +
+    (marketUsesPolymarketTruthPrice(market) ? 1000 : 0) +
+    (hasCurrentPrice ? 250 : 0) +
+    (isBackendLiveMarket(market) ? 100 : 0) +
+    (isRealPaperMarket(market) ? 25 : 0) +
+    updatedAt / 1_000_000_000_000
+  );
+}
+
+function bestByPaperQuality(markets, predicate) {
+  return (markets || [])
+    .filter((market) => !predicate || predicate(market))
+    .sort((left, right) => paperMarketQualityScore(right) - paperMarketQualityScore(left))[0] || null;
+}
+
+function mergePaperMarket(left, right) {
+  if (!left) {
+    const start = marketWindowStartUnix(right);
+    const end = marketWindowEndUnix(right);
+    return {
+      ...definedFields(right),
+      ...(start === null ? {} : { window_start_unix: start, window_end_unix: end ?? start + 300 }),
+      points: [],
+      markers: right?.markers || [],
+    };
+  }
+  const candidates = [left, right].filter(Boolean);
+  const primary = bestByPaperQuality(candidates) || right || left;
+  const secondary = primary === left ? right : left;
+  const merged = {
+    ...definedFields(secondary),
+    ...definedFields(primary),
+    points: [],
+    markers: primary?.markers || secondary?.markers || [],
+  };
+  const startWinner = bestByPaperQuality(candidates, startMetadataFromSource);
+  const startMeta = startMetadataFromSource(startWinner);
+  if (startMeta) {
+    merged.start_price = startMeta.price;
+    merged.start_price_source = startMeta.source;
+    merged.start_event_time_micro = startMeta.eventTimeMicro;
+    merged.start_price_status = "verified";
+  }
+  const priceWinner = bestByPaperQuality(candidates, (market) => (
+    marketUsesPolymarketTruthPrice(market) &&
+    metricNumber(market?.btc_price ?? market?.latest_btc_price) !== null
+  ));
+  if (priceWinner) {
+    const price = metricNumber(priceWinner.btc_price ?? priceWinner.latest_btc_price);
+    merged.btc_price = price;
+    merged.latest_btc_price = price;
+    merged.btc_price_source = priceWinner.btc_price_source || priceWinner.price_source || merged.btc_price_source;
+    merged.btc_price_venue = priceWinner.btc_price_venue || merged.btc_price_venue;
+    merged.price_role = "polymarket_truth";
+    merged.btc_price_is_truth = true;
+    merged.truth_current_price_missing = false;
+  }
+  const start = marketWindowStartUnix(merged) ?? marketWindowStartUnix(primary) ?? marketWindowStartUnix(secondary);
+  if (start !== null) {
+    merged.window_start_unix = start;
+    merged.window_end_unix = marketWindowEndUnix(merged) ?? start + 300;
+    merged.slug = merged.slug || polymarketWindowKeyForMarket(merged) || `btc-updown-5m-${start}`;
+  }
+  return merged;
+}
+
 function allPaperMarkets() {
-  const seen = new Set();
-  return [...paperGraphMarkets(), ...browserLiveMarkets()]
-    .filter((market) => !isBrowserLiveMarket(market))
-    .filter((market) => {
-    const key = paperGraphKey(market);
-    if (!key || seen.has(key)) return false;
-    seen.add(key);
-    return true;
+  pruneNonCurrentPaperState();
+  const grouped = new Map();
+  [...browserLiveMarkets(), ...observedPaperMarkets()]
+    .filter((market) => market && !isBrowserLiveMarket(market))
+    .filter(isCurrentBtcWindowMarket)
+    .forEach((market) => {
+      const key = paperMarketWindowKey(market);
+      if (!key || key === "key:") return;
+      grouped.set(key, mergePaperMarket(grouped.get(key), market));
+    });
+  return [...grouped.values()].sort((left, right) => {
+    const leftStart = marketWindowStartUnix(left) || 0;
+    const rightStart = marketWindowStartUnix(right) || 0;
+    if (leftStart !== rightStart) return rightStart - leftStart;
+    return paperMarketQualityScore(right) - paperMarketQualityScore(left);
   });
 }
 
@@ -705,6 +864,7 @@ function marketSecondsLeftNow(market) {
 function rememberLiveMarket(market) {
   const key = paperGraphKey(market);
   if (!key) return market;
+  const hadKey = state.livePersistedMarkets.has(key);
   const existing = state.livePersistedMarkets.get(key) || {};
   const windowKey = browserWindowKeyForMarket(market);
   const stored = {
@@ -717,6 +877,7 @@ function rememberLiveMarket(market) {
   delete stored[["is", "synthetic", "live"].join("_")];
   state.livePersistedMarkets.set(key, stored);
   if (windowKey && windowKey !== key) {
+    if (!state.livePersistedMarkets.has(windowKey)) state.paperSelectSignature = "";
     state.livePersistedMarkets.set(windowKey, {
       ...(state.livePersistedMarkets.get(windowKey) || {}),
       ...stored,
@@ -727,6 +888,7 @@ function rememberLiveMarket(market) {
       markers: stored.markers || [],
     });
   }
+  if (!hadKey) state.paperSelectSignature = "";
   return stored;
 }
 
@@ -757,134 +919,33 @@ function rememberObservedPaperMarket(market, points = [], markers = []) {
       );
     }
   });
+  state.paperSelectSignature = "";
 }
 
 function rememberWorkflowPaperRows(paperTrade) {
-  const markets = paperTrade?._graphMarkets || [];
-  const marketByKey = new Map(markets.map((market) => [paperGraphKey(market), market]));
-  if (paperTrade?._paperPointsByMarket) {
-    paperTrade._paperPointsByMarket.forEach((points, key) => {
-      rememberObservedPaperMarket(
-        marketByKey.get(key) || points[0] || { market_key: key },
-        points || [],
-        paperTrade._paperMarkersByMarket?.get(key) || [],
-      );
-    });
-    return;
-  }
-  if (Array.isArray(paperTrade?.graphs)) {
-    paperTrade.graphs.forEach((graph) => {
-      const key = paperGraphKey(graph);
-      if (!key) return;
-      rememberObservedPaperMarket(
-        marketByKey.get(key) || graph,
-        graph.points || [],
-        graph.markers || [],
-      );
-    });
-    return;
-  }
-  markets.forEach((market) => {
-    const key = paperGraphKey(market);
-    if (!key) return;
-    rememberObservedPaperMarket(market, market.points || [], market.markers || []);
-  });
+  void paperTrade;
 }
 
 function loadPersistedPaperTicks() {
   try {
-    LEGACY_LIVE_TICK_STORE_KEYS.forEach((key) => window.localStorage?.removeItem(key));
-    const raw = window.localStorage?.getItem(LIVE_TICK_STORE_KEY);
-    if (!raw) {
-      state.paperStorageStatus = { state: "empty", lastError: null, restoredMarkets: 0, savedAt: null };
-      return;
-    }
-    const payload = JSON.parse(raw);
-    let restoredMarkets = 0;
-    (payload.markets || []).forEach((entry) => {
-      const market = entry.market || entry;
-      if (isBrowserLiveMarket(market)) return;
-      const key = paperGraphKey(market);
-      if (!key) return;
-      const restoredMarket = { ...market, points: [], markers: market.markers || [] };
-      rememberLiveMarket(restoredMarket);
-      const points = (Array.isArray(entry.points) ? entry.points : [])
-        .filter(shouldPersistLivePoint)
-        .sort((left, right) => (pointTimestampMicro(left) || 0) - (pointTimestampMicro(right) || 0));
-      state.liveBtcTicksByMarket.set(key, points.slice(-LIVE_TICK_STORE_MAX_POINTS_PER_MARKET));
-      rememberObservedPaperMarket(restoredMarket, entry.paper_points || [], entry.paper_markers || []);
-      restoredMarkets += 1;
-    });
-    state.paperStorageStatus = {
-      state: "restored",
-      lastError: null,
-      restoredMarkets,
-      savedAt: payload.saved_at || null,
-    };
+    [...LEGACY_LIVE_TICK_STORE_KEYS, LIVE_TICK_STORE_KEY].forEach((key) => window.localStorage?.removeItem(key));
   } catch (error) {
-    state.paperStorageStatus = {
-      state: "error",
-      lastError: error.message || String(error),
-      restoredMarkets: 0,
-      savedAt: null,
-    };
-    console.warn("paper tick restore failed", error);
+    console.warn("paper tick storage cleanup failed", error);
   }
+  state.paperStorageStatus = { state: "disabled", lastError: null, restoredMarkets: 0, savedAt: null };
 }
 
 function persistPaperTicksNow() {
   try {
-    if (!window.localStorage) throw new Error("localStorage unavailable");
-    const marketByKey = new Map();
-    [...state.livePersistedMarkets.values(), ...state.paperObservedMarkets.values()].forEach((market) => {
-      const key = browserWindowKeyForMarket(market) || paperGraphKey(market);
-      if (key) marketByKey.set(key, { ...(marketByKey.get(key) || {}), ...market, market_key: key });
-    });
-    const markets = [...marketByKey.values()].map((market) => {
-      const keys = paperStorageKeysForMarket(market);
-      const points = mergePaperChartRows([], keys.flatMap((key) => state.liveBtcTicksByMarket.get(key) || []))
-        .filter(shouldPersistLivePoint)
-        .slice(-LIVE_TICK_STORE_MAX_POINTS_PER_MARKET);
-      return {
-        market: {
-          ...market,
-          points: [],
-          markers: market.markers || [],
-        },
-        points,
-        paper_points: mergePaperChartRows([], keys.flatMap((key) => state.paperObservedPointsByMarket.get(key) || []))
-          .slice(-LIVE_TICK_STORE_MAX_POINTS_PER_MARKET),
-        paper_markers: mergePaperChartRows([], keys.flatMap((key) => state.paperObservedMarkersByMarket.get(key) || []))
-          .slice(-2000),
-      };
-    });
-    const savedAt = new Date().toISOString();
-    window.localStorage.setItem(
-      LIVE_TICK_STORE_KEY,
-      JSON.stringify({ version: 4, saved_at: savedAt, markets }),
-    );
-    state.paperStorageStatus = {
-      state: "saved",
-      lastError: null,
-      restoredMarkets: state.paperStorageStatus.restoredMarkets || 0,
-      savedAt,
-    };
+    window.localStorage?.removeItem(LIVE_TICK_STORE_KEY);
   } catch (error) {
-    state.paperStorageStatus = {
-      ...state.paperStorageStatus,
-      state: "error",
-      lastError: error.message || String(error),
-    };
-    console.warn("paper tick persist failed", error);
+    console.warn("paper tick storage cleanup failed", error);
   }
+  state.paperStorageStatus = { state: "disabled", lastError: null, restoredMarkets: 0, savedAt: null };
 }
 
 function schedulePaperTickPersist() {
-  if (liveTickPersistTimer) return;
-  liveTickPersistTimer = window.setTimeout(() => {
-    liveTickPersistTimer = null;
-    persistPaperTicksNow();
-  }, LIVE_TICK_PERSIST_MS);
+  persistPaperTicksNow();
 }
 
 function isCurrentPaperMarket(market) {
@@ -912,11 +973,11 @@ function isCurrentPaperMarket(market) {
 function currentPaperMarket() {
   const markets = allPaperMarkets().filter(isCurrentPaperMarket);
   if (!markets.length) return null;
-  return markets.find(isRealPaperMarket) || markets.find(isBackendLiveMarket) || markets[0];
+  return markets.sort((left, right) => paperMarketQualityScore(right) - paperMarketQualityScore(left))[0];
 }
 
 function currentDisplayPaperMarket() {
-  return currentPaperMarket() || allPaperMarkets()[0] || null;
+  return currentPaperMarket();
 }
 
 function isBinanceLivePoint(point) {
@@ -972,7 +1033,23 @@ function liveTradePointsForMarket(market) {
 }
 
 function marketUsesPolymarketTruthPrice(market) {
-  return isPolymarketTruthSource(market?.truth_source || market?.start_price_source);
+  return market?.price_role === "polymarket_truth"
+    || market?.btc_price_is_truth === true
+    || market?.truth_current_price_missing === false;
+}
+
+function isPolymarketTruthPoint(row) {
+  const source = String(row?.btc_price_source || row?.btc_price_venue || row?.price_source || "").toLowerCase();
+  return marketUsesPolymarketTruthPrice(row)
+    || source.includes("polymarket")
+    || source.includes("chainlink");
+}
+
+function isExternalPricePoint(row) {
+  return isBinanceLivePoint(row)
+    || isBackendLivePoint(row)
+    || row?.price_role === "external_live_estimate"
+    || String(row?.external_btc_source || "").toLowerCase().includes("binance");
 }
 
 function backendBaseUrl() {
@@ -1000,16 +1077,7 @@ function refreshBackendPaperFeeds(options = {}) {
 }
 
 function historicalPaperMarkets() {
-  const current = currentDisplayPaperMarket();
-  const currentKey = current ? paperGraphKey(current) : "";
-  return allPaperMarkets()
-    .filter((market) => !currentKey || (paperGraphKey(market) !== currentKey && !samePaperWindow(market, current)))
-    .sort((left, right) => {
-      const leftTime = Date.parse(left.window_start || left.latest_generated_at || "");
-      const rightTime = Date.parse(right.window_start || right.latest_generated_at || "");
-      if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) return rightTime - leftTime;
-      return paperGraphKey(left).localeCompare(paperGraphKey(right));
-    });
+  return [];
 }
 
 function paperPointsFor(market) {
@@ -1050,8 +1118,7 @@ function mergePaperChartRows(baseRows, liveRows) {
 function paperChartPointsFor(market) {
   const points = paperPointsFor(market);
   const ticks = downsamplePoints(liveTickPointsForMarket(market), LIVE_TICK_RENDER_MAX_POINTS);
-  if (isCurrentPaperMarket(market) && marketUsesPolymarketTruthPrice(market)) return points;
-  if (isCurrentPaperMarket(market)) return ticks;
+  if (isCurrentPaperMarket(market)) return ticks.length ? mergePaperChartRows(points, ticks) : points;
   const merged = ticks.length ? mergePaperChartRows(points, ticks) : points;
   return merged;
 }
@@ -1073,10 +1140,8 @@ function paperMarkersFor(market) {
 }
 
 function selectedPaperMarket() {
-  const markets = allPaperMarkets();
-  if (!state.paperGraph || state.paperGraph === PAPER_CURRENT_VALUE) return currentDisplayPaperMarket();
-  if (!markets.length) return null;
-  return markets.find((market) => paperGraphKey(market) === state.paperGraph) || null;
+  state.paperGraph = PAPER_CURRENT_VALUE;
+  return currentDisplayPaperMarket();
 }
 
 function paperDistanceBps(row) {
@@ -1086,6 +1151,50 @@ function paperDistanceBps(row) {
   const start = metricNumber(row?.start_price);
   if (btc === null || start === null || start <= 0) return null;
   return Math.log(btc / start) * 10000;
+}
+
+function paperGraphSample(row, index, total, startPrice, source) {
+  const elapsedSeconds = paperPointElapsedSeconds(row, index, total);
+  const dollarMove = paperDollarMoveFromStart(row, startPrice);
+  const btcPrice = metricNumber(row?.btc_price);
+  if (!Number.isFinite(elapsedSeconds) || !Number.isFinite(dollarMove)) return null;
+  return {
+    row,
+    index,
+    source,
+    elapsedSeconds,
+    secondsLeft: Math.max(0, 300 - elapsedSeconds),
+    dollarMove,
+    btcPrice,
+  };
+}
+
+function paperGraphSamples(rows, startPrice, source) {
+  return (rows || [])
+    .map((row, index) => paperGraphSample(row, index, rows.length, startPrice, source))
+    .filter(Boolean);
+}
+
+function chainlinkAnchorRow(market, startMeta, elapsedSeconds = 0) {
+  const start = metricNumber(startMeta?.price);
+  if (start === null) return null;
+  const windowStart = marketWindowStartUnix(market);
+  return {
+    decision: "chainlink_anchor",
+    generated_at: startMeta?.capturedAt || market?.window_start || null,
+    time_unix: windowStart === null ? null : windowStart + elapsedSeconds,
+    window_start_unix: windowStart,
+    seconds_left: Math.max(0, 300 - elapsedSeconds),
+    btc_price: start,
+    start_price: start,
+    start_price_source: startMeta?.source || POLYMARKET_TRUTH_SOURCE,
+    btc_price_source: startMeta?.source || POLYMARKET_TRUTH_SOURCE,
+    btc_price_venue: "polymarket_chainlink",
+    price_role: "polymarket_truth",
+    btc_price_is_truth: true,
+    truth_current_price_missing: false,
+    distance_bps: 0,
+  };
 }
 
 function paperPointSecondsLeft(row, fallbackIndex = 0, total = 1) {
@@ -1129,9 +1238,7 @@ function paperMarketLabel(market) {
   const signals = Number(market.paper_signals ?? market.signals ?? points.filter((row) => row.decision === "paper_signal").length);
   const quotes = Number(market.maker_quotes ?? market.quotes ?? markers.filter((row) => paperMarkerType(row) === "quote").length);
   const fills = Number(market.maker_fills ?? market.fills ?? markers.filter((row) => paperMarkerType(row) === "fill").length);
-  const action = signals || quotes || fills
-    ? `signals ${fmt.format(signals)} | quotes ${fmt.format(quotes)} | fills ${fmt.format(fills)}`
-    : "no paper buy";
+  const action = signals || quotes || fills ? "buy" : "no buy";
   const result = market.pnl_dollars !== undefined || market.maker_pnl_dollars !== undefined
     ? ` | PnL ${formatSignedMoney(market.pnl_dollars ?? market.maker_pnl_dollars)}`
     : "";
@@ -1144,9 +1251,7 @@ function paperStoredPointCount(market) {
 }
 
 function paperStorageWarningText() {
-  if (state.backendStatus.state === "open") return "";
-  if (state.paperStorageStatus.state !== "error") return "";
-  return ` | storage error: ${compactNote(state.paperStorageStatus.lastError, 42)}`;
+  return "";
 }
 
 function paperMarkerType(row) {
@@ -1242,9 +1347,9 @@ function renderBacktestSelects() {
       ? new Date(market.window_start).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
       : "Unknown";
     const status = signal
-      ? `Ask-sim buy ${signal.intended_outcome} ${moneyCents.format(signal.pnl_after_slippage_haircut || 0)}`
-      : `No action: ${rejectReasonLabel(noActionDecisionRow(market)?.reason)}`;
-    return `<option value="${escapeHtml(market.condition_id)}">${escapeHtml(`${when} | ${status} | ${market.slug}`)}</option>`;
+      ? `Buy ${signal.intended_outcome} ${moneyCents.format(signal.pnl_after_slippage_haircut || 0)}`
+      : `No buy: ${rejectReasonLabel(noActionDecisionRow(market)?.reason)}`;
+    return `<option value="${escapeHtml(market.condition_id)}">${escapeHtml(`${when} | ${status}`)}</option>`;
   }).join("");
   byId("backtestMarket").value = state.backtestMarket;
 }
@@ -1275,13 +1380,11 @@ function ruleLine() {
 function ruleSummaryText() {
   const rule = activeRule();
   return [
-    `Buy Up if BTC is above start, Down if below start; only ${rangeText(rule.min_seconds_left, rule.max_seconds_left, "s")} before close`,
+    `${rangeText(rule.min_seconds_left, rule.max_seconds_left, "s")} left`,
     `BTC move ${rangeText(rule.min_abs_distance_bps, rule.max_abs_distance_bps, " bps")}`,
     `ask ${rangeText(rule.min_ask, rule.max_ask)}`,
-    `top-5 depth >= ${money.format(rule.min_top5_capacity_dollars || 0)}`,
-    `fair edge >= ${formatCents(rule.min_fair_edge_vs_bid)}`,
-    `book lean >= ${percentText(rule.min_signal_depth_imbalance)}`,
-    `both asks <= ${formatPrice(rule.max_complement_ask_sum)}`,
+    `edge >= ${formatCents(rule.min_fair_edge_vs_bid)}`,
+    `depth >= ${money.format(rule.min_top5_capacity_dollars || 0)}`,
   ].join(" | ");
 }
 
@@ -1298,26 +1401,24 @@ function renderStrategyPanels() {
   const policy = state.workflow.live_trade.execution_policy || {};
   const routeLabel = paperSummary.maker_route_label || policy.selected_route_label || "Maker 2c below ask for 60s";
   const bookChecks = Number(paperSummary.external_book_checks || 0);
-  const depthSupportText = bookChecks > 0
-    ? "Live Binance BTC depth support is checked before a shadow quote is allowed."
-    : "BTC depth support is configured, but the current paper sample has not exercised that filter yet.";
+  const depthSupportText = bookChecks > 0 ? "Depth checked" : "Depth pending";
   const liveStatus = policy.maker_route_ready
-    ? "Disabled until live paper fills prove post-fill edge and a human enables live orders."
-    : "Disabled. The maker route failed the rolling walk-forward gate, so it is not live-ready.";
+    ? "Disabled until manual enable"
+    : "Disabled";
   byId("backtestStrategy").innerHTML = [
-    strategyCell("Backtest strategy", ruleSummaryText()),
-    strategyCell("Backtest signals", "Historical BTC price plus Polymarket books: fair value, bid/ask, top-5 depth, side book lean, and both-asks sanity."),
-    strategyCell("Backtest fill model", "$25 buy at the ask, hold to settlement, subtract 2c safety cost. This tests table quality; maker fills are checked separately."),
+    strategyCell("Rule", ruleSummaryText()),
+    strategyCell("Signals", "BTC price + Polymarket book"),
+    strategyCell("Fill", "$25 ask buy, hold, -2c"),
   ].join("");
   byId("paperStrategy").innerHTML = [
-    strategyCell("Paper strategy", `Same table rule in live markets. ${depthSupportText}`),
-    strategyCell("Maker route", `${routeLabel}: post-only configured maker quote, never cross the spread, cancel when edge decays or data is stale.`),
-    strategyCell("Paper goal", "Prove post-fill edge and toxic-fill rate. A winning settlement can still be a bad maker fill."),
+    strategyCell("Rule", "Same as backtest"),
+    strategyCell("Book", depthSupportText),
+    strategyCell("Route", routeLabel),
   ].join("");
   byId("liveStrategy").innerHTML = [
-    strategyCell("Live status", liveStatus),
-    strategyCell("Order policy", "Post-only maker limits only; no taker entries, no market orders, cancel stale or negative-edge quotes."),
-    strategyCell("Promotion gate", "Needs positive post-fill edge, low toxic fills, clean start prices, healthy latency, and manual enable."),
+    strategyCell("Status", liveStatus),
+    strategyCell("Orders", "Post-only only"),
+    strategyCell("Gate", "Edge + latency + manual enable"),
   ].join("");
 }
 
@@ -2161,75 +2262,39 @@ function renderValueBarChart(el, rows, emptyMessage, axisText) {
 }
 
 function renderPaperSelects() {
-  const select = byId("paperGraphSelect");
-  const meta = byId("paperGraphMeta");
-  if (!select) return;
-  const markets = allPaperMarkets();
-  const realCurrent = currentPaperMarket();
-  const current = currentDisplayPaperMarket();
-  select.disabled = false;
-  const historical = historicalPaperMarkets();
-  const currentLabel = realCurrent
-    ? `Current live Binance window | ${paperMarketTimeLabel(current)} | ${fmt.format(paperStoredPointCount(current))} stored`
-    : current
-      ? `Latest paper market | ${paperMarketTimeLabel(current)} | ${fmt.format(paperStoredPointCount(current))} stored`
-    : `Current live Binance window | waiting for backend WebSocket`;
-  const marketOptions = historical.map((market) => {
-    const key = paperGraphKey(market);
-    return `<option value="${escapeHtml(key)}">${escapeHtml(paperMarketLabel(market))}</option>`;
-  }).join("");
-  const currentGroup = `
-    <optgroup label="Current / live">
-      <option value="${PAPER_CURRENT_VALUE}">${escapeHtml(currentLabel)}</option>
-    </optgroup>`;
-  const historicalGroup = marketOptions
-    ? `<optgroup label="Historical paper markets">${marketOptions}</optgroup>`
-    : `<optgroup label="Historical paper markets"><option value="" disabled>No past paper graphs yet</option></optgroup>`;
-  select.innerHTML = `${currentGroup}${historicalGroup}`;
-  if (state.paperGraph !== PAPER_CURRENT_VALUE && !markets.some((market) => paperGraphKey(market) === state.paperGraph)) {
-    state.paperGraph = PAPER_CURRENT_VALUE;
-  }
-  select.value = state.paperGraph || PAPER_CURRENT_VALUE;
+  state.paperGraph = PAPER_CURRENT_VALUE;
+  renderPaperMeta();
+}
 
-  if (meta) {
-    const market = selectedPaperMarket();
-    const selectedCurrent = (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE;
-    if (selectedCurrent && market) {
-      refreshBackendPaperFeeds();
-      ensureLiveTickStream();
-    }
-    const points = market ? paperChartPointsFor(market) : [];
-    if (selectedCurrent && market && !points.length && !verifiedBinanceStartPrice(market)) {
-      const startStatus = market.start_price_status || liveStartMetadata(market).start_price_status || "loading";
-      const startError = market.start_price_error || liveStartMetadata(market).start_price_error || "";
-      const streamError = state.liveTickStatus.lastError ? `, ${state.liveTickStatus.lastError}` : "";
-      const message = startStatus === "error"
-        ? `Binance start-price anchor failed${startError ? `: ${startError}` : ""}. Live ticks are not drawn without a real Binance start.`
-        : `Fetching Binance trade at the 5-minute window start. Stream: ${state.liveTickStatus.state}${streamError}. Live ticks are ignored until this anchor is verified.`;
-      meta.innerHTML = `<span class="live-chip is-waiting">${escapeHtml(startStatus === "error" ? "Blocked" : "Waiting")}</span> ${escapeHtml(message + paperStorageWarningText())}`;
-      return;
-    }
-    if (selectedCurrent && market && !points.length) {
-      const streamError = state.liveTickStatus.lastError ? ` (${state.liveTickStatus.lastError})` : "";
-      meta.innerHTML = `<span class="live-chip is-waiting">Waiting</span> Binance stream ${escapeHtml(state.liveTickStatus.state + streamError)}. Trades use microsecond exchange timestamps.${escapeHtml(paperStorageWarningText())}`;
-      return;
-    }
-    const updatedAt = market ? paperDisplayUpdatedAt(market) : null;
-    const statusClass = selectedCurrent && market && isCurrentPaperMarket(market) ? "is-live" : "is-past";
-    const statusText = selectedCurrent && market && isCurrentPaperMarket(market) ? "Live" : (selectedCurrent ? "Latest" : "Past");
-    const tickCount = market ? liveTickPointsForMarket(market).length : 0;
-    const backendText = state.backendStatus.state === "open"
-      ? `Postgres backend ${fmt.format(state.backendStatus.pointsLoaded || 0)} pts`
-      : `Postgres backend ${state.backendStatus.state}${state.backendStatus.lastError ? ` (${state.backendStatus.lastError})` : ""}`;
-    const tickStatus = state.liveTickStatus.state === "open"
-      ? `${fmt.format(tickCount)} local backend WS trade/book ticks`
-      : `Local backend WS ${state.liveTickStatus.state}${state.liveTickStatus.lastError ? ` (${state.liveTickStatus.lastError})` : ""}`;
-    const refreshText = selectedCurrent
-      ? `${backendText}; ${tickStatus}; no browser Binance fallback`
-      : "Historical snapshot";
-    const storedCount = market ? paperStoredPointCount(market) : 0;
-    meta.innerHTML = `<span class="live-chip ${statusClass}">${escapeHtml(statusText)}</span> ${fmt.format(points.length)} shown / ${fmt.format(storedCount)} stored points | updated ${escapeHtml(ageText(updatedAt))} | ${escapeHtml(refreshText + paperStorageWarningText())}`;
+function renderPaperMeta() {
+  const meta = byId("paperGraphMeta");
+  if (!meta) return;
+  const market = selectedPaperMarket();
+  const selectedCurrent = (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE;
+  if (selectedCurrent && market) {
+    refreshBackendPaperFeeds();
+    ensureLiveTickStream();
   }
+  const points = market ? paperChartPointsFor(market) : [];
+  if (selectedCurrent && market && !points.length && !verifiedPaperStartPrice(market)) {
+    const startStatus = market.start_price_status || liveStartMetadata(market).start_price_status || "loading";
+    const startError = market.start_price_error || liveStartMetadata(market).start_price_error || "";
+    const message = startStatus === "error"
+      ? `Start error${startError ? `: ${startError}` : ""}`
+      : "Loading start";
+    meta.innerHTML = `<span class="live-chip is-waiting">${escapeHtml(startStatus === "error" ? "Blocked" : "Loading")}</span> ${escapeHtml(message + paperStorageWarningText())}`;
+    return;
+  }
+  if (selectedCurrent && market && !points.length) {
+    meta.innerHTML = `<span class="live-chip is-waiting">Loading</span>${escapeHtml(paperStorageWarningText())}`;
+    return;
+  }
+  const updatedAt = market ? paperDisplayUpdatedAt(market) : null;
+  const statusClass = selectedCurrent && market && isCurrentPaperMarket(market) ? "is-live" : "is-past";
+  const statusText = selectedCurrent && market && isCurrentPaperMarket(market) ? "Live" : (selectedCurrent ? "Latest" : "Past");
+  const backendError = state.backendStatus.lastError || state.liveTickStatus.lastError;
+  const detail = backendError ? ` | ${compactNote(backendError, 42)}` : "";
+  meta.innerHTML = `<span class="live-chip ${statusClass}">${escapeHtml(statusText)}</span> ${escapeHtml(ageText(updatedAt) + detail + paperStorageWarningText())}`;
 }
 
 function paperDecisionText(row) {
@@ -2385,13 +2450,11 @@ function outcomeBookProbability(row, side) {
 
 function startMetadataFromSource(source, fallbackSource = "paper_market_start") {
   const startPrice = metricNumber(source?.start_price);
-  const binancePrice = metricNumber(source?.binance_start_price);
   const rawSource = source?.start_price_source
     || source?.btc_price_source
-    || (binancePrice !== null ? "binance_ws_trade_at_window_start" : fallbackSource);
-  const price = isPolymarketTruthSource(rawSource)
-    ? (startPrice ?? binancePrice)
-    : (binancePrice ?? startPrice);
+    || fallbackSource;
+  if (!isPolymarketTruthSource(rawSource)) return null;
+  const price = startPrice;
   if (price === null || price <= 0) return null;
   return {
     price,
@@ -2399,11 +2462,6 @@ function startMetadataFromSource(source, fallbackSource = "paper_market_start") 
     eventTimeMicro: source?.start_event_time_micro || null,
     capturedAt: source?.generated_at || source?.ts || source?.btc_price_fetched_at || null,
   };
-}
-
-function isBinanceStartSource(source) {
-  const text = String(source || "").toLowerCase();
-  return text.startsWith("binance_") || text.includes("binance");
 }
 
 function isPolymarketTruthSource(source) {
@@ -2430,16 +2488,11 @@ function preferredPaperStartMetadata(market) {
     ...keys.flatMap((key) => state.workflow?._paperMarkersByMarket?.get(key) || []),
     ...keys.flatMap((key) => state.paperObservedPointsByMarket.get(key) || []),
     ...keys.flatMap((key) => state.paperObservedMarkersByMarket.get(key) || []),
-    ...keys.map((key) => state.livePersistedMarkets.get(key)),
-    ...keys.flatMap((key) => state.liveBtcTicksByMarket.get(key) || []),
   ].filter(Boolean);
   const starts = candidates
     .map((source) => startMetadataFromSource(source))
     .filter(Boolean);
-  const polymarketStart = starts.find((meta) => isPolymarketTruthSource(meta.source));
-  if (polymarketStart) return polymarketStart;
-  const binanceStart = starts.find((meta) => isBinanceStartSource(meta.source));
-  return binanceStart || starts[0] || null;
+  return starts.find((meta) => isPolymarketTruthSource(meta.source)) || null;
 }
 
 function bookSpreadText(bid, ask, formatter) {
@@ -2478,13 +2531,18 @@ function orderBookTableRows(market, rawPoints, latestRaw, latestQuote) {
   let asks = normalizeBookLevels(row.book_asks ?? latestRaw?.book_asks);
   if (!bids.length && bookBid !== null) bids = [[bookBid, bookBidQty || 0]];
   if (!asks.length && bookAsk !== null) asks = [[bookAsk, bookAskQty || 0]];
-  const sideRows = (side, levels) => levels.slice(0, 8).map(([price, size], index) => ({
-    side: `${side} ${index + 1}`,
+  const sideRows = (bookSide, levels) => {
+    const isBuy = bookSide === "Bid";
+    return levels.slice(0, 8).map(([price, size], index) => ({
+    side: `${isBuy ? "Buy" : "Sell"} ${index + 1}`,
+    sideClass: isBuy ? "buy" : "sell",
+    bookSide,
     limit: formatBookMoney(price),
     size: formatBookQty(size),
     notional: formatBookMoney(price * size),
     source: levels.length > 1 ? "Depth WS" : "Top of book",
   }));
+  };
   return [
     ...sideRows("Ask", asks),
     ...sideRows("Bid", bids),
@@ -2495,7 +2553,7 @@ function renderOrderBookTable(market, rawPoints, latestRaw, latestQuote) {
   const rows = orderBookTableRows(market, rawPoints, latestRaw, latestQuote);
   const sourceRow = latestDepthRowForMarket(market, rawPoints) || latestBookRowForMarket(market, rawPoints) || latestRaw;
   const body = rows.map((row) => `
-    <tr>
+    <tr class="paper-book-row is-${escapeHtml(row.sideClass || "neutral")}">
       <th scope="row">${escapeHtml(row.side)}</th>
       <td>${escapeHtml(row.limit)}</td>
       <td>${escapeHtml(row.size)}</td>
@@ -2549,39 +2607,39 @@ function renderPaperDecisionGraph() {
   const selectedCurrent = (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE && isCurrentPaperMarket(market);
   if (!market || !rawPoints.length) {
     if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) {
-      if (market && !verifiedBinanceStartPrice(market)) {
+      if (market && !verifiedPaperStartPrice(market)) {
         const startStatus = market.start_price_status || liveStartMetadata(market).start_price_status || "loading";
         const startError = market.start_price_error || liveStartMetadata(market).start_price_error || "";
         chart.innerHTML = svgEmpty(startStatus === "error"
-          ? `Binance start-price anchor failed${startError ? `: ${startError}` : ""}.`
-          : "Fetching Binance window-start trade. The live line will not draw until the zero anchor is verified.");
+          ? `Start error${startError ? `: ${startError}` : ""}.`
+          : "Loading start.");
         return;
       }
-      chart.innerHTML = svgEmpty("Waiting for the first Binance trade/book tick.");
+      chart.innerHTML = svgEmpty("Loading ticks.");
       return;
     }
-    chart.innerHTML = svgEmpty("No paper price path for this historical market yet.");
+    chart.innerHTML = svgEmpty("No path.");
     return;
   }
 
   const startMeta = preferredPaperStartMetadata(market);
-  const usePolymarketTruthLine = marketUsesPolymarketTruthPrice(market);
-  const lineRows = selectedCurrent && !usePolymarketTruthLine
-    ? liveTradePointsForMarket(market)
-    : rawPoints.filter((row) => row.decision !== "live_book_tick");
-  const allSamples = lineRows
-    .map((row, index) => ({
-      row,
-      index,
-      elapsedSeconds: paperPointElapsedSeconds(row, index, lineRows.length),
-      secondsLeft: Math.max(0, 300 - paperPointElapsedSeconds(row, index, lineRows.length)),
-      dollarMove: paperDollarMoveFromStart(row, startMeta?.price),
-      btcPrice: metricNumber(row.btc_price),
-    }))
-    .filter((point) => Number.isFinite(point.secondsLeft) && Number.isFinite(point.dollarMove));
+  const priceRows = rawPoints.filter((row) => row.decision !== "live_book_tick");
+  const anchor = chainlinkAnchorRow(market, startMeta, 0);
+  let truthRows = priceRows.filter(isPolymarketTruthPoint);
+  if (anchor && !truthRows.some((row) => Math.abs(paperPointElapsedSeconds(row, 0, 1)) < 0.001)) {
+    truthRows = [anchor, ...truthRows];
+  }
+  const externalRows = priceRows.filter((row) => isExternalPricePoint(row) && !isPolymarketTruthPoint(row));
+  const truthSamples = paperGraphSamples(truthRows, startMeta?.price, "chainlink")
+    .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
+  const externalSamples = paperGraphSamples(externalRows, startMeta?.price, "binance")
+    .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
+  const allSamples = [...truthSamples, ...externalSamples]
+    .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
 
   if (!allSamples.length) {
-    chart.innerHTML = svgEmpty("This paper market has price points, but no usable BTC move values yet.");
+    const hasPrices = priceRows.some((row) => metricNumber(row?.btc_price) !== null);
+    chart.innerHTML = svgEmpty(hasPrices && !startMeta ? "Waiting for Polymarket start." : "No usable points.");
     return;
   }
 
@@ -2589,24 +2647,35 @@ function renderPaperDecisionGraph() {
   const plot = { left: 76, right: 306, top: 42, height: 420 };
   const plotWidth = view.width - plot.left - plot.right;
   const plotBottom = plot.top + plot.height;
-  const latest = allSamples[allSamples.length - 1];
-  const latestElapsed = Number.isFinite(latest.elapsedSeconds) ? latest.elapsedSeconds : Math.max(0, 300 - latest.secondsLeft);
+  const latestTruth = truthSamples[truthSamples.length - 1] || null;
+  const latestExternal = externalSamples[externalSamples.length - 1] || null;
+  const latest = latestTruth || latestExternal || allSamples[allSamples.length - 1];
+  const latestDomainSample = allSamples[allSamples.length - 1];
+  const latestElapsed = Number.isFinite(latestDomainSample.elapsedSeconds)
+    ? latestDomainSample.elapsedSeconds
+    : Math.max(0, 300 - latestDomainSample.secondsLeft);
   const xDomain = selectedCurrent ? livePaperXDomain(market, latestElapsed) : { min: 0, max: 300 };
   if (xDomain.max - xDomain.min < 1) xDomain.max = xDomain.min + 1;
   const samples = allSamples.filter((point) => point.elapsedSeconds >= xDomain.min && point.elapsedSeconds <= xDomain.max);
   const visibleSamples = samples.length ? samples : allSamples.slice(-1);
-  const lineSamples = selectedCurrent ? stableLiveLineSamples(visibleSamples) : visibleSamples;
+  const visibleTruthSamples = truthSamples.filter((point) => point.elapsedSeconds >= xDomain.min && point.elapsedSeconds <= xDomain.max);
+  const visibleExternalSamples = externalSamples.filter((point) => point.elapsedSeconds >= xDomain.min && point.elapsedSeconds <= xDomain.max);
+  const truthLineSamples = selectedCurrent ? stableLiveLineSamples(visibleTruthSamples) : visibleTruthSamples;
+  const externalLineSamples = selectedCurrent ? stableLiveLineSamples(visibleExternalSamples) : visibleExternalSamples;
   const xForElapsed = (elapsedSeconds) => {
     const clamped = Math.max(xDomain.min, Math.min(xDomain.max, Number(elapsedSeconds)));
     return plot.left + ((clamped - xDomain.min) / (xDomain.max - xDomain.min)) * plotWidth;
   };
   const dollarDomain = selectedCurrent ? livePaperDollarDomain(market, allSamples) : paperDollarDomain(visibleSamples, 2);
   const yForDollarMove = (value) => plot.top + ((dollarDomain.max - Number(value)) / (dollarDomain.max - dollarDomain.min)) * plot.height;
-  const mappedLinePoints = lineSamples.map((point) => ({
+  const truthLinePoints = compressLinePoints(truthLineSamples.map((point) => ({
     x: xForElapsed(point.elapsedSeconds),
     y: yForDollarMove(point.dollarMove),
-  }));
-  const linePoints = compressLinePoints(mappedLinePoints);
+  })));
+  const externalLinePoints = compressLinePoints(externalLineSamples.map((point) => ({
+    x: xForElapsed(point.elapsedSeconds),
+    y: yForDollarMove(point.dollarMove),
+  })));
   const rule = activeRule();
   const bandRect = (startElapsed, endElapsed, className) => {
     const left = Math.max(xDomain.min, Math.min(startElapsed, endElapsed));
@@ -2671,8 +2740,17 @@ function renderPaperDecisionGraph() {
       <circle class="dot ${type}" cx="${x}" cy="${y}" r="6">
         <title>${escapeHtml(paperMarkerTitle(row))}</title>
       </circle>
-      <text class="paper-marker-label" x="${x + 8}" y="${y - 8}">${escapeHtml(paperMarkerLabel(row))}</text>`;
+	      <text class="paper-marker-label" x="${x + 8}" y="${y - 8}">${escapeHtml(paperMarkerLabel(row))}</text>`;
   }).join("");
+  const truthPath = truthLinePoints.length
+    ? `<path class="line line-chainlink" d="${pathFrom(truthLinePoints)}"></path>`
+    : "";
+  const externalPath = externalLinePoints.length
+    ? `<path class="line line-external" d="${pathFrom(externalLinePoints)}"></path>`
+    : "";
+  const externalLegend = externalLinePoints.length
+    ? `<text class="legend external" x="${plot.left + 116}" y="${plot.top + 20}">Binance external</text>`
+    : "";
 
   const latestRaw = latest.row;
   const latestBookRaw = latestBookRowForMarket(market, rawPoints) || latestRaw;
@@ -2690,9 +2768,11 @@ function renderPaperDecisionGraph() {
     : (latestRaw.time_unix ? formatMicroTimestamp(Number(latestRaw.time_unix) * 1_000_000) : "--");
   const fairProbability = metricNumber(latestRaw.fair_probability);
   const fairEdge = metricNumber(latestRaw.fair_edge);
-  const startPrice = metricNumber(startMeta?.price ?? latestRaw.start_price ?? market.start_price ?? market.binance_start_price);
-  const currentPrice = metricNumber(latest.btcPrice ?? latestRaw.btc_price);
-  const priceDifference = currentPrice !== null && startPrice !== null ? currentPrice - startPrice : latest.dollarMove;
+  const startPrice = metricNumber(startMeta?.price ?? latestRaw.start_price ?? market.start_price);
+  const currentPrice = metricNumber(latestTruth?.btcPrice ?? latest.btcPrice ?? latestRaw.btc_price);
+  const priceDifference = latestTruth
+    ? latestTruth.dollarMove
+    : (currentPrice !== null && startPrice !== null ? currentPrice - startPrice : latest.dollarMove);
   const moveClass = moveToneClass(priceDifference);
   const upProbability = metricNumber(market.paper_up_probability ?? market.up_probability ?? market.latest_up_probability)
     ?? outcomeBookProbability(latestBookRaw || latestRaw, "up")
@@ -2714,6 +2794,7 @@ function renderPaperDecisionGraph() {
   }).join("");
   const latestTitle = [
     `latest ${Math.round(latest.elapsedSeconds)}s in`,
+    latest.source === "chainlink" ? "Chainlink" : "Binance external",
     `BTC ${formatBookMoney(latest.btcPrice)}`,
     formatDollarMove(latest.dollarMove),
     latestTradeTime,
@@ -2728,23 +2809,27 @@ function renderPaperDecisionGraph() {
       ${closeBand}
       ${xTicks}
       ${yTicks}
-      <path class="line line-distance" d="${pathFrom(linePoints)}"></path>
+      ${truthPath}
+      ${externalPath}
+      <text class="legend chainlink" x="${plot.left + 8}" y="${plot.top + 20}">Chainlink</text>
+      ${externalLegend}
       ${eventDots}
       <line class="paper-latest-line" x1="${xForElapsed(latest.elapsedSeconds)}" y1="${plot.top}" x2="${xForElapsed(latest.elapsedSeconds)}" y2="${plotBottom}"></line>
       <circle class="dot latest ${selectedCurrent ? "live-now" : ""}" cx="${xForElapsed(latest.elapsedSeconds)}" cy="${yForDollarMove(latest.dollarMove)}" r="6">
         <title>${escapeHtml(latestTitle)}</title>
       </circle>
-      <text class="axis" x="${plot.left + plotWidth / 2}" y="${plot.top - 16}" text-anchor="middle">BTC dollars from this market start</text>
-      <text class="axis" x="${plot.left + plotWidth / 2}" y="${plotBottom + 54}" text-anchor="middle">Seconds into market</text>
-      <text class="axis" x="22" y="${plot.top + plot.height / 2}" text-anchor="middle" transform="rotate(-90 22 ${plot.top + plot.height / 2})">Dollars from start</text>
       <rect class="note-box" x="696" y="42" width="266" height="584" rx="6"></rect>
       ${infoRows}
     </svg>
     ${renderOrderBookTable(market, rawPoints, latestBookRaw, latestQuote)}`;
 }
 
-function renderPaperChart() {
-  renderPaperSelects();
+function renderPaperChart(options = {}) {
+  if (options.selects === false) {
+    renderPaperMeta();
+  } else {
+    renderPaperSelects();
+  }
   if (allPaperMarkets().length || selectedPaperMarket()) {
     renderPaperDecisionGraph();
     return;
@@ -2765,21 +2850,13 @@ function renderStatus() {
   const makerReady = Boolean(policy.maker_route_ready);
   const makerText = makerRoi === null
     ? ""
-    : ` | maker route ${makerReady ? "paper-ready" : "not ready"} | WF ROI ${formatPercent(makerRoi)} ${makerRoi >= makerTarget ? ">=" : "<"} ${formatPercent(makerTarget)}`;
-  const generated = state.workflow.generated_at
-    ? new Date(state.workflow.generated_at).toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        timeZoneName: "short",
-      })
-    : "unknown build";
-  byId("statusText").textContent = `Loaded ${generated} | active backtest: ${fmt.format(activeBuys)} ask-sim buys | ask-entry ROI ${formatPercent(activeRoi)}${makerText} | ${fmt.format(q.clean_markets || 0)} clean windows`;
+    : ` | ${makerReady ? "paper-ready" : "not ready"} | WF ${formatPercent(makerRoi)}/${formatPercent(makerTarget)}`;
+  byId("statusText").textContent = `${fmt.format(q.clean_markets || 0)} windows | ${fmt.format(activeBuys)} buys | ROI ${formatPercent(activeRoi)}${makerText}`;
 }
 
 function currentPaperViewSelected() {
-  return (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE;
+  state.paperGraph = PAPER_CURRENT_VALUE;
+  return true;
 }
 
 function liveMarketForTicks() {
@@ -2806,56 +2883,31 @@ function appendLiveBtcPoint(market, point) {
       return String(existingKey) === String(pointKey);
     })) return;
     points.push(point);
-    if (points.length > LIVE_TICK_STORE_MAX_POINTS_PER_MARKET) {
-      points.splice(0, points.length - LIVE_TICK_STORE_MAX_POINTS_PER_MARKET);
-    }
-    state.liveBtcTicksByMarket.set(key, points);
+    const bookRows = points.filter((row) => row.decision === "live_book_tick").slice(-LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET);
+    const priceRows = points.filter((row) => row.decision !== "live_book_tick").slice(-LIVE_TICK_STORE_MAX_POINTS_PER_MARKET);
+    state.liveBtcTicksByMarket.set(key, mergePaperChartRows(priceRows, bookRows));
   });
   if (shouldPersistLivePoint(point)) schedulePaperTickPersist();
 }
 
-function verifiedBinanceStartPrice(market) {
-  const readStart = (source) => {
-    const binanceStart = metricNumber(source?.binance_start_price);
-    if (binanceStart !== null && binanceStart > 0) return binanceStart;
-    const sourceLabel = String(source?.start_price_source || "");
-    const startPrice = metricNumber(source?.start_price);
-    if (sourceLabel.startsWith("binance_") && startPrice !== null && startPrice > 0) return startPrice;
-    return null;
-  };
-  const direct = readStart(market);
-  if (direct !== null) return direct;
-  for (const key of paperStorageKeysForMarket(market)) {
-    const stored = state.livePersistedMarkets.get(key);
-    const storedStart = readStart(stored);
-    if (storedStart !== null) return storedStart;
-    const pointStart = (state.liveBtcTicksByMarket.get(key) || [])
-      .map(readStart)
-      .find((value) => value !== null);
-    if (pointStart !== null && pointStart !== undefined) return pointStart;
-  }
-  return null;
+function verifiedPaperStartPrice(market) {
+  return metricNumber(preferredPaperStartMetadata(market)?.price);
 }
 
 function liveStartMetadata(market) {
-  const stored = paperStorageKeysForMarket(market)
-    .map((key) => state.livePersistedMarkets.get(key))
-    .find((candidate) => metricNumber(candidate?.binance_start_price ?? candidate?.start_price) !== null);
-  const storedPoint = paperStorageKeysForMarket(market)
-    .flatMap((key) => state.liveBtcTicksByMarket.get(key) || [])
-    .find((point) => verifiedBinanceStartPrice(point) !== null);
+  const startMeta = preferredPaperStartMetadata(market);
   return {
-    ...(stored || {}),
-    ...(storedPoint || {}),
     ...(market || {}),
-    ...(verifiedBinanceStartPrice(market) !== null ? (storedPoint || stored || {}) : {}),
+    start_price: startMeta?.price,
+    start_price_source: startMeta?.source,
+    start_event_time_micro: startMeta?.eventTimeMicro,
+    start_price_status: startMeta ? "verified" : "loading",
   };
 }
 
 function applyLiveStartMetadata(target, anchor) {
-  if (!target || !anchor) return;
+  if (!target || !anchor || !isPolymarketTruthSource(anchor.source)) return;
   target.start_price = anchor.price;
-  target.binance_start_price = anchor.price;
   target.start_price_source = anchor.source;
   target.start_trade_time_ms = anchor.tradeTimeMs;
   target.start_trade_delay_ms = anchor.delayMs;
@@ -2879,7 +2931,7 @@ function rememberLiveStartAnchor(market, anchor) {
 }
 
 function recomputeLiveTickDistances(market) {
-  const startPrice = verifiedBinanceStartPrice(market);
+  const startPrice = verifiedPaperStartPrice(market);
   if (startPrice === null) return;
   const startMeta = liveStartMetadata(market);
   paperStorageKeysForMarket(market).forEach((key) => {
@@ -2908,7 +2960,7 @@ function scheduleLiveTickRender() {
       return;
     }
     liveTickLastRenderAt = timestamp;
-    if (state.activeTab === "paper" && currentPaperViewSelected()) renderPaperChart();
+    if (state.activeTab === "paper" && currentPaperViewSelected()) renderPaperChart({ selects: false });
   });
 }
 
@@ -2953,13 +3005,16 @@ function handleBackendStreamMessage(payload) {
   if (!payload || typeof payload !== "object") return;
   if (payload.type === "snapshot") {
     const market = rememberBackendStreamMarket(payload.market);
-    const points = Array.isArray(payload.points) ? payload.points.filter(isBinanceLivePoint) : [];
+    const allPoints = Array.isArray(payload.points) ? payload.points : [];
+    const truthPoints = allPoints.filter(isPolymarketTruthPoint);
+    const points = allPoints.filter(isBinanceLivePoint);
+    if (truthPoints.length) rememberObservedPaperMarket(market || truthPoints[0], truthPoints, []);
     points.forEach((point) => appendLiveBtcPoint(market || point, point));
     state.backendStatus = {
       state: "open",
       lastError: null,
       lastStreamAt: new Date(),
-      pointsLoaded: points.length,
+      pointsLoaded: allPoints.length,
       url: backendWebSocketUrl(),
     };
     if (points.length) {
@@ -2983,8 +3038,28 @@ function handleBackendStreamMessage(payload) {
   }
   if (payload.type !== "tick") return;
   const point = payload.point;
-  if (!isBinanceLivePoint(point)) return;
   const market = rememberBackendStreamMarket(payload.market || point) || point;
+  if (isPolymarketTruthPoint(point)) {
+    rememberObservedPaperMarket(market, [point], []);
+    state.backendStatus = {
+      ...state.backendStatus,
+      state: "open",
+      lastError: null,
+      lastStreamAt: new Date(),
+      pointsLoaded: (state.backendStatus.pointsLoaded || 0) + 1,
+      url: backendWebSocketUrl(),
+    };
+    state.liveTickStatus = {
+      ...state.liveTickStatus,
+      state: "open",
+      lastTickAt: new Date(Math.floor((pointTimestampMicro(point) || Date.now() * 1000) / 1000)),
+      lastError: null,
+      url: backendWebSocketUrl(),
+    };
+    scheduleLiveTickRender();
+    return;
+  }
+  if (!isBinanceLivePoint(point)) return;
   appendLiveBtcPoint(market, point);
   state.backendStatus = {
     ...state.backendStatus,
@@ -3169,28 +3244,12 @@ async function main() {
     renderBacktestSelects();
     renderBacktestChart();
   });
-  byId("paperGraphSelect").addEventListener("change", (event) => {
-    state.paperGraph = event.target.value;
-    renderPaperChart();
-    if (state.paperGraph === PAPER_CURRENT_VALUE) {
-      refreshBackendPaperFeeds({ render: state.activeTab === "paper" });
-      ensureLiveTickStream();
-      refreshWorkflow();
-      refreshLivePaperFeeds();
-    } else {
-      closeLiveTickStream();
-    }
-  });
   window.setInterval(() => {
     if (state.activeTab === "paper") {
       refreshWorkflow();
       refreshLivePaperFeeds();
     }
   }, PAPER_REFRESH_MS);
-  window.addEventListener("beforeunload", persistPaperTicksNow);
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") persistPaperTicksNow();
-  });
 }
 
 main().catch((error) => {
