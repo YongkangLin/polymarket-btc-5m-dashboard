@@ -271,6 +271,9 @@ function formatMicroTimestamp(value) {
 function liveFeedLabel(row) {
   if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws_book")) return "Local backend book";
   if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws")) return "Local backend trade";
+  if (String(row?.btc_price_venue || row?.btc_price_source || "").includes("chainlink_data_streams")) return "Chainlink Data Streams";
+  if (String(row?.btc_price_venue || row?.btc_price_source || "").includes("polymarket_rtds_crypto_prices_chainlink")) return "Polymarket Chainlink proxy";
+  if (String(row?.btc_price_venue || "").includes("polymarket_chainlink_proxy")) return "Polymarket Chainlink proxy";
   if (row?.decision === "live_tick") return "Local backend WS trade";
   if (row?.decision === "live_book_tick") return "Local backend WS book";
   return row?.btc_price_venue || row?.reason || "--";
@@ -1049,6 +1052,36 @@ function isPolymarketTruthPoint(row) {
     || source.includes("chainlink");
 }
 
+function isChainlinkDataStreamsSource(source) {
+  return String(source || "").toLowerCase().includes("chainlink_data_streams");
+}
+
+function isPolymarketChainlinkProxySource(source) {
+  const text = String(source || "").toLowerCase();
+  return text.includes("polymarket_rtds_crypto_prices_chainlink") || text.includes("polymarket_chainlink_proxy");
+}
+
+function chainlinkVenueFromSource(source) {
+  if (isChainlinkDataStreamsSource(source)) return "chainlink_data_streams";
+  if (isPolymarketChainlinkProxySource(source)) return "polymarket_chainlink_proxy";
+  return "polymarket_chainlink";
+}
+
+function isChainlinkPriceRow(row) {
+  const source = String(row?.btc_price_source || row?.btc_price_venue || row?.price_source || "").toLowerCase();
+  return row?.decision === "chainlink_tick" || source.includes("chainlink");
+}
+
+function chainlinkLineLabel(rows) {
+  const text = (rows || [])
+    .map((row) => String(row?.btc_price_source || row?.btc_price_venue || row?.price_source || "").toLowerCase())
+    .join(" ");
+  if (text.includes("chainlink_data_streams")) return "Chainlink Data Streams";
+  if (text.includes("polymarket_rtds_crypto_prices_chainlink") || text.includes("polymarket_chainlink_proxy")) return "Polymarket Chainlink proxy";
+  if (text.includes("polymarket_chainlink")) return "Polymarket Chainlink";
+  return "Chainlink";
+}
+
 function isExternalPricePoint(row) {
   return isBinanceLivePoint(row)
     || isBackendLivePoint(row)
@@ -1159,7 +1192,7 @@ function paperDistanceBps(row) {
 
 function pointPlotTimestampMicro(row, source) {
   const receiveMicro = metricNumber(row?.receive_time_micro);
-  if (source === "chainlink" && row?.decision === "chainlink_tick" && receiveMicro !== null) return receiveMicro;
+  if (source === "chainlink" && isChainlinkPriceRow(row) && receiveMicro !== null) return receiveMicro;
   return pointTimestampMicro(row);
 }
 
@@ -1208,8 +1241,8 @@ function chainlinkAnchorRow(market, startMeta, elapsedSeconds = 0) {
     start_price: start,
     start_price_source: startMeta?.source || POLYMARKET_TRUTH_SOURCE,
     btc_price_source: startMeta?.source || POLYMARKET_TRUTH_SOURCE,
-    btc_price_venue: "polymarket_chainlink",
-    price_role: "polymarket_truth",
+    btc_price_venue: chainlinkVenueFromSource(startMeta?.source),
+    price_role: chainlinkVenueFromSource(startMeta?.source),
     btc_price_is_truth: true,
     truth_current_price_missing: false,
     distance_bps: 0,
@@ -2502,6 +2535,8 @@ function isPolymarketTruthSource(source) {
 function startSourceLabel(source) {
   const text = String(source || "");
   if (!text) return "source unknown";
+  if (isChainlinkDataStreamsSource(text)) return "Chainlink Data Streams";
+  if (isPolymarketChainlinkProxySource(text)) return "Polymarket Chainlink proxy";
   if (isPolymarketTruthSource(text)) return "Polymarket Chainlink";
   if (text === "binance_ws_trade_at_window_start") return "Binance WS start tick";
   if (text === "polymarket_paper_event") return "paper capture";
@@ -2671,7 +2706,7 @@ function renderPaperDecisionGraph() {
 
   if (!allSamples.length) {
     const hasPrices = priceRows.some((row) => metricNumber(row?.btc_price) !== null);
-    chart.innerHTML = svgEmpty(hasPrices && !startMeta ? "Waiting for Polymarket start." : "No usable points.");
+    chart.innerHTML = svgEmpty(hasPrices && !startMeta ? "Waiting for Chainlink start." : "No usable points.");
     return;
   }
 
@@ -2793,8 +2828,13 @@ function renderPaperDecisionGraph() {
   const externalPath = externalLinePoints.length
     ? `<path class="line line-external" d="${pathFrom(externalLinePoints)}"></path>`
     : "";
+  const truthLabel = chainlinkLineLabel(truthRows);
+  const truthLegend = truthLinePoints.length
+    ? `<text class="legend chainlink" x="${plot.left + 8}" y="${plot.top + 20}">${escapeHtml(truthLabel)}</text>`
+    : "";
+  const externalLegendX = plot.left + Math.min(220, 20 + truthLabel.length * 7);
   const externalLegend = externalLinePoints.length
-    ? `<text class="legend external" x="${plot.left + 116}" y="${plot.top + 20}">Binance external</text>`
+    ? `<text class="legend external" x="${externalLegendX}" y="${plot.top + 20}">Binance external</text>`
     : "";
 
   const latestRaw = latest.row;
@@ -2842,7 +2882,7 @@ function renderPaperDecisionGraph() {
   }).join("");
   const latestTitle = [
     `latest ${Math.round(latest.elapsedSeconds)}s in`,
-    latest.source === "chainlink" ? "Chainlink" : "Binance external",
+    latest.source === "chainlink" ? truthLabel : "Binance external",
     `BTC ${formatBookMoney(latest.btcPrice)}`,
     formatDollarMove(latest.dollarMove),
     latest.source === "chainlink" && latestRaw.receive_time_micro
@@ -2862,7 +2902,7 @@ function renderPaperDecisionGraph() {
       ${yTicks}
       ${truthPath}
       ${externalPath}
-      <text class="legend chainlink" x="${plot.left + 8}" y="${plot.top + 20}">Chainlink</text>
+      ${truthLegend}
       ${externalLegend}
       ${eventDots}
       <line class="paper-latest-line" x1="${xForElapsed(latest.elapsedSeconds)}" y1="${plot.top}" x2="${xForElapsed(latest.elapsedSeconds)}" y2="${plotBottom}"></line>
