@@ -924,6 +924,13 @@ const OUTCOME_ODDS_FIELDS = [
   "market_odds_error",
 ];
 
+function copyOutcomeOddsFields(target, source) {
+  OUTCOME_ODDS_FIELDS.forEach((field) => {
+    if (source?.[field] !== null && source?.[field] !== undefined) target[field] = source[field];
+  });
+  return target;
+}
+
 function truthPriceValue(market) {
   return metricNumber(market?.btc_price ?? market?.latest_btc_price);
 }
@@ -1123,11 +1130,8 @@ function marketSecondsLeftNow(market) {
 }
 
 function preserveExistingOutcomeOdds(target, existing, incoming) {
-  OUTCOME_ODDS_FIELDS.forEach((field) => {
-    if (incoming?.[field] !== null && incoming?.[field] !== undefined) return;
-    if (existing?.[field] === null || existing?.[field] === undefined) return;
-    target[field] = existing[field];
-  });
+  copyOutcomeOddsFields(target, existing);
+  copyOutcomeOddsFields(target, incoming);
   applyOutcomeOddsFromCandidates(target, [target, incoming, existing]);
 }
 
@@ -3288,14 +3292,20 @@ function outcomeDirectProbability(row, key) {
   );
 }
 
-function outcomeProbabilityFromRow(row, key) {
+function outcomeExplicitProbabilityFromRow(row, key) {
   const direct = outcomeDirectProbability(row, key);
+  if (direct !== null) return direct;
+  const opposite = key === "up" ? "down" : "up";
+  const oppositeDirect = outcomeDirectProbability(row, opposite);
+  return oppositeDirect === null ? null : Math.max(0, Math.min(1, 1 - oppositeDirect));
+}
+
+function outcomeProbabilityFromRow(row, key) {
+  const direct = outcomeExplicitProbabilityFromRow(row, key);
   if (direct !== null) return direct;
   const bookMid = outcomeBookProbability(row, key);
   if (bookMid !== null) return bookMid;
   const opposite = key === "up" ? "down" : "up";
-  const oppositeDirect = outcomeDirectProbability(row, opposite);
-  if (oppositeDirect !== null) return Math.max(0, Math.min(1, 1 - oppositeDirect));
   const oppositeBookMid = outcomeBookProbability(row, opposite);
   if (oppositeBookMid !== null) return Math.max(0, Math.min(1, 1 - oppositeBookMid));
   return metricNumber(row?.[`direction_${key}_probability`]);
@@ -3321,8 +3331,7 @@ function rememberOutcomeOddsForWindow(anchor, candidates = []) {
   const rows = [anchor, ...(candidates || [])].filter(Boolean);
   const key = rows.map(outcomeOddsWindowKey).find(Boolean);
   if (!key) return null;
-  const up = bestOutcomeProbability("up", rows);
-  const down = bestOutcomeProbability("down", rows);
+  const { up, down } = outcomeOddsFromCandidates(rows);
   if (up === null && down === null) return state.latestOutcomeOddsByWindow.get(key) || null;
   const timestamps = rows.map(outcomeOddsTimestampMicro).filter((value) => value !== null);
   const incomingTime = timestamps.length ? Math.max(...timestamps) : 0;
@@ -3411,10 +3420,30 @@ function bestOutcomeProbability(side, candidates) {
     .find((value) => value !== null) ?? null;
 }
 
+function bestExplicitOutcomeProbability(side, candidates) {
+  const key = sideKey(side);
+  if (!key) return null;
+  return (candidates || [])
+    .map((row) => outcomeExplicitProbabilityFromRow(row, key))
+    .find((value) => value !== null) ?? null;
+}
+
+function outcomeOddsFromCandidates(candidates) {
+  const rows = (candidates || []).filter(Boolean);
+  let up = bestExplicitOutcomeProbability("up", rows);
+  let down = bestExplicitOutcomeProbability("down", rows);
+  if (up === null && down !== null) up = Math.max(0, Math.min(1, 1 - down));
+  if (down === null && up !== null) down = Math.max(0, Math.min(1, 1 - up));
+  if (up === null) up = bestOutcomeProbability("up", rows);
+  if (down === null) down = bestOutcomeProbability("down", rows);
+  if (up === null && down !== null) up = Math.max(0, Math.min(1, 1 - down));
+  if (down === null && up !== null) down = Math.max(0, Math.min(1, 1 - up));
+  return { up, down };
+}
+
 function applyOutcomeOddsFromCandidates(target, candidates) {
   const rows = [cachedOutcomeOddsForMarket(target), ...(candidates || [])].filter(Boolean);
-  const up = bestOutcomeProbability("up", rows);
-  const down = bestOutcomeProbability("down", rows);
+  const { up, down } = outcomeOddsFromCandidates(rows);
   if (up !== null) {
     target.paper_up_probability = up;
     target.market_up_probability = up;
@@ -3434,7 +3463,8 @@ function applyOutcomeOddsFromCandidates(target, candidates) {
 }
 
 function paperOutcomeProbability(side, market, latestRaw, latestBookRaw) {
-  return bestOutcomeProbability(side, paperOutcomeCandidates(market, latestRaw, latestBookRaw));
+  const odds = outcomeOddsFromCandidates(paperOutcomeCandidates(market, latestRaw, latestBookRaw));
+  return sideKey(side) === "up" ? odds.up : odds.down;
 }
 
 function paperSession() {
@@ -4581,6 +4611,13 @@ function liveBtcPointKey(point) {
   return String(point?.point_id || `${point?.decision || "tick"}:${pointTimestampMicro(point) || ""}:${point?.btc_price ?? ""}`);
 }
 
+function enrichPointWithMarketOutcomeOdds(point, market) {
+  if (!point || !market) return point;
+  copyOutcomeOddsFields(point, market);
+  applyOutcomeOddsFromCandidates(point, [market, point]);
+  return point;
+}
+
 function liveTickKeySetForMarket(key, points) {
   let keySet = state.liveBtcTickKeysByMarket.get(key);
   if (!keySet) {
@@ -4601,6 +4638,7 @@ function trimLiveBtcPointsForKey(key, points) {
 function appendLiveBtcPoint(market, point) {
   const keys = liveTickStorageKeysForMarket(market);
   if (!keys.length || !isBinanceLivePoint(point)) return;
+  enrichPointWithMarketOutcomeOdds(point, market);
   const marketStartPrice = metricNumber(market?.start_price);
   const startPrice = marketStartPrice ?? verifiedPaperStartPrice(market);
   const startSource = market?.start_price_source || liveStartMetadata(market).start_price_source;
@@ -4783,7 +4821,9 @@ function chainlinkReasonFromMarket(market) {
 }
 
 function rememberBackendStreamPoints(market, allPoints) {
-  const points = Array.isArray(allPoints) ? allPoints : [];
+  const points = Array.isArray(allPoints)
+    ? allPoints.map((point) => enrichPointWithMarketOutcomeOdds(point, market))
+    : [];
   const truthPoints = points.filter(isPolymarketTruthPoint);
   const externalPoints = points.filter(isBinanceLivePoint);
   if (truthPoints.length) rememberObservedPaperMarket(market || truthPoints[0], truthPoints, []);
