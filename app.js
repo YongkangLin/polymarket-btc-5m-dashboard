@@ -815,6 +815,24 @@ function currentWindowStartUnixNow() {
   return Math.floor(Date.now() / 1000 / 300) * 300;
 }
 
+function currentBackendLiveMarketShell() {
+  const start = currentWindowStartUnixNow();
+  return {
+    market_key: `btc-updown-5m-${start}`,
+    condition_id: `btc-updown-5m-${start}`,
+    slug: `btc-updown-5m-${start}`,
+    question: "BTC Up/Down 5m",
+    symbol: "BTCUSDT",
+    window_start_unix: start,
+    window_end_unix: start + 300,
+    status: "backend_live",
+    is_current: true,
+    is_open: true,
+    points: [],
+    markers: [],
+  };
+}
+
 function isCurrentBtcWindowMarket(market) {
   return marketWindowStartUnix(market) === currentWindowStartUnixNow();
 }
@@ -1004,7 +1022,7 @@ function mergePaperMarket(left, right) {
 function allPaperMarkets() {
   pruneNonCurrentPaperState();
   const grouped = new Map();
-  [...browserLiveMarkets(), ...observedPaperMarkets()]
+  [currentBackendLiveMarketShell(), ...browserLiveMarkets(), ...observedPaperMarkets()]
     .filter((market) => market && !isBrowserLiveMarket(market))
     .filter(isCurrentBtcWindowMarket)
     .forEach((market) => {
