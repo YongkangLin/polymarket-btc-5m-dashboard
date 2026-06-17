@@ -3316,6 +3316,17 @@ function outcomeOddsWindowKey(row) {
   return start === null ? "" : String(start);
 }
 
+function outcomeOddsCacheKeys(row) {
+  const keys = [];
+  const start = marketWindowStartUnix(row);
+  if (start !== null) {
+    keys.push(String(start), `btc-updown-5m-${start}`, `backend-live-btc-5m-${start}`);
+  }
+  const key = paperGraphKey(row);
+  if (key) keys.push(key);
+  return [...new Set(keys)];
+}
+
 function outcomeOddsTimestampMicro(row) {
   return pointTimestampMicro(row)
     ?? (Number.isFinite(Date.parse(row?.generated_at || "")) ? Date.parse(row.generated_at) * 1000 : null)
@@ -3323,19 +3334,24 @@ function outcomeOddsTimestampMicro(row) {
 }
 
 function cachedOutcomeOddsForMarket(market) {
-  const key = outcomeOddsWindowKey(market);
-  return key ? state.latestOutcomeOddsByWindow.get(key) || null : null;
+  const keys = outcomeOddsCacheKeys(market);
+  for (const key of keys) {
+    const odds = state.latestOutcomeOddsByWindow.get(key);
+    if (odds) return odds;
+  }
+  return null;
 }
 
 function rememberOutcomeOddsForWindow(anchor, candidates = []) {
   const rows = [anchor, ...(candidates || [])].filter(Boolean);
-  const key = rows.map(outcomeOddsWindowKey).find(Boolean);
-  if (!key) return null;
+  const keys = [...new Set(rows.flatMap(outcomeOddsCacheKeys))];
+  const key = rows.map(outcomeOddsWindowKey).find(Boolean) || keys[0];
+  if (!key || !keys.length) return null;
   const { up, down } = outcomeOddsFromCandidates(rows);
-  if (up === null && down === null) return state.latestOutcomeOddsByWindow.get(key) || null;
+  if (up === null && down === null) return cachedOutcomeOddsForMarket(anchor) || null;
   const timestamps = rows.map(outcomeOddsTimestampMicro).filter((value) => value !== null);
   const incomingTime = timestamps.length ? Math.max(...timestamps) : 0;
-  const existing = state.latestOutcomeOddsByWindow.get(key) || {};
+  const existing = keys.map((cacheKey) => state.latestOutcomeOddsByWindow.get(cacheKey)).find(Boolean) || {};
   const existingTime = metricNumber(existing._odds_updated_micro) || 0;
   if (existingTime && incomingTime && incomingTime < existingTime) return existing;
   const source = rows.find((row) => row?.probability_source || row?.market_probability_source || row?.market_odds_fetched_at);
@@ -3364,7 +3380,7 @@ function rememberOutcomeOddsForWindow(anchor, candidates = []) {
     odds.market_odds_stale = source.market_odds_stale ?? odds.market_odds_stale;
     odds.market_odds_error = source.market_odds_error ?? odds.market_odds_error;
   }
-  state.latestOutcomeOddsByWindow.set(key, odds);
+  keys.forEach((cacheKey) => state.latestOutcomeOddsByWindow.set(cacheKey, odds));
   return odds;
 }
 
@@ -3463,7 +3479,9 @@ function applyOutcomeOddsFromCandidates(target, candidates) {
 }
 
 function paperOutcomeProbability(side, market, latestRaw, latestBookRaw) {
-  const odds = outcomeOddsFromCandidates(paperOutcomeCandidates(market, latestRaw, latestBookRaw));
+  const candidates = paperOutcomeCandidates(market, latestRaw, latestBookRaw);
+  const remembered = rememberOutcomeOddsForWindow(market, candidates);
+  const odds = outcomeOddsFromCandidates([remembered, ...candidates]);
   return sideKey(side) === "up" ? odds.up : odds.down;
 }
 
@@ -4432,8 +4450,8 @@ function renderPaperDecisionGraph(options = {}) {
     { label: "Start price", value: startPrice === null ? "Waiting" : formatBookMoney(startPrice) },
     { label: "Current price", value: currentPrice === null ? "Waiting" : formatBookMoney(currentPrice) },
     { label: "Difference", value: priceDifference === null ? "Waiting" : formatDollarMove(priceDifference), tone: moveClass },
-    { label: "Up percent", value: formatOutcomePercent(upProbability) },
-    { label: "Down percent", value: formatOutcomePercent(downProbability) },
+    { label: "Up %", value: formatOutcomePercent(upProbability) },
+    { label: "Down %", value: formatOutcomePercent(downProbability) },
   ];
   const accountMetrics = isLiveView
     ? [
