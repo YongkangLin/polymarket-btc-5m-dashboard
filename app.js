@@ -1007,12 +1007,14 @@ function mergePaperMarket(left, right) {
   if (!left) {
     const start = marketWindowStartUnix(right);
     const end = marketWindowEndUnix(right);
-    return {
+    const merged = {
       ...definedFields(right),
       ...(start === null ? {} : { window_start_unix: start, window_end_unix: end ?? start + 300 }),
       points: [],
       markers: right?.markers || [],
     };
+    applyOutcomeOddsFromCandidates(merged, [right]);
+    return merged;
   }
   const candidates = [left, right].filter(Boolean);
   const primary = bestByPaperQuality(candidates) || right || left;
@@ -1055,7 +1057,7 @@ function mergePaperMarket(left, right) {
 function allPaperMarkets() {
   pruneNonCurrentPaperState();
   const grouped = new Map();
-  [currentBackendLiveMarketShell(), ...browserLiveMarkets(), ...observedPaperMarkets()]
+  [currentBackendLiveMarketShell(), ...paperGraphMarkets(), ...browserLiveMarkets(), ...observedPaperMarkets()]
     .filter((market) => market && !isBrowserLiveMarket(market))
     .filter(isCurrentBtcWindowMarket)
     .forEach((market) => {
@@ -1125,6 +1127,7 @@ function preserveExistingOutcomeOdds(target, existing, incoming) {
     if (existing?.[field] === null || existing?.[field] === undefined) return;
     target[field] = existing[field];
   });
+  applyOutcomeOddsFromCandidates(target, [target, incoming, existing]);
 }
 
 function rememberLiveMarket(market) {
@@ -1174,6 +1177,7 @@ function rememberObservedPaperMarket(market, points = [], markers = []) {
       markers: [],
     };
     preserveExistingOutcomeOdds(storedMarket, existingMarket, market);
+    applyOutcomeOddsFromCandidates(storedMarket, [market, existingMarket, ...points, ...markers]);
     if (shouldKeepExistingTruthPrice(existingMarket, market)) preserveExistingTruthPrice(storedMarket, existingMarket);
     state.paperObservedMarkets.set(key, storedMarket);
     if (Array.isArray(points) && points.length) {
@@ -1196,7 +1200,16 @@ function rememberObservedPaperMarket(market, points = [], markers = []) {
 }
 
 function rememberWorkflowPaperRows(paperTrade) {
-  void paperTrade;
+  const graphs = Array.isArray(paperTrade?.graphs)
+    ? paperTrade.graphs
+    : (paperTrade?.graphs?.markets || paperTrade?._graphMarkets || []);
+  graphs
+    .filter((market) => market && isCurrentBtcWindowMarket(market))
+    .forEach((market) => rememberObservedPaperMarket(
+      market,
+      Array.isArray(market.points) ? market.points : [],
+      Array.isArray(market.markers) ? market.markers : [],
+    ));
 }
 
 function compactPersistedRow(row, keepBook = false) {
@@ -4572,13 +4585,15 @@ function applyLiveStartMetadata(target, anchor) {
 function rememberLiveStartAnchor(market, anchor) {
   applyLiveStartMetadata(market, anchor);
   paperStorageKeysForMarket(market).forEach((key) => {
+    const existing = state.livePersistedMarkets.get(key) || {};
     const stored = {
-      ...(state.livePersistedMarkets.get(key) || {}),
+      ...existing,
       ...market,
       market_key: key,
       points: [],
       markers: market.markers || [],
     };
+    preserveExistingOutcomeOdds(stored, existing, market);
     applyLiveStartMetadata(stored, anchor);
     state.livePersistedMarkets.set(key, stored);
   });
