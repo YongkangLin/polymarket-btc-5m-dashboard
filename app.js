@@ -826,7 +826,7 @@ function currentWindowStartUnixNow() {
 
 function currentBackendLiveMarketShell() {
   const start = currentWindowStartUnixNow();
-  return {
+  const shell = {
     market_key: `btc-updown-5m-${start}`,
     condition_id: `btc-updown-5m-${start}`,
     slug: `btc-updown-5m-${start}`,
@@ -840,6 +840,8 @@ function currentBackendLiveMarketShell() {
     points: [],
     markers: [],
   };
+  applyOutcomeOddsFromCandidates(shell, [cachedOutcomeOddsForMarket(shell), ...sameWindowOutcomeOddsRows(shell)]);
+  return shell;
 }
 
 function isCurrentBtcWindowMarket(market) {
@@ -3479,10 +3481,14 @@ function applyOutcomeOddsFromCandidates(target, candidates) {
 }
 
 function paperOutcomeProbability(side, market, latestRaw, latestBookRaw) {
+  const key = sideKey(side);
+  if (!key) return null;
+  const explicit = outcomeExplicitProbabilityFromRow(market, key);
+  if (explicit !== null) return explicit;
   const candidates = paperOutcomeCandidates(market, latestRaw, latestBookRaw);
   const remembered = rememberOutcomeOddsForWindow(market, candidates);
   const odds = outcomeOddsFromCandidates([remembered, ...candidates]);
-  return sideKey(side) === "up" ? odds.up : odds.down;
+  return key === "up" ? odds.up : odds.down;
 }
 
 function paperSession() {
