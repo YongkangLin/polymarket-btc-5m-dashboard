@@ -1094,6 +1094,35 @@ function marketSecondsLeftNow(market) {
   return Math.max(0, Math.round(end - Date.now() / 1000));
 }
 
+function preserveExistingOutcomeOdds(target, existing, incoming) {
+  const fields = [
+    "paper_up_probability",
+    "paper_down_probability",
+    "up_probability",
+    "down_probability",
+    "market_up_probability",
+    "market_down_probability",
+    "up_bid",
+    "up_ask",
+    "down_bid",
+    "down_ask",
+    "up_bid_size",
+    "up_ask_size",
+    "down_bid_size",
+    "down_ask_size",
+    "probability_source",
+    "market_probability_source",
+    "market_odds_fetched_at",
+    "market_odds_stale",
+    "market_odds_error",
+  ];
+  fields.forEach((field) => {
+    if (incoming?.[field] !== null && incoming?.[field] !== undefined) return;
+    if (existing?.[field] === null || existing?.[field] === undefined) return;
+    target[field] = existing[field];
+  });
+}
+
 function rememberLiveMarket(market) {
   const key = paperGraphKey(market);
   if (!key) return market;
@@ -1107,6 +1136,7 @@ function rememberLiveMarket(market) {
     points: [],
     markers: market.markers || existing.markers || [],
   };
+  preserveExistingOutcomeOdds(stored, existing, market);
   if (shouldKeepExistingTruthPrice(existing, market)) preserveExistingTruthPrice(stored, existing);
   delete stored[["is", "synthetic", "live"].join("_")];
   state.livePersistedMarkets.set(key, stored);
@@ -1139,6 +1169,7 @@ function rememberObservedPaperMarket(market, points = [], markers = []) {
       points: [],
       markers: [],
     };
+    preserveExistingOutcomeOdds(storedMarket, existingMarket, market);
     if (shouldKeepExistingTruthPrice(existingMarket, market)) preserveExistingTruthPrice(storedMarket, existingMarket);
     state.paperObservedMarkets.set(key, storedMarket);
     if (Array.isArray(points) && points.length) {
