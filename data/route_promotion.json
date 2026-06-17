@@ -217,7 +217,7 @@
       "ready": false
     }
   },
-  "generated_at": "2026-06-17T00:43:20.559991+00:00",
+  "generated_at": "2026-06-17T00:44:11.001015+00:00",
   "routes": {
     "active": {
       "key": "active_late_depth_fair",
@@ -225,7 +225,7 @@
         "inband_events": 28,
         "key": "active_late_depth_fair",
         "label": "Active: 55c-75c near-strike depth/fair maker",
-        "path": "reports/live_paper_miss_diagnosis.json",
+        "path": "reports/live_profile_cheap_pair_miss_diagnosis.json",
         "quote_rate": 0.0,
         "top_reasons": [
           {
@@ -288,7 +288,7 @@
         "inband_events": 28,
         "key": "high_ask_depth_relaxed_probe",
         "label": "Probe: 75c-98c high-fair with -25% depth floor",
-        "path": "reports/live_paper_miss_diagnosis.json",
+        "path": "reports/live_profile_cheap_pair_miss_diagnosis.json",
         "quote_rate": 0.0,
         "top_reasons": [
           {
@@ -349,7 +349,7 @@
       "inband_events": 28,
       "key": "high_ask_depth_relaxed_probe",
       "label": "Probe: 75c-98c high-fair with -25% depth floor",
-      "path": "reports/live_paper_miss_diagnosis.json",
+      "path": "reports/live_profile_cheap_pair_miss_diagnosis.json",
       "quote_rate": 0.0,
       "top_reasons": [
         {
@@ -374,7 +374,7 @@
         "inband_events": 10,
         "key": "early_midask_distance_fair_probe",
         "label": "Probe: 181-240s, 65c-90c, 10-20 bps distance",
-        "path": "reports/live_paper_miss_diagnosis.json",
+        "path": "reports/live_profile_cheap_pair_miss_diagnosis.json",
         "quote_rate": 0.0,
         "top_reasons": [
           {
@@ -433,7 +433,7 @@
         "inband_events": 28,
         "key": "late_high_ask_fair_probe",
         "label": "Challenger: 75c-98c high-fair maker probe",
-        "path": "reports/live_paper_miss_diagnosis.json",
+        "path": "reports/live_profile_cheap_pair_miss_diagnosis.json",
         "quote_rate": 0.0,
         "top_reasons": [
           {
@@ -496,7 +496,7 @@
         "inband_events": 10,
         "key": "early_highask_near_fair_probe",
         "label": "Probe: 181-240s, 80c-98c, 5-15 bps distance",
-        "path": "reports/live_paper_miss_diagnosis.json",
+        "path": "reports/live_profile_cheap_pair_miss_diagnosis.json",
         "quote_rate": 0.0,
         "top_reasons": [
           {
