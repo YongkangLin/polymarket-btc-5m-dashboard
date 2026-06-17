@@ -2033,7 +2033,7 @@ function renderStrategyPanels() {
   const paperSummary = state.workflow.paper_trade.summary || {};
   const missRoute = paperMissRoute();
   const policy = state.workflow.live_trade.execution_policy || {};
-  const routeLabel = paperSummary.maker_route_label || policy.selected_route_label || "Maker 2c below ask for 60s";
+  const routeLabel = paperSummary.maker_route_label || policy.selected_route_label || "Maker improve one tick for 60s";
   const bookChecks = Number(paperSummary.external_book_checks || 0);
   const flowChecks = Number(paperSummary.external_trade_flow_checks || 0);
   const depthSupportText = bookChecks > 0 || flowChecks > 0 ? "BTC pressure checked" : "BTC pressure pending";
@@ -4061,6 +4061,12 @@ function renderPaperChart(options = {}) {
     renderPaperDecisionGraph();
     return;
   }
+  rememberLiveMarket(currentBackendLiveMarketShell());
+  ensureLiveTickStream();
+  if (allPaperMarkets().length || selectedPaperMarket()) {
+    renderPaperDecisionGraph();
+    return;
+  }
   byId("paperChart").innerHTML = `<div class="empty">Waiting for current BTC 5m market.</div>`;
 }
 
@@ -4407,7 +4413,7 @@ function handleBackendStreamMessage(payload) {
 }
 
 function ensureLiveTickStream() {
-  if (!currentPaperViewSelected()) return;
+  if (state.activeTab !== "paper" && !currentPaperViewSelected()) return;
   if (liveTickSocket && [WebSocket.CONNECTING, WebSocket.OPEN].includes(liveTickSocket.readyState)) return;
   if (liveTickReconnectTimer) return;
   const url = backendWebSocketUrl();
@@ -4532,7 +4538,7 @@ function renderActiveTab() {
   });
   if (state.activeTab === "backtest") renderBacktestChart();
   if (state.activeTab === "paper") {
-    if (currentPaperViewSelected()) ensureLiveTickStream();
+    ensureLiveTickStream();
     renderPaperChart();
   } else if (!currentPaperViewSelected()) {
     closeLiveTickStream();

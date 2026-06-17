@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-16T23:23:10.078743+00:00",
+  "generated_at": "2026-06-17T02:42:27.223170+00:00",
   "status": "passed",
   "feature_summary": {
     "markets": 2571,
@@ -46,8 +46,8 @@
       "max_quote": 0.99
     },
     "maker_route": {
-      "mode": "two_below_ask",
-      "quote_horizon_seconds": 15
+      "mode": "improve_one_tick",
+      "quote_horizon_seconds": 60
     },
     "quote_notional_dollars": 5.0
   },
@@ -142,22 +142,23 @@
       "actual": {
         "status": "paper_collecting",
         "maker_route_ready": false,
-        "selected_route_id": "maker_two_below_ask_h15",
+        "selected_route_id": "maker_improve_1c_h60",
         "selected_route_type": "maker"
       },
       "expected": {
         "status": "paper_collecting",
         "maker_route_ready": false,
         "selected_route_id": "maker_two_below_ask_h15",
-        "selected_route_type": "maker"
+        "selected_route_type": "maker",
+        "paper_route_override": "maker_improve_1c_h60"
       },
       "passed": true
     },
     {
       "id": "public_workflow_synced",
       "label": "Public dashboard workflow is synced",
-      "actual": "0f038c7480491602e6c5ae2cb24c7d8e6efa4bf7a96204063ce81de26005b7fc",
-      "expected": "0f038c7480491602e6c5ae2cb24c7d8e6efa4bf7a96204063ce81de26005b7fc",
+      "actual": "61888d942e6df731849c696aee9f650473ad1dd22f36cc25b5d36a99df2eff24",
+      "expected": "61888d942e6df731849c696aee9f650473ad1dd22f36cc25b5d36a99df2eff24",
       "passed": true
     },
     {
@@ -262,12 +263,12 @@
       "id": "engine_maker_route_matches_algorithm",
       "label": "Rust maker route matches selected maker policy",
       "actual": {
-        "mode": "two_below_ask",
-        "quote_horizon_seconds": 15
+        "mode": "improve_one_tick",
+        "quote_horizon_seconds": 60
       },
       "expected": {
-        "mode": "two_below_ask",
-        "quote_horizon_seconds": 15
+        "mode": "improve_one_tick",
+        "quote_horizon_seconds": 60
       },
       "passed": true
     },
