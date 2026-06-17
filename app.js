@@ -399,6 +399,7 @@ function rejectReasonLabel(value) {
     missing_best_ask: "missing best ask",
     outside_time_window: "outside decision window",
     public_trade_sell_flow_or_visible_book_queue: "legacy book-or-trade fill proxy",
+    no_quote: "no buy in this market",
     same_outcome_public_sell_flow_only: "same-outcome sellers reached our bid",
     quote_horizon_expired: "quote time limit expired",
     selected_table_match: "buy rule matched",
@@ -1927,6 +1928,32 @@ function linePathFor(rows, valueFor, xFor, yFor) {
   );
 }
 
+function backtestBtcPrice(row, defaultStartPrice = null) {
+  const directPrice = metricNumber(row?.btc_price);
+  if (directPrice !== null) return directPrice;
+  const startPrice = metricNumber(row?.start_price ?? defaultStartPrice);
+  const distanceBps = metricNumber(row?.distance_bps);
+  if (startPrice === null || distanceBps === null) return null;
+  const impliedPrice = startPrice * (1 + distanceBps / 10000);
+  return Number.isFinite(impliedPrice) ? impliedPrice : null;
+}
+
+function priceDomain(values, startPrice = null) {
+  const cleanValues = values.filter(Number.isFinite);
+  if (!cleanValues.length) return null;
+  let min = Math.min(...cleanValues);
+  let max = Math.max(...cleanValues);
+  const anchor = metricNumber(startPrice);
+  const minSpan = Math.max(anchor ? anchor * 0.0002 : 1, 1);
+  if (max - min < minSpan) {
+    const center = (min + max) / 2;
+    min = center - minSpan / 2;
+    max = center + minSpan / 2;
+  }
+  const pad = Math.max((max - min) * 0.16, minSpan * 0.2);
+  return { min: min - pad, max: max + pad };
+}
+
 function renderBacktestSelects() {
   const allMarkets = marketRows();
   const boughtCount = allMarkets.filter((market) => market.has_signal).length;
@@ -2196,11 +2223,32 @@ function renderSignalDecisionChart(signal, options = {}) {
   const maxSec = Math.max(...seconds);
   const spanSec = Math.max(1, maxSec - minSec);
   const xFor = (row) => plot.left + ((maxSec - Number(row.seconds_left || minSec)) / spanSec) * plotWidth;
+  const defaultStartPrice = metricNumber(signal.start_price)
+    ?? metricNumber(market.start_price)
+    ?? rows.map((row) => metricNumber(row.start_price)).find((value) => value !== null)
+    ?? null;
+  const priceValues = rows
+    .map((row) => backtestBtcPrice(row, defaultStartPrice))
+    .filter(Number.isFinite);
+  const priceRange = priceDomain(
+    [
+      ...priceValues,
+      defaultStartPrice,
+      backtestBtcPrice(signal, defaultStartPrice),
+    ].filter(Number.isFinite),
+    defaultStartPrice
+  );
+  const hasBtcPrices = Boolean(priceRange && priceValues.length >= 2);
   const distanceValues = rows.map((row) => Number(row.distance_bps)).filter(Number.isFinite);
   const maxAbsDistance = Math.max(30, ...distanceValues.map((value) => Math.abs(value))) * 1.15;
   const yDistance = (value) => {
     const number = Number(value);
     return Number.isFinite(number) ? plot.top + ((maxAbsDistance - number) / (maxAbsDistance * 2)) * plot.height : Number.NaN;
+  };
+  const yBtc = (value) => {
+    const number = Number(value);
+    if (!priceRange || !Number.isFinite(number)) return Number.NaN;
+    return plot.top + ((priceRange.max - number) / Math.max(priceRange.max - priceRange.min, 1)) * plot.height;
   };
   const yPrice = (value) => {
     const number = Number(value);
@@ -2232,14 +2280,30 @@ function renderSignalDecisionChart(signal, options = {}) {
     const x = plot.left + ((maxSec - tick) / spanSec) * plotWidth;
     return `<line class="grid" x1="${x}" y1="${plot.top}" x2="${x}" y2="${book.top + book.height}"></line><text class="tick" x="${x}" y="${book.top + book.height + 24}" text-anchor="middle">${tick}s</text>`;
   }).join("");
-  const distanceTicks = [-30, 0, 30].map((tick) => {
-    const y = yDistance(tick);
-    return `<line class="${tick === 0 ? "axis-zero" : "grid"}" x1="${plot.left}" y1="${y}" x2="${plot.left + plotWidth}" y2="${y}"></line><text class="tick" x="${plot.left - 10}" y="${y + 4}" text-anchor="end">${formatBps(tick)}</text>`;
-  }).join("");
+  const topTicks = hasBtcPrices
+    ? [priceRange.max, (priceRange.max + priceRange.min) / 2, priceRange.min].map((tick) => {
+        const y = yBtc(tick);
+        return `<line class="grid" x1="${plot.left}" y1="${y}" x2="${plot.left + plotWidth}" y2="${y}"></line><text class="tick" x="${plot.left - 10}" y="${y + 4}" text-anchor="end">${moneyCents.format(tick)}</text>`;
+      }).join("")
+    : [-30, 0, 30].map((tick) => {
+        const y = yDistance(tick);
+        return `<line class="${tick === 0 ? "axis-zero" : "grid"}" x1="${plot.left}" y1="${y}" x2="${plot.left + plotWidth}" y2="${y}"></line><text class="tick" x="${plot.left - 10}" y="${y + 4}" text-anchor="end">${formatBps(tick)}</text>`;
+      }).join("");
+  const startPriceLine = hasBtcPrices && defaultStartPrice !== null
+    ? `<line class="axis-zero" x1="${plot.left}" y1="${yBtc(defaultStartPrice)}" x2="${plot.left + plotWidth}" y2="${yBtc(defaultStartPrice)}"></line>
+      <text class="tick" x="${plot.left + plotWidth - 8}" y="${yBtc(defaultStartPrice) - 6}" text-anchor="end">start ${moneyCents.format(defaultStartPrice)}</text>`
+    : "";
   const priceTicks = [0, 0.5, 1].map((tick) => {
     const y = yPrice(tick);
     return `<line class="grid" x1="${book.left}" y1="${y}" x2="${book.left + plotWidth}" y2="${y}"></line><text class="tick" x="${book.left - 10}" y="${y + 4}" text-anchor="end">${tick.toFixed(2)}</text>`;
   }).join("");
+  const topPath = hasBtcPrices
+    ? linePathFor(rows, (row) => backtestBtcPrice(row, defaultStartPrice), xFor, yBtc)
+    : linePathFor(rows, (row) => Number(row.distance_bps), xFor, yDistance);
+  const markerTopValue = hasBtcPrices
+    ? backtestBtcPrice(signal, defaultStartPrice)
+    : Number(signal.distance_bps || 0);
+  const markerTopY = hasBtcPrices ? yBtc(markerTopValue) : yDistance(markerTopValue);
   const selectedAskPath = linePathFor(rows, (row) => sideField(row, selectedSide, "ask"), xFor, yPrice);
   const selectedBidPath = linePathFor(rows, (row) => sideField(row, selectedSide, "bid"), xFor, yPrice);
   const oppositeAskPath = linePathFor(rows, (row) => sideField(row, oppositeSide, "ask"), xFor, yPrice);
@@ -2265,16 +2329,17 @@ function renderSignalDecisionChart(signal, options = {}) {
       <rect class="plot" x="${plot.left}" y="${plot.top}" width="${plotWidth}" height="${plot.height}"></rect>
       <rect class="plot" x="${book.left}" y="${book.top}" width="${plotWidth}" height="${book.height}"></rect>
       ${xTicks}
-      ${distanceTicks}
+      ${topTicks}
       ${priceTicks}
-      <path class="line line-distance" d="${linePathFor(rows, (row) => Number(row.distance_bps), xFor, yDistance)}"></path>
+      ${startPriceLine}
+      <path class="line ${hasBtcPrices ? "line-chainlink" : "line-distance"}" d="${topPath}"></path>
       <line class="signal-marker" x1="${markerX}" y1="${plot.top}" x2="${markerX}" y2="${book.top + book.height}"></line>
-      <circle class="dot ${markerClass}" cx="${markerX}" cy="${yDistance(Number(signal.distance_bps || 0))}" r="6"></circle>
+      <circle class="dot ${markerClass}" cx="${markerX}" cy="${markerTopY}" r="6"></circle>
       <path class="line line-ask" d="${selectedAskPath}"></path>
       <path class="line line-bid" d="${selectedBidPath}"></path>
       <path class="line line-other" d="${oppositeAskPath}"></path>
       <circle class="dot ${markerClass}" cx="${markerX}" cy="${yPrice(Number(signal.signal_ask || selectedAsk || 0))}" r="6"></circle>
-      <text class="axis" x="${plot.left + plotWidth / 2}" y="${plot.top - 12}" text-anchor="middle">BTC move from start</text>
+      <text class="axis" x="${plot.left + plotWidth / 2}" y="${plot.top - 12}" text-anchor="middle">${hasBtcPrices ? "BTC price" : "BTC move from start"}</text>
       <text class="axis" x="${book.left + plotWidth / 2}" y="${book.top - 12}" text-anchor="middle">${selectedOutcome} book price at the decision</text>
       <text class="legend ask" x="${book.left + 8}" y="${book.top + 20}">ask</text>
       <text class="legend bid" x="${book.left + 52}" y="${book.top + 20}">bid</text>
