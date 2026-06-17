@@ -761,6 +761,48 @@ svg {
   background: var(--muted);
 }
 
+.paper-odds-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 10px;
+}
+
+.paper-odds-strip > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.paper-odds-strip span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.paper-odds-strip strong {
+  color: var(--ink);
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.paper-odds-strip strong.move-up {
+  color: var(--green);
+}
+
+.paper-odds-strip strong.move-down {
+  color: var(--red);
+}
+
 .paper-book-row.is-buy {
   background: linear-gradient(90deg, rgba(20, 130, 86, 0.15), rgba(20, 130, 86, 0.05));
 }

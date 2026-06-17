@@ -3430,6 +3430,52 @@ function paperOutcomeCandidates(market, latestRaw, latestBookRaw) {
   });
 }
 
+function sameWindowPaperGraphMarkets(market) {
+  const start = marketWindowStartUnix(market);
+  if (start === null) return [];
+  return paperGraphMarkets().filter((row) => row && marketWindowStartUnix(row) === start && rowHasOutcomeOdds(row));
+}
+
+function paperPanelOutcomeCandidates(market, latestRaw, latestBookRaw) {
+  const rows = [
+    market,
+    cachedOutcomeOddsForMarket(market),
+    latestBookRaw,
+    latestRaw,
+    ...sameWindowPaperGraphMarkets(market),
+    ...sameWindowOutcomeOddsRows(market),
+    ...paperPointsFor(market).slice(-240).reverse(),
+    ...paperMarkersFor(market).slice(-120).reverse(),
+    ...liveTickPointsForMarket(market).slice(-240).reverse(),
+  ].filter(Boolean);
+  const seen = new Set();
+  return rows.filter((row) => {
+    const key = [
+      paperGraphKey(row),
+      row.point_id,
+      row.event_id,
+      row.quote_id,
+      row.market_odds_fetched_at,
+      row.generated_at,
+      row.event_time_micro,
+      row.receive_time_micro,
+      row.time_unix,
+    ].filter(Boolean).join(":");
+    if (!key) return true;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function paperPanelOutcomeProbabilities(market, latestRaw, latestBookRaw) {
+  if (!market) return { up: null, down: null };
+  const candidates = paperPanelOutcomeCandidates(market, latestRaw, latestBookRaw);
+  const odds = outcomeOddsFromCandidates(candidates);
+  if (odds.up !== null || odds.down !== null) applyOutcomeOddsFromCandidates(market, candidates);
+  return odds;
+}
+
 function bestOutcomeProbability(side, candidates) {
   const key = sideKey(side);
   if (!key) return null;
@@ -3497,6 +3543,22 @@ function paperOutcomeProbabilities(market, latestRaw, latestBookRaw) {
   const odds = outcomeOddsFromCandidates(rows);
   if (odds.up !== null || odds.down !== null) applyOutcomeOddsFromCandidates(market, rows);
   return odds;
+}
+
+function renderPaperOddsStrip(market, latestRaw, latestBookRaw, odds = null) {
+  if (!market) return "";
+  const resolved = odds || paperPanelOutcomeProbabilities(market, latestRaw, latestBookRaw);
+  return `
+    <div class="paper-odds-strip" role="status" aria-label="Current Polymarket odds">
+      <div>
+        <span>Up</span>
+        <strong class="move-up">${escapeHtml(formatOutcomePercent(resolved.up))}</strong>
+      </div>
+      <div>
+        <span>Down</span>
+        <strong class="move-down">${escapeHtml(formatOutcomePercent(resolved.down))}</strong>
+      </div>
+    </div>`;
 }
 
 function paperSession() {
@@ -3743,7 +3805,14 @@ function latestSessionMetric(market, rawPoints, session, keys) {
 function renderPaperSessionHistory(session) {
   const history = paperSessionHistoryRows(session);
   if (!history.length) return "";
-  const rows = history.slice(-12).reverse().map((row) => {
+  const startingCapital = metricNumber(session?.starting_capital ?? session?.paper_session_starting_capital) ?? 100;
+  let runningCapital = startingCapital;
+  const chronologicalRows = history.slice(-12).map((row) => {
+    const pnl = metricNumber(row.pnl_dollars);
+    runningCapital += pnl ?? 0;
+    return { ...row, _displayCapitalAfter: runningCapital };
+  });
+  const rows = chronologicalRows.reverse().map((row) => {
     const pnl = metricNumber(row.pnl_dollars);
     const tone = pnl === null ? "" : pnl < 0 ? "is-loss" : "is-win";
     const slug = String(row.slug || "--").replace(/^btc-updown-5m-/, "");
@@ -3758,7 +3827,7 @@ function renderPaperSessionHistory(session) {
         <td>${escapeHtml(position)}</td>
         <td>${escapeHtml(row.winner || "--")}</td>
         <td>${escapeHtml(formatSignedMoney(pnl))}</td>
-        <td>${escapeHtml(moneyCents.format(metricNumber(row.capital_after) ?? 0))}</td>
+        <td>${escapeHtml(moneyCents.format(metricNumber(row._displayCapitalAfter) ?? metricNumber(row.capital_after) ?? 0))}</td>
       </tr>`;
   }).join("");
   return `
@@ -4221,15 +4290,16 @@ function renderPaperDecisionGraph(options = {}) {
   const selectedCurrent = (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE && isCurrentPaperMarket(market);
   if (!market || !rawPoints.length) {
     if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) {
+      const oddsStrip = renderPaperOddsStrip(market, null, null);
       if (market && !verifiedPaperStartPrice(market)) {
         const startStatus = market.start_price_status || liveStartMetadata(market).start_price_status || "loading";
         const startError = market.start_price_error || liveStartMetadata(market).start_price_error || "";
-        chart.innerHTML = svgEmpty(startStatus === "error"
+        chart.innerHTML = `${oddsStrip}${svgEmpty(startStatus === "error"
           ? `Start error${startError ? `: ${startError}` : ""}.`
-          : "Loading start.");
+          : "Loading start.")}`;
         return;
       }
-      chart.innerHTML = svgEmpty("Loading ticks.");
+      chart.innerHTML = `${oddsStrip}${svgEmpty("Loading ticks.")}`;
       return;
     }
     chart.innerHTML = svgEmpty("No path.");
@@ -4445,8 +4515,9 @@ function renderPaperDecisionGraph(options = {}) {
   const currentPrice = metricNumber(currentDisplaySample?.btcPrice);
   const priceDifference = currentPrice !== null && startPrice !== null ? currentPrice - startPrice : null;
   const moveClass = moveToneClass(priceDifference);
-  const upProbability = paperOutcomeProbability("up", market, latestRaw, latestBookRaw);
-  const downProbability = paperOutcomeProbability("down", market, latestRaw, latestBookRaw);
+  const outcomeOdds = paperPanelOutcomeProbabilities(market, latestRaw, latestBookRaw);
+  const upProbability = outcomeOdds.up;
+  const downProbability = outcomeOdds.down;
   const session = paperSession();
   const currentPositions = isLiveView ? [] : paperPositionsForMarket(market, rawPoints);
   const positionRows = isLiveView
@@ -4539,9 +4610,10 @@ function renderPaperDecisionGraph(options = {}) {
   const liveNotice = isLiveView
     ? `<div class="live-mode-strip">Live trading is disabled. This is the same current-market view; real balance, orders, fills, and positions plug in here only after manual live approval.</div>`
     : "";
+  const oddsStrip = renderPaperOddsStrip(market, latestRaw, latestBookRaw, outcomeOdds);
 
   const chartAriaLabel = isLiveView ? "Live trade BTC path and events" : "Paper trade BTC path and events";
-  chart.innerHTML = `${liveNotice}
+  chart.innerHTML = `${liveNotice}${oddsStrip}
     <svg class="paper-live-svg" viewBox="0 0 ${view.width} ${view.height}" role="img" aria-label="${chartAriaLabel}">
       <title>${escapeHtml(`${paperMarketLabel(market)} | ${latestTitle}`)}</title>
       <rect class="plot" x="${plot.left}" y="${plot.top}" width="${plotWidth}" height="${plot.height}"></rect>
