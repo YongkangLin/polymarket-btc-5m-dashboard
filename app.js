@@ -2963,6 +2963,7 @@ function latestBookRowForMarket(market, rawPoints) {
     ...(rawPoints || []),
     ...paperMarkersFor(market),
     ...paperPointsFor(market),
+    ...liveTickPointsForMarket(market),
   ];
   const fields = [
     "book_bid",
@@ -2995,6 +2996,7 @@ function latestDepthRowForMarket(market, rawPoints) {
     ...(rawPoints || []),
     ...paperMarkersFor(market),
     ...paperPointsFor(market),
+    ...liveTickPointsForMarket(market),
   ];
   for (let index = candidates.length - 1; index >= 0; index -= 1) {
     const row = candidates[index];
