@@ -1443,7 +1443,7 @@ function rowUsesExternalBinancePrice(row) {
 function hasStrictPolymarketTruthPrice(row) {
   if (!hasChainlinkDataStreamsPrice(row)) return false;
   if (rowUsesExternalBinancePrice(row)) return false;
-  return row?.btc_price_is_truth !== false && row?.truth_current_price_missing !== true;
+  return row?.btc_price_is_truth === true && row?.truth_current_price_missing === false;
 }
 
 function isPolymarketTruthPoint(row) {
