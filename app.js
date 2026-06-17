@@ -3552,6 +3552,36 @@ function paperMicropriceText(value) {
   return `Binance microprice leans against this side.`;
 }
 
+function paperNoFillText(row) {
+  const reason = String(row?.last_no_fill_reason || "");
+  const matching = metricNumber(row?.last_matching_sell_notional);
+  const queue = metricNumber(row?.last_queue_remaining_notional);
+  const minFill = metricNumber(row?.last_min_fill_notional);
+  if (reason === "no_matching_sell_flow_at_or_below_quote") {
+    return "No seller traded this side at or below our bid while the quote was live.";
+  }
+  if (reason === "queue_ahead_not_cleared") {
+    return queue !== null
+      ? `Sellers traded near our bid, but about ${moneyCents.format(queue)} of visible queue was still ahead of us.`
+      : "Sellers traded near our bid, but the visible queue ahead of us did not clear.";
+  }
+  if (reason === "matching_sell_flow_below_min_fill") {
+    return minFill !== null
+      ? `Seller flow after queue was too small to count as a fill; minimum fill is ${moneyCents.format(minFill)}.`
+      : "Seller flow after queue was too small to count as a fill.";
+  }
+  if (reason === "trade_api_http_error" || reason === "trade_api_url_error") {
+    return "The paper engine could not verify public trade flow, so it refused to assume a fill.";
+  }
+  if (reason === "order_already_filled") return "The quote was already fully filled.";
+  if (reason === "no_fill_after_trade_scan") {
+    return matching !== null
+      ? `Verified ${moneyCents.format(matching)} of matching seller flow, but none was executable for this quote.`
+      : "The paper engine checked public trades and found no executable fill.";
+  }
+  return null;
+}
+
 function paperFriendlyReason(row) {
   const reason = String(row?.reason || row?.fill_reason || "");
   const pairQuoteSum = metricNumber(row?.pair_quote_sum);
@@ -3573,7 +3603,16 @@ function paperFriendlyReason(row) {
       : "The two sides were not cheap enough to leave a clean edge.";
   }
   if (reason === "quote_non_positive") return "The available quote would be zero or invalid, so the bot stood down.";
-  if (reason === "quote_horizon_expired") return "The bid sat for its allowed time without a fill, so the bot canceled it.";
+  if (reason === "quote_horizon_expired") {
+    const noFill = paperNoFillText(row);
+    return noFill ? `The bid timed out. ${noFill}` : "The bid sat for its allowed time without a fill, so the bot canceled it.";
+  }
+  if (reason === "live_edge_below_threshold") {
+    const noFill = paperNoFillText(row);
+    return noFill ? `The bid was canceled because the edge moved against us. ${noFill}` : "The bid was canceled because the edge moved against us.";
+  }
+  const noFill = paperNoFillText(row);
+  if (noFill) return noFill;
   if (reason === "bid_traded_through_quote" || reason === "same_outcome_sell_flow_crossed_quote") {
     return quotePrice !== null
       ? `A seller hit through our ${formatPrice(quotePrice)} bid, so the paper engine counted it as a fill.`
