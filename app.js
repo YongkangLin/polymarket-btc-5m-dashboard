@@ -3485,10 +3485,18 @@ function paperOutcomeProbability(side, market, latestRaw, latestBookRaw) {
   if (!key) return null;
   const explicit = outcomeExplicitProbabilityFromRow(market, key);
   if (explicit !== null) return explicit;
-  const candidates = paperOutcomeCandidates(market, latestRaw, latestBookRaw);
-  const remembered = rememberOutcomeOddsForWindow(market, candidates);
-  const odds = outcomeOddsFromCandidates([remembered, ...candidates]);
+  const odds = paperOutcomeProbabilities(market, latestRaw, latestBookRaw);
   return key === "up" ? odds.up : odds.down;
+}
+
+function paperOutcomeProbabilities(market, latestRaw, latestBookRaw) {
+  const candidates = paperOutcomeCandidates(market, latestRaw, latestBookRaw);
+  const liveAnchor = isCurrentBtcWindowMarket(market) ? currentBackendLiveMarketShell() : null;
+  const remembered = rememberOutcomeOddsForWindow(market, [liveAnchor, ...candidates]);
+  const rows = [market, remembered, liveAnchor, ...candidates].filter(Boolean);
+  const odds = outcomeOddsFromCandidates(rows);
+  if (odds.up !== null || odds.down !== null) applyOutcomeOddsFromCandidates(market, rows);
+  return odds;
 }
 
 function paperSession() {
