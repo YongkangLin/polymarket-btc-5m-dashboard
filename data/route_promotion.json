@@ -217,27 +217,27 @@
       "ready": false
     }
   },
-  "generated_at": "2026-06-16T23:46:55.968149+00:00",
+  "generated_at": "2026-06-17T00:43:20.559991+00:00",
   "routes": {
     "active": {
       "key": "active_late_depth_fair",
       "live": {
-        "inband_events": 23,
+        "inband_events": 28,
         "key": "active_late_depth_fair",
         "label": "Active: 55c-75c near-strike depth/fair maker",
         "path": "reports/live_paper_miss_diagnosis.json",
         "quote_rate": 0.0,
         "top_reasons": [
           {
-            "events": 10,
+            "events": 12,
             "reason": "distance_outside_route"
           },
           {
-            "events": 13,
+            "events": 16,
             "reason": "missing_entry_price"
           },
           {
-            "events": 98,
+            "events": 116,
             "reason": "outside_time_window"
           }
         ],
@@ -285,7 +285,7 @@
     "best_probe": {
       "key": "high_ask_depth_relaxed_probe",
       "live": {
-        "inband_events": 23,
+        "inband_events": 28,
         "key": "high_ask_depth_relaxed_probe",
         "label": "Probe: 75c-98c high-fair with -25% depth floor",
         "path": "reports/live_paper_miss_diagnosis.json",
@@ -296,11 +296,11 @@
             "reason": "distance_outside_route"
           },
           {
-            "events": 13,
+            "events": 18,
             "reason": "missing_entry_price"
           },
           {
-            "events": 98,
+            "events": 116,
             "reason": "outside_time_window"
           }
         ],
@@ -346,7 +346,7 @@
       }
     },
     "best_probe_live": {
-      "inband_events": 23,
+      "inband_events": 28,
       "key": "high_ask_depth_relaxed_probe",
       "label": "Probe: 75c-98c high-fair with -25% depth floor",
       "path": "reports/live_paper_miss_diagnosis.json",
@@ -357,11 +357,11 @@
           "reason": "distance_outside_route"
         },
         {
-          "events": 13,
+          "events": 18,
           "reason": "missing_entry_price"
         },
         {
-          "events": 98,
+          "events": 116,
           "reason": "outside_time_window"
         }
       ],
@@ -371,18 +371,18 @@
     "capacity_probe": {
       "key": "early_midask_distance_fair_probe",
       "live": {
-        "inband_events": 7,
+        "inband_events": 10,
         "key": "early_midask_distance_fair_probe",
         "label": "Probe: 181-240s, 65c-90c, 10-20 bps distance",
         "path": "reports/live_paper_miss_diagnosis.json",
         "quote_rate": 0.0,
         "top_reasons": [
           {
-            "events": 7,
+            "events": 10,
             "reason": "distance_outside_route"
           },
           {
-            "events": 114,
+            "events": 134,
             "reason": "outside_time_window"
           }
         ],
@@ -430,7 +430,7 @@
     "challenger": {
       "key": "late_high_ask_fair_probe",
       "live": {
-        "inband_events": 23,
+        "inband_events": 28,
         "key": "late_high_ask_fair_probe",
         "label": "Challenger: 75c-98c high-fair maker probe",
         "path": "reports/live_paper_miss_diagnosis.json",
@@ -441,11 +441,11 @@
             "reason": "distance_outside_route"
           },
           {
-            "events": 13,
+            "events": 18,
             "reason": "missing_entry_price"
           },
           {
-            "events": 98,
+            "events": 116,
             "reason": "outside_time_window"
           }
         ],
@@ -493,18 +493,18 @@
     "scout": {
       "key": "early_highask_near_fair_probe",
       "live": {
-        "inband_events": 7,
+        "inband_events": 10,
         "key": "early_highask_near_fair_probe",
         "label": "Probe: 181-240s, 80c-98c, 5-15 bps distance",
         "path": "reports/live_paper_miss_diagnosis.json",
         "quote_rate": 0.0,
         "top_reasons": [
           {
-            "events": 7,
+            "events": 10,
             "reason": "distance_outside_route"
           },
           {
-            "events": 114,
+            "events": 134,
             "reason": "outside_time_window"
           }
         ],

@@ -5,16 +5,16 @@ const ACTIVE_BACKTEST_KEY = "profile_cheap_pair";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_REFRESH_MS = 30000;
-const LIVE_TICK_RENDER_THROTTLE_MS = 16;
+const LIVE_TICK_RENDER_THROTTLE_MS = 0;
 const LIVE_TICK_STALE_MS = 10000;
 const LIVE_TICK_RECONNECT_MS = 2000;
 const LIVE_SOCKET_CONNECT_TIMEOUT_MS = 3500;
 const REMOTE_LIVE_SOCKET_CONNECT_TIMEOUT_MS = 25000;
 const PUBLIC_BACKEND_BASE = "https://demand-forecasts-deferred-columns.trycloudflare.com";
-const LIVE_TICK_RENDER_MAX_POINTS = 900;
-const LIVE_TICK_PERSIST_MS = 3000;
-const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 4000;
-const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 1200;
+const LIVE_TICK_RENDER_MAX_POINTS = 16000;
+const LIVE_TICK_PERSIST_MS = 1000;
+const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 16000;
+const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 4000;
 const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v7";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
@@ -30,8 +30,8 @@ const LIVE_PAPER_Y_MIN_RADIUS = 8;
 const LIVE_PAPER_Y_EXPANSION_PAD = 1.24;
 const LIVE_PAPER_Y_BUCKET = 4;
 const LIVE_PAPER_RENDER_BUCKET_SECONDS = 0.075;
-const LIVE_CHAINLINK_RENDER_BUCKET_SECONDS = 0.12;
-const LIVE_BINANCE_RENDER_BUCKET_SECONDS = 0.12;
+const LIVE_CHAINLINK_RENDER_BUCKET_SECONDS = null;
+const LIVE_BINANCE_RENDER_BUCKET_SECONDS = null;
 const CHAINLINK_MAX_UNCONFIRMED_STEP_DOLLARS = 10;
 const CHAINLINK_MAX_STEP_RESIDUAL_DOLLARS = 8;
 const CHAINLINK_NEAREST_EXTERNAL_SECONDS = 2.5;
@@ -39,7 +39,8 @@ const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const LOCAL_BACKEND_BASE = configuredBackendBase();
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
-const BACKEND_WS_SNAPSHOT_LIMIT = 5000;
+const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 5000;
+const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 12000;
 const POLYMARKET_TRUTH_SOURCE = "chainlink_data_streams";
 
 const state = {
@@ -1331,7 +1332,7 @@ function isPaperEventPoint(point) {
 }
 
 function shouldPersistLivePoint(point) {
-  return isBinanceLivePoint(point);
+  return isBinanceLivePoint(point) || isChainlinkPriceRow(point);
 }
 
 function liveTickPointsForMarket(market) {
@@ -1347,7 +1348,7 @@ function liveTickPointsForMarket(market) {
   const rows = [];
   keys.forEach((tickKey) => {
     (state.liveBtcTicksByMarket.get(tickKey) || []).forEach((point) => {
-      if (!isBinanceLivePoint(point)) return;
+      if (!isBinanceLivePoint(point) && !isChainlinkPriceRow(point)) return;
       const pointKey = point.point_id || `${point.decision}:${pointTimestampMicro(point)}:${point.btc_price}`;
       if (seen.has(pointKey)) return;
       seen.add(pointKey);
@@ -1364,12 +1365,15 @@ function latestLiveTickForMarket(market) {
 
 function liveChartTickPointsForMarket(market) {
   const points = liveTickPointsForMarket(market);
-  const depthRows = points.filter((point) => isExternalBookPricePoint(point) && point.backend_event_kind === "depth");
-  if (depthRows.length >= 2) return depthRows;
-  const bookRows = points.filter(isExternalBookPricePoint);
-  if (bookRows.length >= 2) return bookRows;
+  const chainlinkRows = points.filter(isChainlinkPriceRow);
   const tradeRows = points.filter(isExternalTradePricePoint);
-  return tradeRows.length ? tradeRows : points;
+  if (tradeRows.length >= 2) return mergePaperChartRows(chainlinkRows, tradeRows);
+  const depthRows = points.filter((point) => isExternalBookPricePoint(point) && point.backend_event_kind === "depth");
+  if (depthRows.length >= 2) return mergePaperChartRows(chainlinkRows, depthRows);
+  const bookRows = points.filter(isExternalBookPricePoint);
+  if (bookRows.length >= 2) return mergePaperChartRows(chainlinkRows, bookRows);
+  if (tradeRows.length) return mergePaperChartRows(chainlinkRows, tradeRows);
+  return chainlinkRows.length ? chainlinkRows : points;
 }
 
 function liveTradePointsForMarket(market) {
@@ -1587,18 +1591,19 @@ function isExternalTradePricePoint(row) {
 }
 
 function externalLineRows(rows) {
-  const depthRows = (rows || []).filter((row) => isExternalBookPricePoint(row) && row?.backend_event_kind === "depth");
-  if (depthRows.length >= 2) return depthRows;
   const tradeRows = (rows || []).filter(isExternalTradePricePoint);
   if (tradeRows.length >= 2) return tradeRows;
+  const depthRows = (rows || []).filter((row) => isExternalBookPricePoint(row) && row?.backend_event_kind === "depth");
+  if (depthRows.length >= 2) return depthRows;
   return (rows || []).filter((row) => isExternalBookPricePoint(row) && row?.backend_event_kind === "book");
 }
 
 function externalLineLabel(rows) {
   const kinds = new Set((rows || []).map((row) => row?.backend_event_kind).filter(Boolean));
+  if (kinds.has("trade")) return "Binance WSS trades";
   if (kinds.has("depth")) return "Binance WSS depth";
   if (kinds.has("book")) return "Binance WSS book";
-  return "Binance WSS trades";
+  return "Binance WSS";
 }
 
 function firstExternalStartPrice(rows) {
@@ -1626,7 +1631,8 @@ function backendWebSocketUrl() {
   url.pathname = "/ws/binance/ticks";
   url.search = new URLSearchParams({
     symbol: "BTCUSDT",
-    snapshot_limit: String(BACKEND_WS_SNAPSHOT_LIMIT),
+    chainlink_snapshot_limit: String(BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT),
+    binance_snapshot_limit: String(BACKEND_WS_BINANCE_SNAPSHOT_LIMIT),
   }).toString();
   return url.toString();
 }
@@ -3060,6 +3066,39 @@ function paperSession() {
   return state.workflow?.paper_trade?.session || {};
 }
 
+function paperSessionHistoryRows(session) {
+  const history = Array.isArray(session?.pnl_history) ? session.pnl_history : [];
+  return history.slice(-12);
+}
+
+function paperSessionRealizedPnl(session) {
+  const history = paperSessionHistoryRows(session);
+  if (history.length) {
+    return history.reduce((total, row) => total + (metricNumber(row.pnl_dollars) ?? 0), 0);
+  }
+  return metricNumber(session?.total_pnl_dollars ?? session?.realized_pnl_dollars ?? session?.paper_session_total_pnl);
+}
+
+function paperSessionCommittedCapital(session) {
+  const explicit = metricNumber(session?.committed_capital ?? session?.paper_session_committed_capital);
+  if (explicit !== null) return explicit;
+  const positions = Array.isArray(session?.positions) ? session.positions : [];
+  return positions.reduce((total, position) => {
+    if (String(position?.status || "") === "settled") return total;
+    const filled = metricNumber(position?.filled_cost) ?? 0;
+    const reserved = metricNumber(position?.reserved_notional ?? position?.order_notional) ?? 0;
+    if (String(position?.status || "") === "canceled" && filled <= 0) return total;
+    return total + (String(position?.status || "") === "canceled" ? filled : Math.max(filled, reserved));
+  }, 0);
+}
+
+function paperSessionCapital(session) {
+  const startingCapital = metricNumber(session?.starting_capital ?? session?.paper_session_starting_capital) ?? 100;
+  const realizedPnl = paperSessionRealizedPnl(session);
+  if (realizedPnl !== null) return startingCapital + realizedPnl;
+  return metricNumber(session?.current_capital ?? session?.paper_session_current_capital);
+}
+
 function paperSessionPositionsForMarket(market) {
   return paperPositionsForMarket(market, []);
 }
@@ -3265,7 +3304,7 @@ function latestSessionMetric(market, rawPoints, session, keys) {
 }
 
 function renderPaperSessionHistory(session) {
-  const history = Array.isArray(session?.pnl_history) ? session.pnl_history : [];
+  const history = paperSessionHistoryRows(session);
   if (!history.length) return "";
   const rows = history.slice(-12).reverse().map((row) => {
     const pnl = metricNumber(row.pnl_dollars);
@@ -3634,7 +3673,7 @@ function renderPaperDecisionGraph() {
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
   const rawTruthSamples = (startMeta ? paperGraphSamples(truthRows, startMeta.price, "chainlink") : [])
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
-  const truthSamples = removeUnconfirmedChainlinkSpikes(rawTruthSamples, externalSamples);
+  const truthSamples = rawTruthSamples;
   const allSamples = [...truthSamples, ...externalSamples]
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
 
@@ -3681,13 +3720,13 @@ function renderPaperDecisionGraph() {
     y: yForDollarMove(point.dollarMove),
     sample: point,
     elapsedSeconds: point.elapsedSeconds,
-  })));
+  })), selectedCurrent ? 0 : 0.75);
   const externalLinePoints = compressLinePoints(externalLineSamples.map((point) => ({
     x: xForElapsed(point.elapsedSeconds),
     y: yForDollarMove(point.dollarMove),
     sample: point,
     elapsedSeconds: point.elapsedSeconds,
-  })));
+  })), selectedCurrent ? 0 : 0.75);
   const headCandidates = [...truthLineSamples, ...externalLineSamples]
     .filter((point) => point && Number.isFinite(point.elapsedSeconds) && Number.isFinite(point.dollarMove))
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
@@ -3834,8 +3873,10 @@ function renderPaperDecisionGraph() {
   const session = paperSession();
   const currentPositions = paperPositionsForMarket(market, rawPoints);
   const positionRows = paperPositionPanelRows(currentPositions);
-  const sessionCapital = latestSessionMetric(market, rawPoints, session, ["paper_session_current_capital", "current_capital"]);
-  const sessionPnl = latestSessionMetric(market, rawPoints, session, ["paper_session_total_pnl", "paper_session_total_pnl_dollars", "total_pnl_dollars", "realized_pnl_dollars"]);
+  const sessionCapital = paperSessionCapital(session)
+    ?? latestSessionMetric(market, rawPoints, session, ["paper_session_current_capital", "current_capital"]);
+  const sessionPnl = paperSessionRealizedPnl(session)
+    ?? latestSessionMetric(market, rawPoints, session, ["paper_session_total_pnl", "paper_session_total_pnl_dollars", "total_pnl_dollars", "realized_pnl_dollars"]);
   const marketMetrics = [
     { label: "Start price", value: startPrice === null ? "Waiting" : formatBookMoney(startPrice) },
     { label: "Current price", value: currentPrice === null ? "Waiting" : formatBookMoney(currentPrice) },
