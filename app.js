@@ -1851,9 +1851,9 @@ function paperMarketLabel(market) {
   const signals = Number(market.paper_signals ?? market.signals ?? points.filter((row) => row.decision === "paper_signal").length);
   const quotes = Number(market.maker_quotes ?? market.quotes ?? markers.filter((row) => paperMarkerType(row) === "quote").length);
   const fills = Number(market.maker_fills ?? market.fills ?? markers.filter((row) => paperMarkerType(row) === "fill").length);
-  const action = signals || quotes || fills ? "buy" : "no buy";
-  const result = market.pnl_dollars !== undefined || market.maker_pnl_dollars !== undefined
-    ? ` | PnL ${formatSignedMoney(market.pnl_dollars ?? market.maker_pnl_dollars)}`
+  const action = fills ? "filled buy" : quotes ? "open bid" : signals ? "setup" : "no action";
+  const result = market.maker_pnl_dollars !== undefined
+    ? ` | Maker P&L ${formatSignedMoney(market.maker_pnl_dollars)}`
     : "";
   return `${status} | ${paperMarketTimeLabel(market)} | ${action}${result}`;
 }
@@ -1888,8 +1888,8 @@ function paperMarkerLabel(row) {
 
 function paperBuyDecision(row) {
   const type = paperMarkerType(row);
-  if (["signal", "quote", "fill"].includes(type) || row?.decision === "paper_signal") return "yes";
-  if (["cancel", "fail"].includes(type) || row?.decision === "no_signal") return "no";
+  if (type === "fill") return "yes";
+  if (["signal", "quote", "cancel", "fail"].includes(type) || row?.decision === "paper_signal" || row?.decision === "no_signal") return "no";
   return "--";
 }
 
@@ -2101,7 +2101,7 @@ function renderStrategyPanels() {
     strategyCell("Buy Rule", ruleSummaryText()),
     strategyCell(
       "Result",
-      `${fmt.format(activeSummary.quote_markets || signalRows().length)} buys | ${formatSignedMoney(activeSummary.pnl_dollars)} P&L | ${formatPercent(activeSummary.roi_on_planned_cost)} return`,
+      `${fmt.format(activeSummary.quote_markets || signalRows().length)} historical quotes | ${formatSignedMoney(activeSummary.pnl_dollars)} P&L | ${formatPercent(activeSummary.roi_on_planned_cost)} return`,
     ),
   ].join("");
   const paperStrategy = byId("paperStrategy");
@@ -2704,13 +2704,13 @@ function liveStatusRows() {
 
 function plainCheckLabel(row) {
   const labels = {
-    backtest_signals: "Historical buys",
-    backtest_days: "Days with buys",
+    backtest_signals: "Historical quotes",
+    backtest_days: "Days with quotes",
     backtest_win_rate: "Historical wins",
     backtest_roi_after_haircut: "Profit rate",
     capacity_rate: "Enough size",
-    live_signals: "Paper buys found",
-    signal_days: "Paper buy days",
+    live_signals: "Paper setups found",
+    signal_days: "Paper setup days",
     win_rate: "Paper wins",
     roi_after_haircut: "Paper profit rate",
     worst_day_after_haircut: "Worst day",
@@ -2722,8 +2722,8 @@ function plainCheckLabel(row) {
     maker_win_rate: "Maker wins",
     maker_roi_on_filled_cost: "Maker profit rate",
     maker_worst_day: "Worst maker day",
-    paper_signals: "Paper buys found",
-    paper_days: "Paper buy days",
+    paper_signals: "Paper setups found",
+    paper_days: "Paper setup days",
     maker_route: "Maker route",
     historical_maker_fill_rate: "Maker fills",
     maker_profit: "Maker profit",
@@ -2866,7 +2866,7 @@ function paperStatusRows() {
       label: "Table matches",
       value: Number(summary.paper_signals || 0),
       detail: fmt.format(summary.paper_signals || 0),
-      title: "Live moments that matched the selected table before maker-route fill simulation.",
+      title: "Live moments that matched the selected table. These are setups, not filled buys.",
     },
     {
       label: "BTC book checks",
@@ -3037,7 +3037,7 @@ function paperDecisionText(row) {
   const side = row.side || row.intended_outcome || row.outcome || "";
   if (row.decision === "live_tick") return "Live BTC tick";
   if (row.decision === "live_book_tick") return "Live BTC book tick";
-  if (row.decision === "paper_signal") return `Signal ${side || "matched"}`;
+  if (row.decision === "paper_signal") return `Setup ${side || "matched"}`;
   if (row.event_type === "maker_paper_quote") return `Quote ${side || ""}`.trim();
   if (row.event_type === "maker_paper_fill") return `Fill ${side || ""}`.trim();
   if (row.event_type === "maker_paper_cancel") return `Cancel: ${rejectReasonLabel(row.reason)}`;
@@ -3704,9 +3704,8 @@ function paperMarkerTitle(row) {
 
 function paperActionName(row) {
   const side = row?.side || row?.intended_outcome || row?.outcome || "";
-  const article = /^[aeiou]/i.test(side || "") ? "an" : "a";
-  if (row?.decision === "paper_signal") return side === "Pair" ? "Found a two-sided buy setup" : `Found ${article} ${side || "side"} buy setup`;
-  if (row?.event_type === "maker_paper_quote") return `Placed a bid for ${side || "this side"}`;
+  if (row?.decision === "paper_signal") return side === "Pair" ? "Setup matched on both sides" : `Setup matched for ${side || "this side"}`;
+  if (row?.event_type === "maker_paper_quote") return `Opened a post-only bid for ${side || "this side"}`;
   if (row?.event_type === "maker_paper_fill") return `Bid filled for ${side || "this side"}`;
   if (row?.event_type === "maker_paper_cancel") return `Canceled ${side || "the"} bid`;
   if (String(row?.event_type || "").includes("settlement")) return "Closed position at market result";
@@ -3825,7 +3824,7 @@ function paperActionWhy(row) {
   }
   const notional = metricNumber(row?.filled_cost ?? row?.order_notional ?? row?.paper_session_order_notional);
   if (notional !== null && ["quote", "fill", "cancel", "signal"].includes(type)) {
-    pieces.push(`Size ${moneyCents.format(notional)}`);
+    pieces.push(`${type === "fill" ? "Filled" : "Target size"} ${moneyCents.format(notional)}`);
   }
   const bankrollMax = metricNumber(row?.bankroll_max_order);
   if (bankrollMax !== null && ["quote", "signal"].includes(type)) {
@@ -3869,7 +3868,7 @@ function isPaperActionLogRow(row) {
 
 function paperActionBuyText(row) {
   const type = paperMarkerType(row);
-  return (row?.decision === "paper_signal" || ["signal", "quote", "fill"].includes(type)) ? "yes" : "--";
+  return type === "fill" ? "yes" : "no";
 }
 
 function paperActionLogRows(market, rawPoints) {
