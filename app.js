@@ -4063,11 +4063,7 @@ function renderPaperChart(options = {}) {
   }
   rememberLiveMarket(currentBackendLiveMarketShell());
   ensureLiveTickStream();
-  if (allPaperMarkets().length || selectedPaperMarket()) {
-    renderPaperDecisionGraph();
-    return;
-  }
-  byId("paperChart").innerHTML = `<div class="empty">Waiting for current BTC 5m market.</div>`;
+  renderPaperDecisionGraph();
 }
 
 function renderStatus() {
