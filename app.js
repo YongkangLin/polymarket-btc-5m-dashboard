@@ -2059,7 +2059,7 @@ function strategyCell(title, body) {
 
 function paperMissRoute() {
   const routes = state.workflow?.paper_trade?.miss_diagnosis?.routes || [];
-  return routes.find((route) => route.key === "active_late_depth_fair") || routes[0] || null;
+  return routes.find((route) => route.key === "strict_active") || routes[0] || null;
 }
 
 function paperMissFiringText(route) {
