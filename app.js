@@ -39,8 +39,8 @@ const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const LOCAL_BACKEND_BASE = configuredBackendBase();
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
-const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 100000;
-const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 100000;
+const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 1000;
+const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 5000;
 const POLYMARKET_TRUTH_SOURCE = "chainlink_data_streams";
 
 const state = {
@@ -1396,7 +1396,7 @@ function liveChartTickPointsForMarket(market) {
   const tradeRows = points.filter(isExternalTradePricePoint);
   const depthRows = points.filter((point) => isExternalBookPricePoint(point) && point.backend_event_kind === "depth");
   if (depthRows.length >= 2) return mergePaperChartRows(chainlinkRows, depthRows);
-  const bookRows = points.filter(isExternalBookPricePoint);
+  const bookRows = points.filter((point) => isExternalBookPricePoint(point) && point.backend_event_kind === "book");
   if (bookRows.length >= 2) return mergePaperChartRows(chainlinkRows, bookRows);
   if (tradeRows.length >= 2) return mergePaperChartRows(chainlinkRows, tradeRows);
   if (tradeRows.length) return mergePaperChartRows(chainlinkRows, tradeRows);
@@ -1618,19 +1618,19 @@ function isExternalTradePricePoint(row) {
 }
 
 function externalLineRows(rows) {
-  const tradeRows = (rows || []).filter(isExternalTradePricePoint);
   const depthRows = (rows || []).filter((row) => isExternalBookPricePoint(row) && row?.backend_event_kind === "depth");
   if (depthRows.length >= 2) return depthRows;
   const bookRows = (rows || []).filter((row) => isExternalBookPricePoint(row) && row?.backend_event_kind === "book");
   if (bookRows.length >= 2) return bookRows;
+  const tradeRows = (rows || []).filter(isExternalTradePricePoint);
   return tradeRows;
 }
 
 function externalLineLabel(rows) {
   const kinds = new Set((rows || []).map((row) => row?.backend_event_kind).filter(Boolean));
-  if (kinds.has("trade")) return "Binance WSS trades";
   if (kinds.has("depth")) return "Binance WSS depth";
   if (kinds.has("book")) return "Binance WSS book";
+  if (kinds.has("trade")) return "Binance WSS trades";
   return "Binance WSS";
 }
 
