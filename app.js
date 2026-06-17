@@ -398,7 +398,8 @@ function rejectReasonLabel(value) {
     external_trade_flow_support_too_low: "BTC trade flow against buy",
     missing_best_ask: "missing best ask",
     outside_time_window: "outside decision window",
-    public_trade_sell_flow_or_visible_book_queue: "sell flow reached our bid",
+    public_trade_sell_flow_or_visible_book_queue: "legacy book-or-trade fill proxy",
+    same_outcome_public_sell_flow_only: "same-outcome sellers reached our bid",
     quote_horizon_expired: "quote time limit expired",
     selected_table_match: "buy rule matched",
     visible_book_queue_depleted: "visible queue was depleted",
@@ -3272,13 +3273,13 @@ function paperPositionPanelRows(positions) {
     })
     .sort((left, right) => left.priority - right.priority || right.time - left.time);
   const active = rows.filter((row) => ["Holding", "Open quote"].includes(row.label));
-  if (active.length) return active.slice(0, 3);
+  if (active.length) return active.slice(0, 2);
   const closed = rows.filter((row) => row.label === "Closed");
   if (closed.length) return closed.slice(0, 2);
   const canceled = rows.filter((row) => row.label === "Canceled");
   if (canceled.length) {
     return [
-      { label: "No open position", value: "None", detail: `last ${canceled[0].value} canceled`, tone: "move-flat" },
+      { label: "No open position", value: "None", detail: `last ${compactNote(canceled[0].value, 18)} canceled`, tone: "move-flat" },
     ];
   }
   return [{ label: "No open position", value: "None", detail: "waiting for a fill", tone: "move-flat" }];
@@ -3507,53 +3508,109 @@ function paperMarkerTitle(row) {
 
 function paperActionName(row) {
   const side = row?.side || row?.intended_outcome || row?.outcome || "";
-  if (row?.decision === "paper_signal") return `Buy setup ${side || ""}`.trim();
-  if (row?.event_type === "maker_paper_quote") return `Quote ${side || ""}`.trim();
-  if (row?.event_type === "maker_paper_fill") return `Fill ${side || ""}`.trim();
-  if (row?.event_type === "maker_paper_cancel") return `Cancel ${side || ""}`.trim();
-  if (String(row?.event_type || "").includes("settlement")) return "Settle";
+  const article = /^[aeiou]/i.test(side || "") ? "an" : "a";
+  if (row?.decision === "paper_signal") return side === "Pair" ? "Found a two-sided buy setup" : `Found ${article} ${side || "side"} buy setup`;
+  if (row?.event_type === "maker_paper_quote") return `Placed a bid for ${side || "this side"}`;
+  if (row?.event_type === "maker_paper_fill") return `Bid filled for ${side || "this side"}`;
+  if (row?.event_type === "maker_paper_cancel") return `Canceled ${side || "the"} bid`;
+  if (String(row?.event_type || "").includes("settlement")) return "Closed position at market result";
   return paperDecisionText(row);
+}
+
+function paperBookPressureText(value) {
+  if (value === null) return null;
+  const abs = Math.abs(value);
+  const strength = abs >= 0.25 ? "strongly" : abs >= 0.1 ? "clearly" : abs >= 0.02 ? "slightly" : "barely";
+  if (value > 0.005) return `Binance book ${strength} supports this side (${percentText(value)}).`;
+  if (value < -0.005) return `Binance book leans against this side (${percentText(value)}).`;
+  return `Binance book is roughly neutral (${percentText(value)}).`;
+}
+
+function paperMicropriceText(value) {
+  if (value === null || Math.abs(value) < 0.01) return null;
+  if (value > 0) return `Binance microprice also supports this side.`;
+  return `Binance microprice leans against this side.`;
+}
+
+function paperFriendlyReason(row) {
+  const reason = String(row?.reason || row?.fill_reason || "");
+  const pairQuoteSum = metricNumber(row?.pair_quote_sum);
+  const pairEdge = metricNumber(row?.pair_edge);
+  const quotePrice = metricNumber(row?.maker_quote_price ?? row?.quote_price ?? row?.bid_price ?? row?.price ?? row?.entry_price);
+  const side = row?.side || row?.intended_outcome || row?.outcome || "";
+  if (reason === "base_pair_quote") {
+    if (pairQuoteSum !== null && pairEdge !== null) {
+      return `Buying both sides would cost ${moneyCents.format(pairQuoteSum)} per $1 payout, leaving about ${formatCents(pairEdge)} of room.`;
+    }
+    return "Both sides were cheap enough to quote below the $1 payout.";
+  }
+  if (reason === "already_signaled_market_side") {
+    return "The bot already opened this setup for the current market, so it is not doubling up.";
+  }
+  if (reason === "pair_quote_too_expensive") {
+    return pairQuoteSum !== null
+      ? `The two sides cost ${formatPrice(pairQuoteSum)} together, which is too close to or above the $1 payout.`
+      : "The two sides were not cheap enough to leave a clean edge.";
+  }
+  if (reason === "quote_non_positive") return "The available quote would be zero or invalid, so the bot stood down.";
+  if (reason === "quote_horizon_expired") return "The bid sat for its allowed time without a fill, so the bot canceled it.";
+  if (reason === "bid_traded_through_quote" || reason === "same_outcome_sell_flow_crossed_quote") {
+    return quotePrice !== null
+      ? `A seller hit through our ${formatPrice(quotePrice)} bid, so the paper engine counted it as a fill.`
+      : "A seller traded through our bid, so the paper engine counted it as a fill.";
+  }
+  if (reason === "visible_bid_queue_consumed") return "Enough visible sell flow passed our queue estimate, so the paper engine counted a fill.";
+  if (reason === "final_no_trade_window") return "The market was too close to the end, so the bot avoided opening new risk.";
+  if (reason === "missing_order_book" || reason === "missing_ask") return "The Polymarket book was incomplete, so the bot could not quote safely.";
+  if (reason === "chainlink_data_streams_truth_missing") return "Chainlink truth was missing, so the bot refused to use a backup price.";
+  if (reason === "external_book_missing") return "The Binance external order book was missing, so the pressure signal was unavailable.";
+  if (reason === "external_trade_flow_missing") return "The Binance trade-flow signal was missing, so the pressure signal was unavailable.";
+  if (reason === "market_not_accepting_orders") return "Polymarket was not accepting orders for this market.";
+  if (row?.decision === "paper_signal" && side) return `The rule allowed a maker bid for ${side}.`;
+  return rejectReasonLabel(reason) || "--";
 }
 
 function paperActionWhy(row) {
   const type = paperMarkerType(row);
   const pieces = [];
   if (row?.decision === "paper_signal") {
-    pieces.push("rule matched");
+    pieces.push(paperFriendlyReason(row));
   } else if (type === "quote") {
-    pieces.push("posted paper maker bid");
+    pieces.push("Posted a maker bid; this is paper-only and waits for someone else to sell into it.");
   } else if (type === "fill") {
-    pieces.push(row?.fill_reason ? `filled: ${rejectReasonLabel(row.fill_reason)}` : "paper fill inferred");
+    pieces.push(paperFriendlyReason(row));
   } else if (type === "cancel") {
-    pieces.push(`canceled: ${rejectReasonLabel(row?.reason)}`);
+    pieces.push(paperFriendlyReason(row));
   } else if (type === "settlement") {
-    pieces.push(row?.outcome_win === true ? "winner paid out" : row?.outcome_win === false ? "settled at zero" : "market settled");
+    pieces.push(row?.outcome_win === true ? "The held side won and paid out." : row?.outcome_win === false ? "The held side lost and settled at zero." : "The market settled.");
   }
   const quotePrice = metricNumber(row?.maker_quote_price ?? row?.quote_price ?? row?.bid_price ?? row?.price);
   if (quotePrice !== null && ["quote", "fill", "cancel", "signal"].includes(type)) {
-    pieces.push(`price ${formatPrice(quotePrice)}`);
+    pieces.push(`Bid ${formatPrice(quotePrice)}`);
   }
   const notional = metricNumber(row?.filled_cost ?? row?.order_notional ?? row?.paper_session_order_notional);
   if (notional !== null && ["quote", "fill", "cancel", "signal"].includes(type)) {
-    pieces.push(`size ${moneyCents.format(notional)}`);
+    pieces.push(`Size ${moneyCents.format(notional)}`);
   }
   const bankrollMax = metricNumber(row?.bankroll_max_order);
   if (bankrollMax !== null && ["quote", "signal"].includes(type)) {
-    pieces.push(`bankroll max ${moneyCents.format(bankrollMax)}`);
+    pieces.push(`Bankroll cap ${moneyCents.format(bankrollMax)}`);
   }
   const kelly = metricNumber(row?.bankroll_fractional_kelly_fraction);
   if (kelly !== null && ["quote", "signal"].includes(type)) {
-    pieces.push(`Kelly ${(kelly * 100).toFixed(1)}%`);
+    pieces.push(`Kelly size ${(kelly * 100).toFixed(1)}%`);
   }
   const fairEdge = metricNumber(row?.fair_edge ?? row?.fair_edge_vs_signal_bid);
-  if (fairEdge !== null) pieces.push(`edge ${formatCents(fairEdge)}`);
+  if (fairEdge !== null) pieces.push(`Estimated room ${formatCents(fairEdge)}`);
   const support = metricNumber(row?.external_book_support);
-  if (support !== null) pieces.push(`BTC book ${percentText(support)}`);
+  const bookPressure = paperBookPressureText(support);
+  if (bookPressure) pieces.push(bookPressure);
   const microSupport = metricNumber(row?.external_book_microprice_support_bps);
-  if (microSupport !== null) pieces.push(`micro ${formatBpsDeep(microSupport)}`);
+  const microprice = paperMicropriceText(microSupport);
+  if (microprice) pieces.push(microprice);
   const pnl = metricNumber(row?.pnl_dollars);
-  if (pnl !== null) pieces.push(`PnL ${formatSignedMoney(pnl)}`);
-  return pieces.filter(Boolean).join(" | ") || "--";
+  if (pnl !== null) pieces.push(`Result ${formatSignedMoney(pnl)}`);
+  return pieces.filter(Boolean).join(" ") || "--";
 }
 
 function paperActionTimeText(row) {
@@ -3910,14 +3967,14 @@ function renderPaperDecisionGraph() {
   const renderPositionPanel = () => {
     const x = 716;
     return `
-      <rect class="paper-side-section is-positions" x="708" y="358" width="242" height="112" rx="6"></rect>
+      <rect class="paper-side-section is-positions" x="708" y="354" width="242" height="126" rx="6"></rect>
       <text class="paper-side-section-title" x="${x}" y="380">POSITIONS</text>
       ${positionRows.map((row, index) => {
-        const y = 408 + index * 32;
+        const y = 405 + index * 42;
         return `
           <text class="paper-position-status ${row.tone || ""}" x="${x}" y="${y}">${escapeHtml(row.label)}</text>
-          <text class="paper-position-value ${row.tone || ""}" x="${x}" y="${y + 18}">${escapeHtml(compactNote(row.value, 24))}</text>
-          ${row.detail ? `<text class="paper-position-detail" x="${x}" y="${y + 34}">${escapeHtml(compactNote(row.detail, 30))}</text>` : ""}`;
+          <text class="paper-position-value ${row.tone || ""}" x="${x}" y="${y + 17}">${escapeHtml(compactNote(row.value, 21))}</text>
+          ${row.detail ? `<text class="paper-position-detail" x="${x}" y="${y + 31}">${escapeHtml(compactNote(row.detail, 24))}</text>` : ""}`;
       }).join("")}`;
   };
   const infoRows = compact ? "" : `
