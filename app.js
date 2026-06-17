@@ -56,6 +56,7 @@ const state = {
   paperObservedMarkets: new Map(),
   paperObservedPointsByMarket: new Map(),
   paperObservedMarkersByMarket: new Map(),
+  latestOutcomeOddsByWindow: new Map(),
   liveTickStatus: {
     state: "idle",
     venue: "local_backend_ws",
@@ -1257,6 +1258,12 @@ function currentRowsEntries(map, maxRows) {
     .filter(([, rows]) => rows.length);
 }
 
+function currentOutcomeOddsEntries() {
+  return [...state.latestOutcomeOddsByWindow.entries()]
+    .filter(([key, odds]) => Number(key) === currentWindowStartUnixNow() && currentWindowRow(odds, key))
+    .map(([key, odds]) => [key, compactPersistedRow(odds)]);
+}
+
 function loadPersistedPaperTicks() {
   try {
     LEGACY_LIVE_TICK_STORE_KEYS.forEach((key) => window.localStorage?.removeItem(key));
@@ -1274,6 +1281,7 @@ function loadPersistedPaperTicks() {
     state.paperObservedMarkets = new Map(payload.observed_markets || []);
     state.paperObservedPointsByMarket = new Map(payload.observed_points || []);
     state.paperObservedMarkersByMarket = new Map(payload.observed_markers || []);
+    state.latestOutcomeOddsByWindow = new Map(payload.outcome_odds || []);
     state.liveBtcTicksByMarket = new Map(payload.live_ticks || []);
     state.liveBtcTickKeysByMarket = new Map(
       [...state.liveBtcTicksByMarket.entries()].map(([key, rows]) => [key, new Set((rows || []).map(liveBtcPointKey))]),
@@ -1299,6 +1307,7 @@ function persistPaperTicksNow() {
     observed_markets: currentMarketEntries(state.paperObservedMarkets),
     observed_points: currentRowsEntries(state.paperObservedPointsByMarket, LIVE_TICK_STORE_MAX_POINTS_PER_MARKET),
     observed_markers: currentRowsEntries(state.paperObservedMarkersByMarket, 400),
+    outcome_odds: currentOutcomeOddsEntries(),
     live_ticks: currentRowsEntries(
       state.liveBtcTicksByMarket,
       LIVE_TICK_STORE_MAX_POINTS_PER_MARKET + LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET,
@@ -3292,6 +3301,64 @@ function outcomeProbabilityFromRow(row, key) {
   return metricNumber(row?.[`direction_${key}_probability`]);
 }
 
+function outcomeOddsWindowKey(row) {
+  const start = marketWindowStartUnix(row);
+  return start === null ? "" : String(start);
+}
+
+function outcomeOddsTimestampMicro(row) {
+  return pointTimestampMicro(row)
+    ?? (Number.isFinite(Date.parse(row?.generated_at || "")) ? Date.parse(row.generated_at) * 1000 : null)
+    ?? (Number.isFinite(Date.parse(row?.market_odds_fetched_at || "")) ? Date.parse(row.market_odds_fetched_at) * 1000 : null);
+}
+
+function cachedOutcomeOddsForMarket(market) {
+  const key = outcomeOddsWindowKey(market);
+  return key ? state.latestOutcomeOddsByWindow.get(key) || null : null;
+}
+
+function rememberOutcomeOddsForWindow(anchor, candidates = []) {
+  const rows = [anchor, ...(candidates || [])].filter(Boolean);
+  const key = rows.map(outcomeOddsWindowKey).find(Boolean);
+  if (!key) return null;
+  const up = bestOutcomeProbability("up", rows);
+  const down = bestOutcomeProbability("down", rows);
+  if (up === null && down === null) return state.latestOutcomeOddsByWindow.get(key) || null;
+  const timestamps = rows.map(outcomeOddsTimestampMicro).filter((value) => value !== null);
+  const incomingTime = timestamps.length ? Math.max(...timestamps) : 0;
+  const existing = state.latestOutcomeOddsByWindow.get(key) || {};
+  const existingTime = metricNumber(existing._odds_updated_micro) || 0;
+  if (existingTime && incomingTime && incomingTime < existingTime) return existing;
+  const source = rows.find((row) => row?.probability_source || row?.market_probability_source || row?.market_odds_fetched_at);
+  const odds = {
+    ...existing,
+    window_start_unix: Number(key),
+    window_end_unix: Number(key) + 300,
+    slug: `btc-updown-5m-${key}`,
+    market_key: `btc-updown-5m-${key}`,
+    _odds_updated_micro: incomingTime || existingTime || Date.now() * 1000,
+  };
+  if (up !== null) {
+    odds.paper_up_probability = up;
+    odds.market_up_probability = up;
+    odds.up_probability = up;
+  }
+  if (down !== null) {
+    odds.paper_down_probability = down;
+    odds.market_down_probability = down;
+    odds.down_probability = down;
+  }
+  if (source) {
+    odds.probability_source = source.probability_source || source.market_probability_source || odds.probability_source;
+    odds.market_probability_source = source.market_probability_source || source.probability_source || odds.market_probability_source;
+    odds.market_odds_fetched_at = source.market_odds_fetched_at || odds.market_odds_fetched_at;
+    odds.market_odds_stale = source.market_odds_stale ?? odds.market_odds_stale;
+    odds.market_odds_error = source.market_odds_error ?? odds.market_odds_error;
+  }
+  state.latestOutcomeOddsByWindow.set(key, odds);
+  return odds;
+}
+
 function sameWindowOutcomeOddsRows(market) {
   const start = marketWindowStartUnix(market);
   const pools = [
@@ -3305,6 +3372,7 @@ function sameWindowOutcomeOddsRows(market) {
 function paperOutcomeCandidates(market, latestRaw, latestBookRaw) {
   const rows = [
     market,
+    cachedOutcomeOddsForMarket(market),
     ...sameWindowOutcomeOddsRows(market),
     ...paperStorageKeysForMarket(market).flatMap((storageKey) => [
       state.livePersistedMarkets.get(storageKey),
@@ -3344,7 +3412,7 @@ function bestOutcomeProbability(side, candidates) {
 }
 
 function applyOutcomeOddsFromCandidates(target, candidates) {
-  const rows = (candidates || []).filter(Boolean);
+  const rows = [cachedOutcomeOddsForMarket(target), ...(candidates || [])].filter(Boolean);
   const up = bestOutcomeProbability("up", rows);
   const down = bestOutcomeProbability("down", rows);
   if (up !== null) {
@@ -3362,6 +3430,7 @@ function applyOutcomeOddsFromCandidates(target, candidates) {
     target.probability_source = source.probability_source || target.probability_source;
     target.market_probability_source = source.market_probability_source || source.probability_source || target.market_probability_source;
   }
+  rememberOutcomeOddsForWindow(target, rows);
 }
 
 function paperOutcomeProbability(side, market, latestRaw, latestBookRaw) {
