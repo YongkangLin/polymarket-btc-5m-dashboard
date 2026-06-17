@@ -899,6 +899,30 @@ const TRUTH_PRICE_FIELDS = [
   "latest_chainlink_receive_time_micro",
 ];
 
+const OUTCOME_ODDS_FIELDS = [
+  "paper_up_probability",
+  "paper_down_probability",
+  "up_probability",
+  "down_probability",
+  "market_up_probability",
+  "market_down_probability",
+  "latest_up_probability",
+  "latest_down_probability",
+  "up_bid",
+  "up_ask",
+  "down_bid",
+  "down_ask",
+  "up_bid_size",
+  "up_ask_size",
+  "down_bid_size",
+  "down_ask_size",
+  "probability_source",
+  "market_probability_source",
+  "market_odds_fetched_at",
+  "market_odds_stale",
+  "market_odds_error",
+];
+
 function truthPriceValue(market) {
   return metricNumber(market?.btc_price ?? market?.latest_btc_price);
 }
@@ -1018,6 +1042,7 @@ function mergePaperMarket(left, right) {
     merged.btc_price_is_truth = true;
     merged.truth_current_price_missing = false;
   }
+  applyOutcomeOddsFromCandidates(merged, candidates);
   const start = marketWindowStartUnix(merged) ?? marketWindowStartUnix(primary) ?? marketWindowStartUnix(secondary);
   if (start !== null) {
     merged.window_start_unix = start;
@@ -1095,28 +1120,7 @@ function marketSecondsLeftNow(market) {
 }
 
 function preserveExistingOutcomeOdds(target, existing, incoming) {
-  const fields = [
-    "paper_up_probability",
-    "paper_down_probability",
-    "up_probability",
-    "down_probability",
-    "market_up_probability",
-    "market_down_probability",
-    "up_bid",
-    "up_ask",
-    "down_bid",
-    "down_ask",
-    "up_bid_size",
-    "up_ask_size",
-    "down_bid_size",
-    "down_ask_size",
-    "probability_source",
-    "market_probability_source",
-    "market_odds_fetched_at",
-    "market_odds_stale",
-    "market_odds_error",
-  ];
-  fields.forEach((field) => {
+  OUTCOME_ODDS_FIELDS.forEach((field) => {
     if (incoming?.[field] !== null && incoming?.[field] !== undefined) return;
     if (existing?.[field] === null || existing?.[field] === undefined) return;
     target[field] = existing[field];
@@ -3249,34 +3253,106 @@ function firstMetricNumber(...values) {
   return null;
 }
 
-function paperOutcomeProbability(side, market, latestRaw, latestBookRaw) {
-  const key = sideKey(side);
-  if (!key) return null;
-  const candidates = [
+function rowHasOutcomeOdds(row) {
+  return OUTCOME_ODDS_FIELDS.some((field) => row?.[field] !== null && row?.[field] !== undefined);
+}
+
+function outcomeDirectProbability(row, key) {
+  return firstMetricNumber(
+    row?.[`paper_${key}_probability`],
+    row?.[`market_${key}_probability`],
+    row?.[`${key}_probability`],
+    row?.[`latest_${key}_probability`],
+  );
+}
+
+function outcomeProbabilityFromRow(row, key) {
+  const direct = outcomeDirectProbability(row, key);
+  if (direct !== null) return direct;
+  const bookMid = outcomeBookProbability(row, key);
+  if (bookMid !== null) return bookMid;
+  const opposite = key === "up" ? "down" : "up";
+  const oppositeDirect = outcomeDirectProbability(row, opposite);
+  if (oppositeDirect !== null) return Math.max(0, Math.min(1, 1 - oppositeDirect));
+  const oppositeBookMid = outcomeBookProbability(row, opposite);
+  if (oppositeBookMid !== null) return Math.max(0, Math.min(1, 1 - oppositeBookMid));
+  return metricNumber(row?.[`direction_${key}_probability`]);
+}
+
+function sameWindowOutcomeOddsRows(market) {
+  const start = marketWindowStartUnix(market);
+  const pools = [
+    ...paperGraphMarkets(),
+    ...state.livePersistedMarkets.values(),
+    ...state.paperObservedMarkets.values(),
+  ];
+  return pools.filter((row) => row && start !== null && marketWindowStartUnix(row) === start && rowHasOutcomeOdds(row));
+}
+
+function paperOutcomeCandidates(market, latestRaw, latestBookRaw) {
+  const rows = [
     market,
+    ...sameWindowOutcomeOddsRows(market),
     ...paperStorageKeysForMarket(market).flatMap((storageKey) => [
       state.livePersistedMarkets.get(storageKey),
       state.paperObservedMarkets.get(storageKey),
     ]),
     latestBookRaw,
     latestRaw,
+    ...paperPointsFor(market).slice(-120).reverse(),
+    ...paperMarkersFor(market).slice(-80).reverse(),
+    ...liveTickPointsForMarket(market).slice(-120).reverse(),
   ].filter(Boolean);
-  const direct = candidates
-    .map((row) => firstMetricNumber(
-      row?.[`paper_${key}_probability`],
-      row?.[`market_${key}_probability`],
-      row?.[`${key}_probability`],
-      row?.[`latest_${key}_probability`],
-    ))
-    .find((value) => value !== null);
-  if (direct !== undefined) return direct;
-  const bookMid = candidates
-    .map((row) => outcomeBookProbability(row, key))
-    .find((value) => value !== null);
-  if (bookMid !== undefined) return bookMid;
+  const seen = new Set();
+  return rows.filter((row) => {
+    const key = [
+      paperGraphKey(row),
+      row.point_id,
+      row.event_id,
+      row.quote_id,
+      row.generated_at,
+      row.event_time_micro,
+      row.receive_time_micro,
+      row.time_unix,
+    ].filter(Boolean).join(":");
+    if (!key) return true;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function bestOutcomeProbability(side, candidates) {
+  const key = sideKey(side);
+  if (!key) return null;
   return candidates
-    .map((row) => metricNumber(row?.[`direction_${key}_probability`]))
+    .map((row) => outcomeProbabilityFromRow(row, key))
     .find((value) => value !== null) ?? null;
+}
+
+function applyOutcomeOddsFromCandidates(target, candidates) {
+  const rows = (candidates || []).filter(Boolean);
+  const up = bestOutcomeProbability("up", rows);
+  const down = bestOutcomeProbability("down", rows);
+  if (up !== null) {
+    target.paper_up_probability = up;
+    target.market_up_probability = up;
+    target.up_probability = up;
+  }
+  if (down !== null) {
+    target.paper_down_probability = down;
+    target.market_down_probability = down;
+    target.down_probability = down;
+  }
+  const source = rows.find((row) => row?.probability_source || row?.market_probability_source);
+  if (source) {
+    target.probability_source = source.probability_source || target.probability_source;
+    target.market_probability_source = source.market_probability_source || source.probability_source || target.market_probability_source;
+  }
+}
+
+function paperOutcomeProbability(side, market, latestRaw, latestBookRaw) {
+  return bestOutcomeProbability(side, paperOutcomeCandidates(market, latestRaw, latestBookRaw));
 }
 
 function paperSession() {
