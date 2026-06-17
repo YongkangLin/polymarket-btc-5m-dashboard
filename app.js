@@ -1,7 +1,7 @@
 const fmt = new Intl.NumberFormat("en-US");
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const moneyCents = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const ACTIVE_BACKTEST_KEY = "profile_cheap_pair";
+const ACTIVE_BACKTEST_KEY = "strict_directional_maker";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_REFRESH_MS = 30000;
@@ -1938,7 +1938,7 @@ function renderBacktestSelects() {
       : allMarkets;
   byId("marketFilter").innerHTML = [
     ["all", `All markets (${fmt.format(allMarkets.length)})`],
-    ["bought", `Ask-sim buys (${fmt.format(boughtCount)})`],
+    ["bought", `Maker quotes (${fmt.format(boughtCount)})`],
     ["no_action", `No action (${fmt.format(noActionCount)})`],
   ].map(([value, label]) => `<option value="${value}">${escapeHtml(label)}</option>`).join("");
   byId("marketFilter").value = state.marketFilter;
@@ -1953,7 +1953,7 @@ function renderBacktestSelects() {
       ? new Date(market.window_start).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
       : "Unknown";
     const status = signal
-      ? `Buy ${signal.intended_outcome} ${moneyCents.format(signal.pnl_after_slippage_haircut || 0)}`
+      ? `${signal.traded ? "Filled" : "Quoted"} ${signal.intended_outcome} ${moneyCents.format(signal.pnl_after_slippage_haircut || 0)}`
       : `No buy: ${rejectReasonLabel(noActionDecisionRow(market)?.reason)}`;
     return `<option value="${escapeHtml(market.condition_id)}">${escapeHtml(`${when} | ${status}`)}</option>`;
   }).join("");
@@ -1962,14 +1962,15 @@ function renderBacktestSelects() {
 
 function ruleLine() {
   const rule = activeRule();
+  const edgeThreshold = rule.min_fair_edge_vs_bid ?? rule.min_fair_edge_vs_quote;
   const pieces = [
     `${rangeText(rule.min_seconds_left, rule.max_seconds_left, "s")} left`,
     `ask ${rangeText(rule.min_ask, rule.max_ask)}`,
     `BTC move ${rangeText(rule.min_abs_distance_bps, rule.max_abs_distance_bps, " bps")}`,
     `depth >= ${money.format(rule.min_top5_capacity_dollars || 0)}`,
   ];
-  if (rule.min_fair_edge_vs_bid !== null && rule.min_fair_edge_vs_bid !== undefined) {
-    pieces.push(`fair edge >= ${formatCents(rule.min_fair_edge_vs_bid)}`);
+  if (edgeThreshold !== null && edgeThreshold !== undefined) {
+    pieces.push(`fair edge >= ${formatCents(edgeThreshold)}`);
   }
   if (rule.min_signal_depth_imbalance !== null && rule.min_signal_depth_imbalance !== undefined) {
     pieces.push(`book lean >= ${percentText(rule.min_signal_depth_imbalance)}`);
@@ -1985,11 +1986,12 @@ function ruleLine() {
 
 function ruleSummaryText() {
   const rule = activeRule();
+  const edgeThreshold = rule.min_fair_edge_vs_bid ?? rule.min_fair_edge_vs_quote;
   return [
     `${rangeText(rule.min_seconds_left, rule.max_seconds_left, "s")} left`,
     `BTC move ${rangeText(rule.min_abs_distance_bps, rule.max_abs_distance_bps, " bps")}`,
     `ask ${rangeText(rule.min_ask, rule.max_ask)}`,
-    `edge >= ${formatCents(rule.min_fair_edge_vs_bid)}`,
+    `edge >= ${formatCents(edgeThreshold)}`,
     `depth >= ${money.format(rule.min_top5_capacity_dollars || 0)}`,
   ].join(" | ");
 }
@@ -2043,7 +2045,7 @@ function renderStrategyPanels() {
   byId("backtestStrategy").innerHTML = [
     strategyCell("Rule", ruleSummaryText()),
     strategyCell("Signals", "BTC price + PM book"),
-    strategyCell("Fill", "$25 ask buy, hold, -2c"),
+    strategyCell("Fill", "Post-only quote, public sell-flow fill"),
   ].join("");
   const paperStrategy = byId("paperStrategy");
   if (paperStrategy) {
@@ -2068,11 +2070,14 @@ function marketDecisionSummary(row, market, isSignal) {
   const oppositeFlow = metricNumber(row[`${oppositeSide}_signed_trade_notional_15s`]);
   const flowEdge = metricNumber(row.trade_flow_edge_15s);
   const pnl = metricNumber(row.pnl_after_slippage_haircut);
+  const quotePrice = metricNumber(row.quote_price ?? row.maker_quote_price);
+  const filledCost = metricNumber(row.filled_cost);
+  const wasFilled = Boolean(row.traded || (filledCost !== null && filledCost > 0));
   const headline = isSignal
-    ? `Simulated ask buy ${outcome} at ${formatPrice(selectedAsk)} with ${row.seconds_left}s left`
+    ? `Post-only ${outcome} bid at ${formatPrice(quotePrice ?? selectedBid)} with ${row.seconds_left}s left`
     : `No action with ${row.seconds_left}s left`;
   const result = isSignal
-    ? `${row.winner} won | settlement ${row.outcome_win ? "1.00" : "0.00"} | ${formatSignedMoney(pnl)} PnL after safety cost`
+    ? `${wasFilled ? `Filled ${moneyCents.format(filledCost || 0)}` : "Not filled"} | ${row.winner} won | ${formatSignedMoney(pnl)} PnL`
     : `Stopped: ${rejectReasonLabel(row.reason)} | winner ${market.winner || row.winner || "--"}`;
   const reason = isSignal
     ? `Matched rule: ${ruleLine()}`
@@ -2119,16 +2124,16 @@ function renderBacktestSummary(market, row, isSignal) {
 
 function tradeTitle(row) {
   const rule = activeRule();
-  const entry = Number(row.signal_ask);
+  const entry = Number(row.quote_price ?? row.maker_quote_price ?? row.signal_bid ?? row.signal_ask);
   const exit = Number(row.settlement_exit_price);
   const pnl = Number(row.pnl_after_slippage_haircut);
   const rawPnl = Number(row.pnl_dollars);
   const oppositeAsk = row.intended_outcome === "Up" ? row.down_ask : row.up_ask;
   return [
-    `Signal ${signalNumber(row)}: simulated ask buy ${row.intended_outcome} at ${entry.toFixed(2)} with ${row.seconds_left}s left`,
+    `Signal ${signalNumber(row)}: post-only ${row.intended_outcome} bid at ${entry.toFixed(2)} with ${row.seconds_left}s left`,
     `Held to settlement: ${row.winner} won, exit ${exit.toFixed(2)}`,
-    `Profit: ${moneyCents.format(pnl)} after 2c safety cost (${moneyCents.format(rawPnl)} raw)`,
-    `Why: ${rangeText(rule.min_seconds_left, rule.max_seconds_left, "s")} left, BTC moved ${Number(row.abs_distance_bps).toFixed(1)} bps, buy price was ${rangeText(rule.min_ask, rule.max_ask)}, fair edge was ${formatCents(row.fair_edge_vs_signal_bid)}`,
+    `Profit: ${moneyCents.format(pnl)} (${moneyCents.format(rawPnl)} raw)`,
+    `Why: ${rangeText(rule.min_seconds_left, rule.max_seconds_left, "s")} left, BTC moved ${Number(row.abs_distance_bps).toFixed(1)} bps, ask was ${rangeText(rule.min_ask, rule.max_ask)}, fair edge was ${formatCents(row.fair_edge_vs_signal_bid)}`,
     `Book then: ${row.intended_outcome} bid/ask ${formatPrice(row.signal_bid)}/${formatPrice(entry)}; other side ask ${formatPrice(oppositeAsk)}`,
   ].join(" | ");
 }
@@ -2146,7 +2151,8 @@ function noActionTitle(row, market) {
 function decisionGateRows(row, isSignal) {
   const rule = activeRule();
   const absDistance = Math.abs(Number(row.abs_distance_bps || 0));
-  const fairEdgeGateEnabled = rule.min_fair_edge_vs_bid !== null && rule.min_fair_edge_vs_bid !== undefined;
+  const edgeThreshold = rule.min_fair_edge_vs_bid ?? rule.min_fair_edge_vs_quote;
+  const fairEdgeGateEnabled = edgeThreshold !== null && edgeThreshold !== undefined;
   const bookLeanGateEnabled = rule.min_signal_depth_imbalance !== null && rule.min_signal_depth_imbalance !== undefined;
   const pairGateEnabled = rule.max_complement_ask_sum !== null && rule.max_complement_ask_sum !== undefined;
   const rows = [
@@ -2156,7 +2162,7 @@ function decisionGateRows(row, isSignal) {
     ["Depth", money.format(row.top5_capacity_dollars || 0), Number(row.top5_capacity_dollars || 0) >= Number(rule.min_top5_capacity_dollars || 0)],
   ];
   if (fairEdgeGateEnabled) {
-    rows.push(["Fair edge", formatCents(row.fair_edge_vs_signal_bid), Number(row.fair_edge_vs_signal_bid || 0) >= Number(rule.min_fair_edge_vs_bid)]);
+    rows.push(["Fair edge", formatCents(row.fair_edge_vs_signal_bid), Number(row.fair_edge_vs_signal_bid || 0) >= Number(edgeThreshold)]);
   }
   if (bookLeanGateEnabled) {
     rows.push(["Book lean", `${((Number(row.signal_depth_imbalance || 0)) * 100).toFixed(0)}%`, Number(row.signal_depth_imbalance || 0) >= Number(rule.min_signal_depth_imbalance)]);
@@ -2166,7 +2172,7 @@ function decisionGateRows(row, isSignal) {
   }
   rows.push(
     isSignal
-      ? ["Result", `${row.winner} won, ${moneyCents.format(row.pnl_after_slippage_haircut || 0)}`, Number(row.pnl_after_slippage_haircut || 0) > 0]
+      ? ["Result", `${row.traded ? "Filled" : "No fill"}, ${moneyCents.format(row.pnl_after_slippage_haircut || 0)}`, Number(row.pnl_after_slippage_haircut || 0) > 0]
       : ["Decision", rejectReasonLabel(row.reason), row.reason === "selected_table_match"]
   );
   return rows;
@@ -2340,8 +2346,8 @@ function renderTradePnlChart(signals) {
       ${bars}
       <path class="line" d="${pathFrom(linePoints)}"></path>
       ${dots}
-      <text class="axis" x="${view.left + plotWidth / 2}" y="${view.height - 18}" text-anchor="middle">${signals.length} market buys: bar = each entry, line = total profit</text>
-      <text class="axis" x="20" y="${view.top + plotHeight / 2}" text-anchor="middle" transform="rotate(-90 20 ${view.top + plotHeight / 2})">Profit after 2c safety cost</text>
+      <text class="axis" x="${view.left + plotWidth / 2}" y="${view.height - 18}" text-anchor="middle">${signals.length} maker quotes: bar = each market, line = total profit</text>
+      <text class="axis" x="20" y="${view.top + plotHeight / 2}" text-anchor="middle" transform="rotate(-90 20 ${view.top + plotHeight / 2})">Profit after settlement</text>
     </svg>`;
 }
 
@@ -2972,10 +2978,28 @@ function latestBookRowForMarket(market, rawPoints) {
     "up_ask",
     "down_bid",
     "down_ask",
+    "up_bid_size",
+    "up_ask_size",
+    "up_bid_depth_5",
+    "up_ask_depth_5",
+    "down_bid_size",
+    "down_ask_size",
+    "down_bid_depth_5",
+    "down_ask_depth_5",
+    "up_depth_imbalance",
+    "down_depth_imbalance",
     "signal_bid",
     "signal_ask",
     "side_depth_imbalance",
     "signal_depth_imbalance",
+    "book_bid",
+    "book_ask",
+    "book_bids",
+    "book_asks",
+    "pm_up_bids",
+    "pm_up_asks",
+    "pm_down_bids",
+    "pm_down_asks",
     "external_book_imbalance",
     "external_book_microprice_support_bps",
     "external_trade_flow_support",
@@ -2991,6 +3015,15 @@ function hasDepthLevels(row) {
   return Boolean(normalizeBookLevels(row?.book_bids).length || normalizeBookLevels(row?.book_asks).length);
 }
 
+function hasPmDepthLevels(row) {
+  return Boolean(
+    normalizeBookLevels(row?.pm_up_bids).length
+    || normalizeBookLevels(row?.pm_up_asks).length
+    || normalizeBookLevels(row?.pm_down_bids).length
+    || normalizeBookLevels(row?.pm_down_asks).length
+  );
+}
+
 function latestDepthRowForMarket(market, rawPoints) {
   const candidates = [
     ...(rawPoints || []),
@@ -3000,7 +3033,7 @@ function latestDepthRowForMarket(market, rawPoints) {
   ];
   for (let index = candidates.length - 1; index >= 0; index -= 1) {
     const row = candidates[index];
-    if (row?.backend_event_kind === "depth" || hasDepthLevels(row)) return row;
+    if (row?.backend_event_kind === "depth" || hasDepthLevels(row) || hasPmDepthLevels(row)) return row;
   }
   return null;
 }
@@ -3447,6 +3480,51 @@ function normalizeBookLevels(value) {
     .filter(Boolean);
 }
 
+function pmBookLevels(row, side, bookSide) {
+  const levels = normalizeBookLevels(row?.[`pm_${side}_${bookSide}`]);
+  if (levels.length) return levels;
+  const top = sideField(row, side, bookSide === "bids" ? "bid" : "ask");
+  const size = sideField(row, side, bookSide === "bids" ? "bid_size" : "ask_size")
+    ?? sideField(row, side, bookSide === "bids" ? "bid_depth_5" : "ask_depth_5");
+  return top === null ? [] : [[top, size || 0]];
+}
+
+function pmOrderBookTableRows(row, latestRaw, latestQuote) {
+  const source = { ...(latestRaw || {}), ...(row || {}) };
+  const quoteSide = latestQuote?.side || latestQuote?.intended_outcome || source.side || source.intended_outcome;
+  const first = quoteSide === "Down" ? "down" : "up";
+  const sides = first === "up" ? ["up", "down"] : ["down", "up"];
+  const labelFor = (side) => side === "up" ? "Up" : "Down";
+  const rows = [];
+  sides.forEach((side) => {
+    const asks = pmBookLevels(source, side, "asks").slice(0, 4);
+    const bids = pmBookLevels(source, side, "bids").slice(0, 4);
+    asks.forEach(([price, size], index) => {
+      rows.push({
+        side: `${labelFor(side)} Sell ${index + 1}`,
+        sideClass: "sell",
+        bookSide: "Ask",
+        limit: formatPredictionPrice(price),
+        size: formatBookQty(size),
+        notional: formatBookMoney(price * size),
+        source: "Polymarket",
+      });
+    });
+    bids.forEach(([price, size], index) => {
+      rows.push({
+        side: `${labelFor(side)} Buy ${index + 1}`,
+        sideClass: "buy",
+        bookSide: "Bid",
+        limit: formatPredictionPrice(price),
+        size: formatBookQty(size),
+        notional: formatBookMoney(price * size),
+        source: "Polymarket",
+      });
+    });
+  });
+  return rows;
+}
+
 function orderBookTableRows(market, rawPoints, latestRaw, latestQuote) {
   const row = latestDepthRowForMarket(market, rawPoints) || latestBookRowForMarket(market, rawPoints) || latestRaw || {};
   const bookBid = metricNumber(row.book_bid ?? latestRaw?.book_bid);
@@ -3457,17 +3535,18 @@ function orderBookTableRows(market, rawPoints, latestRaw, latestQuote) {
   let asks = normalizeBookLevels(row.book_asks ?? latestRaw?.book_asks);
   if (!bids.length && bookBid !== null) bids = [[bookBid, bookBidQty || 0]];
   if (!asks.length && bookAsk !== null) asks = [[bookAsk, bookAskQty || 0]];
+  if (!bids.length && !asks.length) return pmOrderBookTableRows(row, latestRaw, latestQuote);
   const sideRows = (bookSide, levels) => {
     const isBuy = bookSide === "Bid";
     return levels.slice(0, 8).map(([price, size], index) => ({
-    side: `${isBuy ? "Buy" : "Sell"} ${index + 1}`,
-    sideClass: isBuy ? "buy" : "sell",
-    bookSide,
-    limit: formatBookMoney(price),
-    size: formatBookQty(size),
-    notional: formatBookMoney(price * size),
-    source: levels.length > 1 ? "Depth WS" : "Top of book",
-  }));
+      side: `${isBuy ? "Buy" : "Sell"} ${index + 1}`,
+      sideClass: isBuy ? "buy" : "sell",
+      bookSide,
+      limit: formatBookMoney(price),
+      size: formatBookQty(size),
+      notional: formatBookMoney(price * size),
+      source: levels.length > 1 ? "Depth WS" : "Top of book",
+    }));
   };
   return [
     ...sideRows("Ask", asks),
@@ -3478,6 +3557,9 @@ function orderBookTableRows(market, rawPoints, latestRaw, latestQuote) {
 function renderOrderBookTable(market, rawPoints, latestRaw, latestQuote) {
   const rows = orderBookTableRows(market, rawPoints, latestRaw, latestQuote);
   const sourceRow = latestDepthRowForMarket(market, rawPoints) || latestBookRowForMarket(market, rawPoints) || latestRaw;
+  const isPmBook = rows.some((row) => row.source === "Polymarket");
+  const title = isPmBook ? "Polymarket Order Book Depth" : "BTC Order Book Depth";
+  const sourceLabel = isPmBook ? "CLOB snapshot" : liveFeedLabel(sourceRow);
   const body = rows.map((row) => `
     <tr class="paper-book-row is-${escapeHtml(row.sideClass || "neutral")}">
       <th scope="row">${escapeHtml(row.side)}</th>
@@ -3489,8 +3571,8 @@ function renderOrderBookTable(market, rawPoints, latestRaw, latestQuote) {
   return `
     <div class="paper-book-table">
       <div class="paper-book-heading">
-        <span>BTC Order Book Depth</span>
-        <span>${escapeHtml(liveFeedLabel(sourceRow))}</span>
+        <span>${escapeHtml(title)}</span>
+        <span>${escapeHtml(sourceLabel)}</span>
       </div>
       <table>
         <thead>
