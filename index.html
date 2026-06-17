@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>BTC 5m Trading Workflow</title>
-    <link rel="stylesheet" href="styles.css?v=20260616-106">
+    <link rel="stylesheet" href="styles.css?v=20260617-010">
   </head>
   <body>
     <main class="shell">
@@ -25,11 +25,11 @@
       <section class="panel is-active" id="backtestPanel" data-panel="backtest">
         <div class="toolbar">
           <label class="filter-label">
-            <span>Market Filter</span>
+            <span>Show</span>
             <select id="marketFilter"></select>
           </label>
           <label class="market-label">
-            <span>Market</span>
+            <span>Historical Market</span>
             <select id="backtestMarket"></select>
           </label>
         </div>
@@ -47,11 +47,14 @@
       </section>
 
       <section class="panel" id="livePanel" data-panel="live">
+        <div class="toolbar">
+          <div class="paper-meta" id="liveGraphMeta" role="status" aria-live="polite"></div>
+        </div>
         <div class="strategy-strip" id="liveStrategy"></div>
         <div class="chart" id="liveChart"></div>
       </section>
     </main>
 
-    <script src="app.js?v=20260617-008"></script>
+    <script src="app.js?v=20260617-010"></script>
   </body>
 </html>

@@ -198,6 +198,18 @@ select {
   padding: 16px;
 }
 
+.live-mode-strip {
+  margin-bottom: 10px;
+  border: 1px solid #d6dde2;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  padding: 9px 11px;
+}
+
 .strategy-strip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -881,7 +893,8 @@ svg {
     padding: 8px;
   }
 
-  #paperChart svg.paper-live-svg {
+  #paperChart svg.paper-live-svg,
+  #liveChart svg.paper-live-svg {
     min-width: 0;
     max-width: 100%;
     width: 100%;

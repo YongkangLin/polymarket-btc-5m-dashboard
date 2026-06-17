@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-06-17T05:24:33.966697+00:00",
+  "generated_at": "2026-06-17T06:22:00.586748+00:00",
   "status": "passed",
   "feature_summary": {
-    "markets": 2201,
-    "rows": 662501,
-    "complete_markets": 2201,
+    "markets": 2167,
+    "rows": 652267,
+    "complete_markets": 2167,
     "min_rows_per_market": 301,
     "max_rows_per_market": 301,
     "bad_rows": 0
@@ -23,9 +23,9 @@
     "roi_after_slippage_haircut": 0.016495167146392077
   },
   "workflow_summary": {
-    "strategy": "dominant_late_depth_fair_clean",
-    "status": "golden_signal_window",
-    "clean_markets": 2201,
+    "strategy": "strict_directional_maker",
+    "status": "golden_strategy_contract",
+    "clean_markets": 2167,
     "decision_rows": 133346,
     "wallet_profile_strategies": [
       "profile_cheap_pair",
@@ -43,17 +43,21 @@
       "enabled": true,
       "min_seconds_left": 91,
       "max_seconds_left": 150,
-      "min_abs_distance_bps": 0.0,
-      "max_abs_distance_bps": 10.0,
+      "min_abs_distance_bps": 5.0,
+      "max_abs_distance_bps": 15.0,
       "min_ask": 0.65,
       "max_ask": 0.9,
       "min_top5_capacity_dollars": 25.0,
+      "min_signal_depth_imbalance": null,
+      "min_trade_flow_edge_dollars": null,
       "min_external_book_support": null,
-      "min_external_microprice_support_bps": null
+      "min_external_microprice_support_bps": null,
+      "min_external_trade_flow_dollars": null,
+      "max_complement_ask_sum": null
     },
     "maker_route": {
       "mode": "improve_one_tick",
-      "quote_horizon_seconds": 15
+      "quote_horizon_seconds": 60
     },
     "quote_notional_dollars": 5.0
   },
@@ -96,29 +100,49 @@
     {
       "id": "feature_markets_complete",
       "label": "Every feature market has 301 clean seconds",
-      "actual": 2201,
-      "expected": 2201,
+      "actual": 2167,
+      "expected": 2167,
       "passed": true
     },
     {
       "id": "feature_bad_rows_zero",
-      "label": "No stale/null core feature rows",
+      "label": "No stale/null/provenance-invalid core feature rows",
       "actual": 0,
       "expected": 0,
       "passed": true
     },
     {
+      "id": "workflow_markets_match_clean_manifest",
+      "label": "Workflow Back Test markets exactly match clean manifest",
+      "actual": 2167,
+      "expected": 2167,
+      "passed": true
+    },
+    {
+      "id": "workflow_allowed_price_sources_match",
+      "label": "Workflow declares allowed Back Test price sources",
+      "actual": [
+        "telonex_crypto_prices",
+        "chainlink_data_streams"
+      ],
+      "expected": [
+        "telonex_crypto_prices",
+        "chainlink_data_streams"
+      ],
+      "passed": true
+    },
+    {
       "id": "algorithm_clean_count_matches_features",
       "label": "Algorithm clean count matches selected data gate",
-      "actual": 2201,
-      "expected": 2201,
+      "actual": 2167,
+      "expected": 2167,
       "passed": true
     },
     {
       "id": "workflow_clean_count_matches_algorithm",
       "label": "Workflow clean count matches algorithm",
-      "actual": 2201,
-      "expected": 2201,
+      "actual": 2167,
+      "expected": 2167,
       "passed": true
     },
     {
@@ -131,15 +155,15 @@
     {
       "id": "workflow_signals_match_algorithm",
       "label": "Workflow signal count matches algorithm",
-      "actual": 1001,
-      "expected": 1001,
+      "actual": 1078,
+      "expected": 1078,
       "passed": true
     },
     {
       "id": "workflow_win_rate_matches_algorithm",
       "label": "Workflow ROI/reference metric matches algorithm",
-      "actual": 0.024414,
-      "expected": 0.024414,
+      "actual": 0.028639,
+      "expected": 0.028639,
       "passed": true
     },
     {
@@ -148,23 +172,23 @@
       "actual": {
         "status": "paper_collecting",
         "maker_route_ready": false,
-        "selected_route_id": "maker_improve_1c_h15",
+        "selected_route_id": "maker_improve_1c_h60",
         "selected_route_type": "maker"
       },
       "expected": {
         "status": "paper_collecting",
         "maker_route_ready": false,
-        "selected_route_id": "maker_improve_1c_h15",
+        "selected_route_id": "maker_improve_1c_h60",
         "selected_route_type": "maker",
-        "paper_route_override": "maker_improve_1c_h15"
+        "paper_route_override": "maker_improve_1c_h60"
       },
       "passed": true
     },
     {
       "id": "public_workflow_synced",
       "label": "Public dashboard workflow is synced",
-      "actual": "61d34d8d3d4e7215c9019b4028fc00b7e5c2ac03154075c2ec1adc22340ddadc",
-      "expected": "61d34d8d3d4e7215c9019b4028fc00b7e5c2ac03154075c2ec1adc22340ddadc",
+      "actual": "f4bf4634a4cc995226d023af9c1cacef07210159d328a125b70a789ffe443cd8",
+      "expected": "f4bf4634a4cc995226d023af9c1cacef07210159d328a125b70a789ffe443cd8",
       "passed": true
     },
     {
@@ -241,25 +265,33 @@
         "enabled": true,
         "min_seconds_left": 91,
         "max_seconds_left": 150,
-        "min_abs_distance_bps": 0.0,
-        "max_abs_distance_bps": 10.0,
+        "min_abs_distance_bps": 5.0,
+        "max_abs_distance_bps": 15.0,
         "min_ask": 0.65,
         "max_ask": 0.9,
         "min_top5_capacity_dollars": 25.0,
+        "min_signal_depth_imbalance": null,
+        "min_trade_flow_edge_dollars": null,
         "min_external_book_support": null,
-        "min_external_microprice_support_bps": null
+        "min_external_microprice_support_bps": null,
+        "min_external_trade_flow_dollars": null,
+        "max_complement_ask_sum": null
       },
       "expected": {
         "enabled": true,
         "min_seconds_left": 91,
         "max_seconds_left": 150,
-        "min_abs_distance_bps": 0.0,
-        "max_abs_distance_bps": 10.0,
+        "min_abs_distance_bps": 5.0,
+        "max_abs_distance_bps": 15.0,
         "min_ask": 0.65,
         "max_ask": 0.9,
         "min_top5_capacity_dollars": 25.0,
+        "min_signal_depth_imbalance": null,
+        "min_trade_flow_edge_dollars": null,
         "min_external_book_support": null,
-        "min_external_microprice_support_bps": null
+        "min_external_microprice_support_bps": null,
+        "min_external_trade_flow_dollars": null,
+        "max_complement_ask_sum": null
       },
       "passed": true
     },
@@ -282,11 +314,11 @@
       "label": "Rust maker route matches selected maker policy",
       "actual": {
         "mode": "improve_one_tick",
-        "quote_horizon_seconds": 15
+        "quote_horizon_seconds": 60
       },
       "expected": {
         "mode": "improve_one_tick",
-        "quote_horizon_seconds": 15
+        "quote_horizon_seconds": 60
       },
       "passed": true
     },

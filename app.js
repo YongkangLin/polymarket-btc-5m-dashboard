@@ -97,11 +97,18 @@ function isCompactPaperChart() {
 
 function configuredBackendBase() {
   const params = new URLSearchParams(window.location.search || "");
+  const host = window.location.hostname;
+  if (host === "yongkanglin.github.io") {
+    if (params.has("backend") && window.history?.replaceState) {
+      params.delete("backend");
+      const query = params.toString();
+      window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash || ""}`);
+    }
+    return PUBLIC_BACKEND_BASE;
+  }
   const explicit = window.POLYMARKET_BACKEND_BASE
     || params.get("backend");
   if (explicit) return String(explicit).replace(/\/+$/, "");
-  const host = window.location.hostname;
-  if (host === "yongkanglin.github.io") return PUBLIC_BACKEND_BASE;
   const saved = window.localStorage?.getItem("POLYMARKET_BACKEND_BASE");
   if (saved) return String(saved).replace(/\/+$/, "");
   const protocol = window.location.protocol === "https:" ? "https:" : "http:";
@@ -1387,11 +1394,11 @@ function liveChartTickPointsForMarket(market) {
   const points = liveTickPointsForMarket(market);
   const chainlinkRows = points.filter(isChainlinkPriceRow);
   const tradeRows = points.filter(isExternalTradePricePoint);
-  if (tradeRows.length >= 2) return mergePaperChartRows(chainlinkRows, tradeRows);
   const depthRows = points.filter((point) => isExternalBookPricePoint(point) && point.backend_event_kind === "depth");
   if (depthRows.length >= 2) return mergePaperChartRows(chainlinkRows, depthRows);
   const bookRows = points.filter(isExternalBookPricePoint);
   if (bookRows.length >= 2) return mergePaperChartRows(chainlinkRows, bookRows);
+  if (tradeRows.length >= 2) return mergePaperChartRows(chainlinkRows, tradeRows);
   if (tradeRows.length) return mergePaperChartRows(chainlinkRows, tradeRows);
   return chainlinkRows.length ? chainlinkRows : points;
 }
@@ -1612,10 +1619,11 @@ function isExternalTradePricePoint(row) {
 
 function externalLineRows(rows) {
   const tradeRows = (rows || []).filter(isExternalTradePricePoint);
-  if (tradeRows.length >= 2) return tradeRows;
   const depthRows = (rows || []).filter((row) => isExternalBookPricePoint(row) && row?.backend_event_kind === "depth");
   if (depthRows.length >= 2) return depthRows;
-  return (rows || []).filter((row) => isExternalBookPricePoint(row) && row?.backend_event_kind === "book");
+  const bookRows = (rows || []).filter((row) => isExternalBookPricePoint(row) && row?.backend_event_kind === "book");
+  if (bookRows.length >= 2) return bookRows;
+  return tradeRows;
 }
 
 function externalLineLabel(rows) {
@@ -1938,6 +1946,25 @@ function backtestBtcPrice(row, defaultStartPrice = null) {
   return Number.isFinite(impliedPrice) ? impliedPrice : null;
 }
 
+function bpsRangePercentText(min, max) {
+  const asPct = (value) => `${(Number(value) / 100).toFixed(2)}%`;
+  if (min !== null && min !== undefined && max !== null && max !== undefined) return `${asPct(min)}-${asPct(max)}`;
+  if (min !== null && min !== undefined) return `at least ${asPct(min)}`;
+  if (max !== null && max !== undefined) return `up to ${asPct(max)}`;
+  return "any move";
+}
+
+function backtestMoveText(row, market = {}) {
+  const start = metricNumber(row?.start_price ?? market?.start_price);
+  const current = backtestBtcPrice(row, start);
+  if (start !== null && current !== null) {
+    const diff = current - start;
+    const pct = start ? diff / start : null;
+    return `${formatDollarMove(diff)} (${formatPercent(pct)})`;
+  }
+  return formatBps(row?.distance_bps);
+}
+
 function priceDomain(values, startPrice = null) {
   const cleanValues = values.filter(Number.isFinite);
   if (!cleanValues.length) return null;
@@ -1965,8 +1992,8 @@ function renderBacktestSelects() {
       : allMarkets;
   byId("marketFilter").innerHTML = [
     ["all", `All markets (${fmt.format(allMarkets.length)})`],
-    ["bought", `Maker quotes (${fmt.format(boughtCount)})`],
-    ["no_action", `No action (${fmt.format(noActionCount)})`],
+    ["bought", `Bought (${fmt.format(boughtCount)})`],
+    ["no_action", `No buy (${fmt.format(noActionCount)})`],
   ].map(([value, label]) => `<option value="${value}">${escapeHtml(label)}</option>`).join("");
   byId("marketFilter").value = state.marketFilter;
   const allowed = new Set(filteredMarkets.map((market) => market.condition_id));
@@ -1980,8 +2007,8 @@ function renderBacktestSelects() {
       ? new Date(market.window_start).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
       : "Unknown";
     const status = signal
-      ? `${signal.traded ? "Filled" : "Quoted"} ${signal.intended_outcome} ${moneyCents.format(signal.pnl_after_slippage_haircut || 0)}`
-      : `No buy: ${rejectReasonLabel(noActionDecisionRow(market)?.reason)}`;
+      ? `BUY ${signal.intended_outcome} | ${signal.winner === signal.intended_outcome ? "won" : "lost"} | ${formatSignedMoney(signal.pnl_after_slippage_haircut)}`
+      : `NO BUY | ${rejectReasonLabel(noActionDecisionRow(market)?.reason)}`;
     return `<option value="${escapeHtml(market.condition_id)}">${escapeHtml(`${when} | ${status}`)}</option>`;
   }).join("");
   byId("backtestMarket").value = state.backtestMarket;
@@ -1992,9 +2019,9 @@ function ruleLine() {
   const edgeThreshold = rule.min_fair_edge_vs_bid ?? rule.min_fair_edge_vs_quote;
   const pieces = [
     `${rangeText(rule.min_seconds_left, rule.max_seconds_left, "s")} left`,
-    `ask ${rangeText(rule.min_ask, rule.max_ask)}`,
-    `BTC move ${rangeText(rule.min_abs_distance_bps, rule.max_abs_distance_bps, " bps")}`,
-    `depth >= ${money.format(rule.min_top5_capacity_dollars || 0)}`,
+    `market price ${formatOutcomePercent(rule.min_ask)}-${formatOutcomePercent(rule.max_ask)}`,
+    `BTC move ${bpsRangePercentText(rule.min_abs_distance_bps, rule.max_abs_distance_bps)}`,
+    `visible size at least ${money.format(rule.min_top5_capacity_dollars || 0)}`,
   ];
   if (edgeThreshold !== null && edgeThreshold !== undefined) {
     pieces.push(`fair edge >= ${formatCents(edgeThreshold)}`);
@@ -2013,13 +2040,12 @@ function ruleLine() {
 
 function ruleSummaryText() {
   const rule = activeRule();
-  const edgeThreshold = rule.min_fair_edge_vs_bid ?? rule.min_fair_edge_vs_quote;
   return [
+    `Buy the side BTC is already leaning toward`,
     `${rangeText(rule.min_seconds_left, rule.max_seconds_left, "s")} left`,
-    `BTC move ${rangeText(rule.min_abs_distance_bps, rule.max_abs_distance_bps, " bps")}`,
-    `ask ${rangeText(rule.min_ask, rule.max_ask)}`,
-    `edge >= ${formatCents(edgeThreshold)}`,
-    `depth >= ${money.format(rule.min_top5_capacity_dollars || 0)}`,
+    `BTC move ${bpsRangePercentText(rule.min_abs_distance_bps, rule.max_abs_distance_bps)}`,
+    `market price ${formatOutcomePercent(rule.min_ask)}-${formatOutcomePercent(rule.max_ask)}`,
+    `visible size ${money.format(rule.min_top5_capacity_dollars || 0)}+`,
   ].join(" | ");
 }
 
@@ -2060,6 +2086,7 @@ function paperMissBestProbeText() {
 
 function renderStrategyPanels() {
   const paperSummary = state.workflow.paper_trade.summary || {};
+  const activeSummary = state.workflow.active_backtest?.summary || {};
   const missRoute = paperMissRoute();
   const policy = state.workflow.live_trade.execution_policy || {};
   const routeLabel = paperSummary.maker_route_label || policy.selected_route_label || "Maker improve one tick for 60s";
@@ -2070,9 +2097,12 @@ function renderStrategyPanels() {
     ? "Disabled until manual enable"
     : "Disabled";
   byId("backtestStrategy").innerHTML = [
-    strategyCell("Rule", ruleSummaryText()),
-    strategyCell("Signals", "BTC price + PM book"),
-    strategyCell("Fill", "Post-only quote, public sell-flow fill"),
+    strategyCell("Goal", "Would this simple rule have made money?"),
+    strategyCell("Buy Rule", ruleSummaryText()),
+    strategyCell(
+      "Result",
+      `${fmt.format(activeSummary.quote_markets || signalRows().length)} buys | ${formatSignedMoney(activeSummary.pnl_dollars)} P&L | ${formatPercent(activeSummary.roi_on_planned_cost)} return`,
+    ),
   ].join("");
   const paperStrategy = byId("paperStrategy");
   if (paperStrategy) {
@@ -2080,9 +2110,9 @@ function renderStrategyPanels() {
     paperStrategy.hidden = true;
   }
   byId("liveStrategy").innerHTML = [
-    strategyCell("Status", liveStatus),
+    strategyCell("Mode", liveStatus),
+    strategyCell("Same View", "Paper layout, real balance/orders when enabled"),
     strategyCell("Orders", "Post-only only"),
-    strategyCell("Gate", "Edge + latency + manual enable"),
   ].join("");
 }
 
@@ -2101,27 +2131,27 @@ function marketDecisionSummary(row, market, isSignal) {
   const filledCost = metricNumber(row.filled_cost);
   const wasFilled = Boolean(row.traded || (filledCost !== null && filledCost > 0));
   const headline = isSignal
-    ? `Post-only ${outcome} bid at ${formatPrice(quotePrice ?? selectedBid)} with ${row.seconds_left}s left`
-    : `No action with ${row.seconds_left}s left`;
+    ? `BUY ${outcome} at ${formatPrice(quotePrice ?? selectedBid)}`
+    : "NO BUY";
   const result = isSignal
-    ? `${wasFilled ? `Filled ${moneyCents.format(filledCost || 0)}` : "Not filled"} | ${row.winner} won | ${formatSignedMoney(pnl)} PnL`
-    : `Stopped: ${rejectReasonLabel(row.reason)} | winner ${market.winner || row.winner || "--"}`;
+    ? `${wasFilled ? `Filled ${moneyCents.format(filledCost || 0)}` : "Not filled"} | ${row.winner} won | ${formatSignedMoney(pnl)}`
+    : `Reason: ${rejectReasonLabel(row.reason)} | ${market.winner || row.winner || "--"} won`;
   const reason = isSignal
-    ? `Matched rule: ${ruleLine()}`
-    : `Nearest decision row: ${ruleLine()}`;
+    ? `${outcome} matched because BTC was ${outcome === "Up" ? "above" : "below"} the start, the market price was inside our buy range, and enough visible size was available.`
+    : `The closest checked moment failed the rule: ${rejectReasonLabel(row.reason)}.`;
   return {
     headline,
     result,
     reason,
     signals: [
-      ["BTC move", formatBps(row.distance_bps)],
-      ["Fair value", formatPrice(row.fair_probability)],
-      ["Fair edge", formatCents(row.fair_edge_vs_signal_bid)],
-      ["Bid/ask", `${formatPrice(selectedBid)} / ${formatPrice(selectedAsk)}`],
-      ["Top-5 depth", money.format(selectedDepth || 0)],
+      ["Start BTC", metricNumber(row.start_price ?? market.start_price) === null ? "--" : moneyCents.format(metricNumber(row.start_price ?? market.start_price))],
+      ["Decision BTC", backtestBtcPrice(row, market.start_price) === null ? "--" : moneyCents.format(backtestBtcPrice(row, market.start_price))],
+      ["BTC move", backtestMoveText(row, market)],
+      ["Bot bid", formatPrice(quotePrice ?? selectedBid)],
+      ["Market ask", formatPrice(selectedAsk)],
+      ["Visible size", money.format(selectedDepth || 0)],
       ["Book lean", percentText(row.signal_depth_imbalance ?? row[`${selectedSide}_depth_imbalance`])],
-      ["15s flow edge", flowEdge === null ? `${money.format(selectedFlow || 0)} vs ${money.format(oppositeFlow || 0)}` : money.format(flowEdge)],
-      ["Both asks", formatPrice(row.complement_ask_sum)],
+      ["Result", isSignal ? `${row.winner} won, ${formatSignedMoney(pnl)}` : rejectReasonLabel(row.reason)],
     ],
   };
 }
@@ -2157,21 +2187,20 @@ function tradeTitle(row) {
   const rawPnl = Number(row.pnl_dollars);
   const oppositeAsk = row.intended_outcome === "Up" ? row.down_ask : row.up_ask;
   return [
-    `Signal ${signalNumber(row)}: post-only ${row.intended_outcome} bid at ${entry.toFixed(2)} with ${row.seconds_left}s left`,
-    `Held to settlement: ${row.winner} won, exit ${exit.toFixed(2)}`,
-    `Profit: ${moneyCents.format(pnl)} (${moneyCents.format(rawPnl)} raw)`,
-    `Why: ${rangeText(rule.min_seconds_left, rule.max_seconds_left, "s")} left, BTC moved ${Number(row.abs_distance_bps).toFixed(1)} bps, ask was ${rangeText(rule.min_ask, rule.max_ask)}, fair edge was ${formatCents(row.fair_edge_vs_signal_bid)}`,
+    `Buy ${row.intended_outcome} at ${entry.toFixed(2)} with ${row.seconds_left}s left`,
+    `Held to close: ${row.winner} won`,
+    `P&L: ${moneyCents.format(pnl)} (${moneyCents.format(rawPnl)} raw)`,
+    `Why: BTC moved ${bpsRangePercentText(rule.min_abs_distance_bps, rule.max_abs_distance_bps)}, price was ${formatOutcomePercent(rule.min_ask)}-${formatOutcomePercent(rule.max_ask)}, visible size was enough`,
     `Book then: ${row.intended_outcome} bid/ask ${formatPrice(row.signal_bid)}/${formatPrice(entry)}; other side ask ${formatPrice(oppositeAsk)}`,
   ].join(" | ");
 }
 
 function noActionTitle(row, market) {
   return [
-    `${market.slug}: no action with ${row.seconds_left}s left`,
+    `${market.slug}: no buy with ${row.seconds_left}s left`,
     `Reason: ${rejectReasonLabel(row.reason)}`,
-    `Candidate side: ${decisionOutcome(row)}`,
-    `BTC move: ${formatBps(row.distance_bps)}`,
-    `Fair edge: ${formatCents(row.fair_edge_vs_signal_bid)}`,
+    `Candidate: ${decisionOutcome(row)}`,
+    `BTC move: ${backtestMoveText(row, market)}`,
   ].join(" | ");
 }
 
@@ -2183,19 +2212,19 @@ function decisionGateRows(row, isSignal) {
   const bookLeanGateEnabled = rule.min_signal_depth_imbalance !== null && rule.min_signal_depth_imbalance !== undefined;
   const pairGateEnabled = rule.max_complement_ask_sum !== null && rule.max_complement_ask_sum !== undefined;
   const rows = [
-    ["Time", `${row.seconds_left}s`, inRange(row.seconds_left, rule.min_seconds_left, rule.max_seconds_left)],
-    ["Move", formatBps(absDistance), inRange(absDistance, rule.min_abs_distance_bps, rule.max_abs_distance_bps)],
-    ["Entry ask", formatPrice(row.signal_ask), inRange(row.signal_ask, rule.min_ask, rule.max_ask)],
-    ["Depth", money.format(row.top5_capacity_dollars || 0), Number(row.top5_capacity_dollars || 0) >= Number(rule.min_top5_capacity_dollars || 0)],
+    ["Time left", `${row.seconds_left}s`, inRange(row.seconds_left, rule.min_seconds_left, rule.max_seconds_left)],
+    ["BTC move", backtestMoveText(row), inRange(absDistance, rule.min_abs_distance_bps, rule.max_abs_distance_bps)],
+    ["Buy price", formatOutcomePercent(row.signal_ask), inRange(row.signal_ask, rule.min_ask, rule.max_ask)],
+    ["Visible size", money.format(row.top5_capacity_dollars || 0), Number(row.top5_capacity_dollars || 0) >= Number(rule.min_top5_capacity_dollars || 0)],
   ];
   if (fairEdgeGateEnabled) {
-    rows.push(["Fair edge", formatCents(row.fair_edge_vs_signal_bid), Number(row.fair_edge_vs_signal_bid || 0) >= Number(edgeThreshold)]);
+    rows.push(["Estimated edge", formatCents(row.fair_edge_vs_signal_bid), Number(row.fair_edge_vs_signal_bid || 0) >= Number(edgeThreshold)]);
   }
   if (bookLeanGateEnabled) {
-    rows.push(["Book lean", `${((Number(row.signal_depth_imbalance || 0)) * 100).toFixed(0)}%`, Number(row.signal_depth_imbalance || 0) >= Number(rule.min_signal_depth_imbalance)]);
+    rows.push(["Book pressure", `${((Number(row.signal_depth_imbalance || 0)) * 100).toFixed(0)}%`, Number(row.signal_depth_imbalance || 0) >= Number(rule.min_signal_depth_imbalance)]);
   }
   if (pairGateEnabled) {
-    rows.push(["Both asks", formatPrice(row.complement_ask_sum), Number(row.complement_ask_sum || 99) <= Number(rule.max_complement_ask_sum)]);
+    rows.push(["Both sides", formatPrice(row.complement_ask_sum), Number(row.complement_ask_sum || 99) <= Number(rule.max_complement_ask_sum)]);
   }
   rows.push(
     isSignal
@@ -2267,14 +2296,14 @@ function renderSignalDecisionChart(signal, options = {}) {
   const selectedImbalance = metricNumber(signal.signal_depth_imbalance ?? signal[`${selectedSide}_depth_imbalance`]);
   const gateRows = decisionGateRows(signal, isSignal);
   const bookRows = [
-    [`${selectedOutcome} bid/ask`, `${formatPrice(selectedBid)} / ${formatPrice(selectedAsk)}`],
-    [`Other ask`, formatPrice(oppositeAsk)],
-    ["Fair value", formatPrice(signal.fair_probability)],
-    ["Fair edge", formatCents(signal.fair_edge_vs_signal_bid)],
-    ["Top-5 depth", money.format(selectedDepth || 0)],
-    ["Book lean", selectedImbalance === null ? "--" : `${(selectedImbalance * 100).toFixed(0)}%`],
-    ["15s flow", `${money.format(selectedFlow || 0)} vs ${money.format(oppositeFlow || 0)}`],
-    ["Both asks", formatPrice(signal.complement_ask_sum)],
+    [`Buy ${selectedOutcome}`, `${formatPrice(selectedBid)} / ${formatPrice(selectedAsk)}`],
+    ["Other side", formatPrice(oppositeAsk)],
+    ["Bot value", formatPrice(signal.fair_probability)],
+    ["Bot edge", formatCents(signal.fair_edge_vs_signal_bid)],
+    ["Visible size", money.format(selectedDepth || 0)],
+    ["PM pressure", selectedImbalance === null ? "--" : `${(selectedImbalance * 100).toFixed(0)}%`],
+    ["PM recent flow", `${money.format(selectedFlow || 0)} vs ${money.format(oppositeFlow || 0)}`],
+    ["Both prices", formatPrice(signal.complement_ask_sum)],
   ];
   const xTicks = [maxSec, Math.round((maxSec + minSec) / 2), minSec].map((tick) => {
     const x = plot.left + ((maxSec - tick) / spanSec) * plotWidth;
@@ -2321,7 +2350,7 @@ function renderSignalDecisionChart(signal, options = {}) {
   }).join("");
   const title = isSignal ? tradeTitle(signal) : noActionTitle(signal, market);
   const markerClass = isSignal ? "signal" : "fail";
-  const noteTitle = isSignal ? "Trade rule and result" : "No-action reason";
+  const noteTitle = isSignal ? "Why buy?" : "Why no buy?";
 
   byId("backtestChart").innerHTML = `
     <svg viewBox="0 0 ${view.width} ${view.height}" role="img" aria-label="Selected backtest decision context">
@@ -2339,12 +2368,12 @@ function renderSignalDecisionChart(signal, options = {}) {
       <path class="line line-bid" d="${selectedBidPath}"></path>
       <path class="line line-other" d="${oppositeAskPath}"></path>
       <circle class="dot ${markerClass}" cx="${markerX}" cy="${yPrice(Number(signal.signal_ask || selectedAsk || 0))}" r="6"></circle>
-      <text class="axis" x="${plot.left + plotWidth / 2}" y="${plot.top - 12}" text-anchor="middle">${hasBtcPrices ? "BTC price" : "BTC move from start"}</text>
-      <text class="axis" x="${book.left + plotWidth / 2}" y="${book.top - 12}" text-anchor="middle">${selectedOutcome} book price at the decision</text>
+      <text class="axis" x="${plot.left + plotWidth / 2}" y="${plot.top - 12}" text-anchor="middle">${hasBtcPrices ? "BTC price during this 5-minute market" : "BTC move from start"}</text>
+      <text class="axis" x="${book.left + plotWidth / 2}" y="${book.top - 12}" text-anchor="middle">${selectedOutcome} contract price</text>
       <text class="legend ask" x="${book.left + 8}" y="${book.top + 20}">ask</text>
       <text class="legend bid" x="${book.left + 52}" y="${book.top + 20}">bid</text>
       <text class="legend other" x="${book.left + 92}" y="${book.top + 20}">other ask</text>
-      <text class="axis" x="${book.left + plotWidth / 2}" y="${view.height - 18}" text-anchor="middle">Seconds left in the market</text>
+      <text class="axis" x="${book.left + plotWidth / 2}" y="${view.height - 18}" text-anchor="middle">Seconds left</text>
       <rect class="note-box" x="686" y="36" width="274" height="238" rx="6"></rect>
       <text class="axis" x="708" y="64">${escapeHtml(noteTitle)}</text>
       ${gateText}
@@ -3896,10 +3925,11 @@ function renderPaperActionLog(market, rawPoints) {
     </div>`;
 }
 
-function renderPaperDecisionGraph() {
+function renderPaperDecisionGraph(options = {}) {
+  const isLiveView = options.mode === "live";
   const market = selectedPaperMarket();
   const rawPoints = market ? paperChartPointsFor(market) : [];
-  const chart = byId("paperChart");
+  const chart = byId(options.chartId || "paperChart");
   const selectedCurrent = (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE && isCurrentPaperMarket(market);
   if (!market || !rawPoints.length) {
     if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) {
@@ -4134,12 +4164,18 @@ function renderPaperDecisionGraph() {
     ?? metricNumber(market.market_down_probability ?? market.paper_down_probability ?? market.down_probability ?? market.latest_down_probability)
     ?? metricNumber(latestRaw.market_down_probability ?? latestRaw.paper_down_probability ?? latestRaw.down_probability);
   const session = paperSession();
-  const currentPositions = paperPositionsForMarket(market, rawPoints);
-  const positionRows = paperPositionPanelRows(currentPositions);
-  const sessionCapital = paperSessionCapital(session)
-    ?? latestSessionMetric(market, rawPoints, session, ["paper_session_current_capital", "current_capital"]);
-  const sessionPnl = paperSessionRealizedPnl(session)
-    ?? latestSessionMetric(market, rawPoints, session, ["paper_session_total_pnl", "paper_session_total_pnl_dollars", "total_pnl_dollars", "realized_pnl_dollars"]);
+  const currentPositions = isLiveView ? [] : paperPositionsForMarket(market, rawPoints);
+  const positionRows = isLiveView
+    ? [{ label: "No live positions", value: "Live disabled", detail: "Manual enable required", tone: "move-flat" }]
+    : paperPositionPanelRows(currentPositions);
+  const sessionCapital = isLiveView
+    ? null
+    : paperSessionCapital(session)
+      ?? latestSessionMetric(market, rawPoints, session, ["paper_session_current_capital", "current_capital"]);
+  const sessionPnl = isLiveView
+    ? null
+    : paperSessionRealizedPnl(session)
+      ?? latestSessionMetric(market, rawPoints, session, ["paper_session_total_pnl", "paper_session_total_pnl_dollars", "total_pnl_dollars", "realized_pnl_dollars"]);
   const marketMetrics = [
     { label: "Start price", value: startPrice === null ? "Waiting" : formatBookMoney(startPrice) },
     { label: "Current price", value: currentPrice === null ? "Waiting" : formatBookMoney(currentPrice) },
@@ -4147,10 +4183,15 @@ function renderPaperDecisionGraph() {
     { label: "Up percent", value: formatOutcomePercent(upProbability) },
     { label: "Down percent", value: formatOutcomePercent(downProbability) },
   ];
-  const accountMetrics = [
-    { label: "Capital", value: sessionCapital === null ? "--" : moneyCents.format(sessionCapital) },
-    { label: "Session P&L", value: formatSignedMoney(sessionPnl), tone: sessionPnl === null ? "" : sessionPnl < 0 ? "move-down" : "move-up" },
-  ];
+  const accountMetrics = isLiveView
+    ? [
+        { label: "Real balance", value: "Disabled" },
+        { label: "Live P&L", value: "--" },
+      ]
+    : [
+        { label: "Capital", value: sessionCapital === null ? "--" : moneyCents.format(sessionCapital) },
+        { label: "Session P&L", value: formatSignedMoney(sessionPnl), tone: sessionPnl === null ? "" : sessionPnl < 0 ? "move-down" : "move-up" },
+      ];
   const renderPanelMetric = (row, x, y, options = {}) => {
     const valueClass = options.valueClass || "";
     if (options.inline) {
@@ -4211,8 +4252,13 @@ function renderPaperDecisionGraph() {
     paperDecisionText(latestRaw),
   ].join(" | ");
 
-  chart.innerHTML = `
-    <svg class="paper-live-svg" viewBox="0 0 ${view.width} ${view.height}" role="img" aria-label="Paper trade BTC path and events">
+  const liveNotice = isLiveView
+    ? `<div class="live-mode-strip">Live trading is disabled. This is the same current-market view; real balance, orders, fills, and positions plug in here only after manual live approval.</div>`
+    : "";
+
+  const chartAriaLabel = isLiveView ? "Live trade BTC path and events" : "Paper trade BTC path and events";
+  chart.innerHTML = `${liveNotice}
+    <svg class="paper-live-svg" viewBox="0 0 ${view.width} ${view.height}" role="img" aria-label="${chartAriaLabel}">
       <title>${escapeHtml(`${paperMarketLabel(market)} | ${latestTitle}`)}</title>
       <rect class="plot" x="${plot.left}" y="${plot.top}" width="${plotWidth}" height="${plot.height}"></rect>
       ${decisionBand}
@@ -4235,7 +4281,7 @@ function renderPaperDecisionGraph() {
     </svg>
     ${compactInfoRows}
     ${renderPaperActionLog(market, rawPoints)}
-    ${renderPaperSessionHistory(session)}
+    ${isLiveView ? "" : renderPaperSessionHistory(session)}
     ${renderOrderBookTable(market, rawPoints, latestBookRaw, latestQuote)}`;
 }
 
@@ -4252,6 +4298,27 @@ function renderPaperChart(options = {}) {
   rememberLiveMarket(currentBackendLiveMarketShell());
   ensureLiveTickStream();
   renderPaperDecisionGraph();
+}
+
+function renderLiveMeta() {
+  const meta = byId("liveGraphMeta");
+  if (!meta) return;
+  const market = selectedPaperMarket();
+  const updatedAt = market ? paperDisplayUpdatedAt(market) : null;
+  const backendError = state.backendStatus.lastError || state.liveTickStatus.lastError;
+  const detail = backendError ? ` | ${compactNote(backendError, 42)}` : "";
+  meta.innerHTML = `<span class="live-chip is-waiting">Live disabled</span> ${escapeHtml(`same market view, ${ageText(updatedAt)}${detail}`)}`;
+}
+
+function renderLiveChart() {
+  renderLiveMeta();
+  if (allPaperMarkets().length || selectedPaperMarket()) {
+    renderPaperDecisionGraph({ chartId: "liveChart", mode: "live" });
+    return;
+  }
+  rememberLiveMarket(currentBackendLiveMarketShell());
+  ensureLiveTickStream();
+  renderPaperDecisionGraph({ chartId: "liveChart", mode: "live" });
 }
 
 function renderStatus() {
@@ -4398,7 +4465,7 @@ function recomputeLiveTickDistances(market) {
 }
 
 function scheduleLiveTickRender() {
-  if (state.activeTab !== "paper" || !currentPaperViewSelected()) return;
+  if (!["paper", "live"].includes(state.activeTab) || !currentPaperViewSelected()) return;
   if (liveTickRenderFrame) return;
   liveTickRenderFrame = window.requestAnimationFrame((timestamp) => {
     liveTickRenderFrame = null;
@@ -4408,6 +4475,7 @@ function scheduleLiveTickRender() {
     }
     liveTickLastRenderAt = timestamp;
     if (state.activeTab === "paper" && currentPaperViewSelected()) renderPaperChart({ selects: false });
+    if (state.activeTab === "live" && currentPaperViewSelected()) renderLiveChart();
   });
 }
 
@@ -4597,7 +4665,7 @@ function handleBackendStreamMessage(payload) {
 }
 
 function ensureLiveTickStream() {
-  if (state.activeTab !== "paper" && !currentPaperViewSelected()) return;
+  if (!["paper", "live"].includes(state.activeTab)) return;
   if (liveTickSocket && [WebSocket.CONNECTING, WebSocket.OPEN].includes(liveTickSocket.readyState)) return;
   if (liveTickReconnectTimer) return;
   const url = backendWebSocketUrl();
@@ -4672,7 +4740,7 @@ function ensureLiveTickStream() {
   liveTickSocket.onclose = () => {
     if (liveTickSocket?._connectTimer) window.clearTimeout(liveTickSocket._connectTimer);
     liveTickSocket = null;
-    if (!currentPaperViewSelected()) return;
+    if (!["paper", "live"].includes(state.activeTab) || !currentPaperViewSelected()) return;
     state.liveTickStatus = {
       ...state.liveTickStatus,
       state: "reconnecting",
@@ -4695,6 +4763,7 @@ function ensureLiveTickStream() {
 function refreshLivePaperFeeds() {
   ensureLiveTickStream();
   if (state.activeTab === "paper" && (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) renderPaperChart();
+  if (state.activeTab === "live" && (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) renderLiveChart();
 }
 
 async function refreshWorkflow() {
@@ -4724,10 +4793,12 @@ function renderActiveTab() {
   if (state.activeTab === "paper") {
     ensureLiveTickStream();
     renderPaperChart();
-  } else if (!currentPaperViewSelected()) {
+  } else if (state.activeTab === "live") {
+    ensureLiveTickStream();
+    renderLiveChart();
+  } else {
     closeLiveTickStream();
   }
-  if (state.activeTab === "live") renderGateChart("live");
 }
 
 async function main() {
@@ -4738,7 +4809,7 @@ async function main() {
   renderBacktestSelects();
   renderBacktestChart();
   renderPaperChart();
-  renderGateChart("live");
+  renderLiveChart();
   refreshBackendPaperFeeds({ render: false });
   refreshLivePaperFeeds();
 
@@ -4746,7 +4817,7 @@ async function main() {
     button.addEventListener("click", () => {
       state.activeTab = button.dataset.tab;
       renderActiveTab();
-      if (state.activeTab === "paper") {
+      if (state.activeTab === "paper" || state.activeTab === "live") {
         refreshWorkflow();
         refreshLivePaperFeeds();
       }
@@ -4762,7 +4833,7 @@ async function main() {
     renderBacktestChart();
   });
   window.setInterval(() => {
-    if (state.activeTab === "paper") {
+    if (state.activeTab === "paper" || state.activeTab === "live") {
       ensureLiveTickStream();
       refreshWorkflow();
     } else {
