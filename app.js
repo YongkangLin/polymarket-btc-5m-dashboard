@@ -3221,24 +3221,31 @@ function firstMetricNumber(...values) {
 function paperOutcomeProbability(side, market, latestRaw, latestBookRaw) {
   const key = sideKey(side);
   if (!key) return null;
-  return firstMetricNumber(
-    outcomeBookProbability(latestBookRaw || latestRaw, key),
-    market?.[`paper_${key}_probability`],
-    market?.[`market_${key}_probability`],
-    market?.[`${key}_probability`],
-    market?.[`latest_${key}_probability`],
-    latestBookRaw?.[`paper_${key}_probability`],
-    latestBookRaw?.[`market_${key}_probability`],
-    latestBookRaw?.[`${key}_probability`],
-    latestRaw?.[`paper_${key}_probability`],
-    latestRaw?.[`market_${key}_probability`],
-    latestRaw?.[`${key}_probability`],
-    latestRaw?.[`${key}_ask`],
-    latestRaw?.[`${key}_bid`],
-    latestBookRaw?.[`direction_${key}_probability`],
-    market?.[`direction_${key}_probability`],
-    latestRaw?.[`direction_${key}_probability`],
-  );
+  const candidates = [
+    market,
+    ...paperStorageKeysForMarket(market).flatMap((storageKey) => [
+      state.livePersistedMarkets.get(storageKey),
+      state.paperObservedMarkets.get(storageKey),
+    ]),
+    latestBookRaw,
+    latestRaw,
+  ].filter(Boolean);
+  const direct = candidates
+    .map((row) => firstMetricNumber(
+      row?.[`paper_${key}_probability`],
+      row?.[`market_${key}_probability`],
+      row?.[`${key}_probability`],
+      row?.[`latest_${key}_probability`],
+    ))
+    .find((value) => value !== null);
+  if (direct !== undefined) return direct;
+  const bookMid = candidates
+    .map((row) => outcomeBookProbability(row, key))
+    .find((value) => value !== null);
+  if (bookMid !== undefined) return bookMid;
+  return candidates
+    .map((row) => metricNumber(row?.[`direction_${key}_probability`]))
+    .find((value) => value !== null) ?? null;
 }
 
 function paperSession() {
