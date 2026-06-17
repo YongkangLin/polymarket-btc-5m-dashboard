@@ -706,11 +706,11 @@ function removeUnconfirmedChainlinkSpikes(samples, externalSamples) {
 }
 
 function sideKey(outcome) {
-  return outcome === "Up" ? "up" : "down";
+  return String(outcome || "").toLowerCase() === "up" ? "up" : "down";
 }
 
 function oppositeSideKey(outcome) {
-  return outcome === "Up" ? "down" : "up";
+  return sideKey(outcome) === "up" ? "down" : "up";
 }
 
 function sideField(row, side, field) {
@@ -3206,8 +3206,39 @@ function formatPredictionPrice(value) {
 
 function formatOutcomePercent(value) {
   const number = metricNumber(value);
-  if (number === null) return "--";
+  if (number === null) return "Waiting";
   return `${(number * 100).toFixed(1)}%`;
+}
+
+function firstMetricNumber(...values) {
+  for (const value of values) {
+    const number = metricNumber(value);
+    if (number !== null) return number;
+  }
+  return null;
+}
+
+function paperOutcomeProbability(side, market, latestRaw, latestBookRaw) {
+  const key = sideKey(side);
+  if (!key) return null;
+  return firstMetricNumber(
+    outcomeBookProbability(latestBookRaw || latestRaw, key),
+    market?.[`paper_${key}_probability`],
+    market?.[`market_${key}_probability`],
+    market?.[`${key}_probability`],
+    market?.[`latest_${key}_probability`],
+    latestBookRaw?.[`paper_${key}_probability`],
+    latestBookRaw?.[`market_${key}_probability`],
+    latestBookRaw?.[`${key}_probability`],
+    latestRaw?.[`paper_${key}_probability`],
+    latestRaw?.[`market_${key}_probability`],
+    latestRaw?.[`${key}_probability`],
+    latestRaw?.[`${key}_ask`],
+    latestRaw?.[`${key}_bid`],
+    latestBookRaw?.[`direction_${key}_probability`],
+    market?.[`direction_${key}_probability`],
+    latestRaw?.[`direction_${key}_probability`],
+  );
 }
 
 function paperSession() {
@@ -4156,12 +4187,8 @@ function renderPaperDecisionGraph(options = {}) {
   const currentPrice = metricNumber(currentDisplaySample?.btcPrice);
   const priceDifference = currentPrice !== null && startPrice !== null ? currentPrice - startPrice : null;
   const moveClass = moveToneClass(priceDifference);
-  const upProbability = outcomeBookProbability(latestBookRaw || latestRaw, "up")
-    ?? metricNumber(market.market_up_probability ?? market.paper_up_probability ?? market.up_probability ?? market.latest_up_probability)
-    ?? metricNumber(latestRaw.market_up_probability ?? latestRaw.paper_up_probability ?? latestRaw.up_probability);
-  const downProbability = outcomeBookProbability(latestBookRaw || latestRaw, "down")
-    ?? metricNumber(market.market_down_probability ?? market.paper_down_probability ?? market.down_probability ?? market.latest_down_probability)
-    ?? metricNumber(latestRaw.market_down_probability ?? latestRaw.paper_down_probability ?? latestRaw.down_probability);
+  const upProbability = paperOutcomeProbability("up", market, latestRaw, latestBookRaw);
+  const downProbability = paperOutcomeProbability("down", market, latestRaw, latestBookRaw);
   const session = paperSession();
   const currentPositions = isLiveView ? [] : paperPositionsForMarket(market, rawPoints);
   const positionRows = isLiveView
