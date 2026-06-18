@@ -10,7 +10,7 @@ const LIVE_TICK_STALE_MS = 10000;
 const LIVE_TICK_RECONNECT_MS = 2000;
 const LIVE_SOCKET_CONNECT_TIMEOUT_MS = 3500;
 const REMOTE_LIVE_SOCKET_CONNECT_TIMEOUT_MS = 25000;
-const PUBLIC_BACKEND_BASE = "https://resolved-poor-bare-dale.trycloudflare.com";
+const PUBLIC_BACKEND_BASE = "https://refuse-exists-enrolled-cage.trycloudflare.com";
 const LIVE_TICK_RENDER_MAX_POINTS = 2400;
 const LIVE_AUX_RENDER_THROTTLE_MS = 500;
 const LIVE_TICK_PERSIST_MS = 1000;
@@ -48,8 +48,8 @@ const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const BINANCE_DEPTH_TABLE_STALE_MS = 15000;
 const LOCAL_BACKEND_BASE = configuredBackendBase();
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
-const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 1000;
-const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 12000;
+const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 600;
+const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 3000;
 const POLYMARKET_TRUTH_SOURCE = "chainlink_data_streams";
 
 function configuredInitialTab() {
@@ -2225,6 +2225,7 @@ function backendWebSocketUrl() {
     binance_snapshot_limit: String(BACKEND_WS_BINANCE_SNAPSHOT_LIMIT),
     paper_edge_id: activePaperEdgeId(),
     paper_history_limit: "36",
+    paper_snapshot_seconds: "5",
   }).toString();
   return url.toString();
 }
