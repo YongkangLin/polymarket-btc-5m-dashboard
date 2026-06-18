@@ -37,6 +37,7 @@ const CHAINLINK_MAX_STEP_RESIDUAL_DOLLARS = 8;
 const CHAINLINK_NEAREST_EXTERNAL_SECONDS = 2.5;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
+const BINANCE_DEPTH_TABLE_STALE_MS = 3000;
 const LOCAL_BACKEND_BASE = configuredBackendBase();
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
 const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 1000;
@@ -3237,11 +3238,12 @@ function latestExternalDepthRowForMarket(market, rawPoints) {
 function externalDepthSnapshotFromRow(row) {
   const bids = normalizeBookLevels(row?.book_bids);
   const asks = normalizeBookLevels(row?.book_asks);
-  if (row?.backend_event_kind !== "depth" || bids.length + asks.length < 4) return null;
+  if (row?.backend_event_kind !== "depth" || !isExternalBookPricePoint(row) || bids.length + asks.length < 4) return null;
   return { row, bids, asks, source: "Depth WS" };
 }
 
 function latestExternalDepthSnapshotForMarket(market, rawPoints) {
+  const marketIsCurrent = isCurrentPaperMarket(market);
   const candidates = [
     ...(rawPoints || []),
     ...paperMarkersFor(market),
@@ -3250,6 +3252,11 @@ function latestExternalDepthSnapshotForMarket(market, rawPoints) {
   ];
   for (let index = candidates.length - 1; index >= 0; index -= 1) {
     const snapshot = externalDepthSnapshotFromRow(candidates[index]);
+    if (snapshot && marketIsCurrent) {
+      const eventMicro = pointTimestampMicro(snapshot.row);
+      const ageMs = eventMicro === null ? null : Math.max(0, Date.now() - eventMicro / 1000);
+      if (ageMs !== null && ageMs > BINANCE_DEPTH_TABLE_STALE_MS) continue;
+    }
     if (snapshot) return snapshot;
   }
   return null;
@@ -4428,8 +4435,7 @@ function renderPaperDecisionGraph(options = {}) {
   const latestTruth = realTruthSamples[realTruthSamples.length - 1] || null;
   const latestExternal = externalSamples[externalSamples.length - 1] || null;
   const truthDisplaySample = freshestTruthDisplaySample(market, realTruthSamples, marketTruthPoint);
-  const staleTruthSample = fallbackTruthDisplaySample(market, realTruthSamples, marketTruthPoint);
-  const displayedTruthSample = truthDisplaySample || staleTruthSample;
+  const displayedTruthSample = truthDisplaySample;
   const latest = displayedTruthSample || latestTruth || truthSamples[truthSamples.length - 1] || latestExternal || allSamples[allSamples.length - 1];
   const latestDomainSample = allSamples[allSamples.length - 1];
   const latestElapsed = Number.isFinite(latestDomainSample.elapsedSeconds)
