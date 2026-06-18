@@ -15,7 +15,7 @@ const LIVE_TICK_RENDER_MAX_POINTS = 16000;
 const LIVE_TICK_PERSIST_MS = 1000;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 50000;
 const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 10000;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v8";
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v9";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
   "polymarketPaperLiveTicks.v3",
@@ -23,6 +23,7 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v5",
   "polymarketPaperLiveTicks.v6",
   "polymarketPaperLiveTicks.v7",
+  "polymarketPaperLiveTicks.v8",
 ];
 const LIVE_PAPER_X_WINDOW_SECONDS = 75;
 const LIVE_PAPER_X_LEAD_SECONDS = 8;
@@ -1202,6 +1203,12 @@ function currentWindowRow(row, fallbackKey = "") {
   return start !== null && start === currentWindowStartUnixNow();
 }
 
+function rowBelongsToMarketWindow(row, market) {
+  const marketStart = marketWindowStartUnix(market);
+  const rowStart = marketWindowStartUnix(row);
+  return marketStart !== null && rowStart !== null && marketStart === rowStart;
+}
+
 function compactPersistedRows(rows, maxRows) {
   const currentRows = (rows || []).filter((row) => currentWindowRow(row));
   const keepRows = currentRows.length <= maxRows
@@ -1209,7 +1216,7 @@ function compactPersistedRows(rows, maxRows) {
     : [currentRows[0], ...currentRows.slice(-(maxRows - 1))];
   let keepBookIndex = -1;
   keepRows.forEach((row, index) => {
-    if (Array.isArray(row?.book_bids) || Array.isArray(row?.book_asks)) keepBookIndex = index;
+    if (externalDepthSnapshotFromRow(row)) keepBookIndex = index;
   });
   return keepRows.map((row, index) => compactPersistedRow(row, index === keepBookIndex));
 }
@@ -3110,7 +3117,7 @@ function latestBookRowForMarket(market, rawPoints) {
 function externalDepthSnapshotFromRow(row) {
   const bids = normalizeBookLevels(row?.book_bids);
   const asks = normalizeBookLevels(row?.book_asks);
-  if (row?.backend_event_kind !== "depth" || !isExternalBookPricePoint(row) || bids.length + asks.length < 4) return null;
+  if (row?.backend_event_kind !== "depth" || !isExternalBookPricePoint(row) || !bids.length || !asks.length) return null;
   return { row, bids, asks, source: "Binance depth WS" };
 }
 
@@ -3127,12 +3134,8 @@ function labelExternalDepthSnapshot(snapshot) {
 }
 
 function latestExternalDepthSnapshotForMarket(market, rawPoints) {
-  const candidates = [
-    ...(rawPoints || []),
-    ...paperMarkersFor(market),
-    ...paperPointsFor(market),
-    ...liveTickPointsForMarket(market),
-  ];
+  const candidates = liveTickPointsForMarket(market)
+    .filter((row) => rowBelongsToMarketWindow(row, market));
   for (let index = candidates.length - 1; index >= 0; index -= 1) {
     const snapshot = externalDepthSnapshotFromRow(candidates[index]);
     if (snapshot) {
@@ -3144,9 +3147,7 @@ function latestExternalDepthSnapshotForMarket(market, rawPoints) {
       return labeled && !labeled.stale ? labeled : null;
     }
   }
-  const cached = state.latestExternalDepthSnapshotsByMarket.get(paperMarketWindowKey(market));
-  const labeled = labelExternalDepthSnapshot(cached);
-  return labeled && !labeled.stale ? labeled : null;
+  return null;
 }
 
 function formatBookMoney(value) {
