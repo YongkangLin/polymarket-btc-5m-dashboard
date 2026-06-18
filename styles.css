@@ -765,7 +765,7 @@ svg {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  margin: 10px 0 0;
+  margin: 12px 0 0;
 }
 
 .paper-odds-strip > div {
@@ -780,9 +780,19 @@ svg {
   background: #fbfcfd;
 }
 
+.paper-odds-strip > div:first-child {
+  border-color: rgba(31, 122, 93, 0.34);
+  background: rgba(31, 122, 93, 0.08);
+}
+
+.paper-odds-strip > div:last-child {
+  border-color: rgba(185, 68, 61, 0.34);
+  background: rgba(185, 68, 61, 0.08);
+}
+
 .paper-odds-strip span {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 900;
   line-height: 1.1;
   text-transform: uppercase;
@@ -790,7 +800,7 @@ svg {
 
 .paper-odds-strip strong {
   color: var(--ink);
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 900;
   line-height: 1;
 }

@@ -3113,12 +3113,16 @@ function latestExternalDepthSnapshotForMarket(market, rawPoints) {
     const snapshot = externalDepthSnapshotFromRow(candidates[index]);
     if (snapshot) {
       const labeled = labelExternalDepthSnapshot(snapshot);
-      state.latestExternalDepthSnapshotsByMarket.set(paperMarketWindowKey(market || snapshot.row), labeled);
-      return labeled;
+      const cacheKey = paperMarketWindowKey(market || snapshot.row);
+      if (cacheKey && labeled && !labeled.stale) {
+        state.latestExternalDepthSnapshotsByMarket.set(cacheKey, labeled);
+      }
+      return labeled && !labeled.stale ? labeled : null;
     }
   }
   const cached = state.latestExternalDepthSnapshotsByMarket.get(paperMarketWindowKey(market));
-  return labelExternalDepthSnapshot(cached);
+  const labeled = labelExternalDepthSnapshot(cached);
+  return labeled && !labeled.stale ? labeled : null;
 }
 
 function formatBookMoney(value) {
@@ -3420,11 +3424,11 @@ function renderPaperOddsStrip(market, latestRaw, latestBookRaw, odds = null) {
   return `
     <div class="paper-odds-strip" role="status" aria-label="Current Polymarket odds">
       <div>
-        <span>Polymarket Up</span>
+        <span>UP</span>
         <strong class="move-up">${escapeHtml(formatOutcomePercent(resolved.up))}</strong>
       </div>
       <div>
-        <span>Polymarket Down</span>
+        <span>DOWN</span>
         <strong class="move-down">${escapeHtml(formatOutcomePercent(resolved.down))}</strong>
       </div>
     </div>`;
@@ -3799,7 +3803,7 @@ function selectedOrderBookSnapshot(market, rawPoints, latestRaw) {
   const depthSnapshot = latestExternalDepthSnapshotForMarket(market, rawPoints);
   if (depthSnapshot) return depthSnapshot;
   return {
-    row: latestBookRowForMarket(market, rawPoints) || latestRaw || {},
+    row: {},
     bids: [],
     asks: [],
     source: "Waiting for Binance depth WS",
