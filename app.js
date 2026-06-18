@@ -15,7 +15,7 @@ const LIVE_TICK_RENDER_MAX_POINTS = 16000;
 const LIVE_TICK_PERSIST_MS = 1000;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 50000;
 const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 10000;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v10";
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v11";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
   "polymarketPaperLiveTicks.v3",
@@ -25,6 +25,7 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v7",
   "polymarketPaperLiveTicks.v8",
   "polymarketPaperLiveTicks.v9",
+  "polymarketPaperLiveTicks.v10",
 ];
 const LIVE_PAPER_X_WINDOW_SECONDS = 75;
 const LIVE_PAPER_X_LEAD_SECONDS = 8;
@@ -3126,7 +3127,7 @@ function labelExternalDepthSnapshot(snapshot) {
   return {
     ...snapshot,
     stale: ageMs !== null && ageMs > BINANCE_DEPTH_TABLE_STALE_MS,
-    source: `Binance depth WS only${age ? ` · ${age}` : ""}`,
+    source: `Binance depth WS${age ? ` · ${age}` : ""}`,
   };
 }
 
@@ -3833,7 +3834,7 @@ function selectedOrderBookSnapshot(market, rawPoints, latestRaw) {
     row: {},
     bids: [],
     asks: [],
-    source: "Waiting for Binance depth WS only",
+    source: "Waiting for Binance depth WS",
     waiting: true,
   };
 }
@@ -3862,7 +3863,7 @@ function orderBookTableRows(market, rawPoints, latestRaw, latestQuote, snapshot 
 function renderOrderBookTable(market, rawPoints, latestRaw, latestQuote) {
   const snapshot = selectedOrderBookSnapshot(market, rawPoints, latestRaw);
   const rows = orderBookTableRows(market, rawPoints, latestRaw, latestQuote, snapshot);
-  const sourceLabel = snapshot.source;
+  const sourceLabel = snapshot.waiting ? "Binance depth WS" : snapshot.source;
   const body = rows.length ? rows.map((row) => `
     <tr class="paper-book-row is-${escapeHtml(row.sideClass || "neutral")}">
       <th scope="row">${escapeHtml(row.side)}</th>
@@ -3871,7 +3872,7 @@ function renderOrderBookTable(market, rawPoints, latestRaw, latestQuote) {
       <td>${escapeHtml(row.notional)}</td>
     </tr>`).join("") : `
     <tr class="paper-book-row is-neutral">
-      <td colspan="4">Waiting for live Binance depth WS only.</td>
+      <td colspan="4">Waiting for Binance depth WS.</td>
     </tr>`;
   return `
     <div class="paper-book-table">
@@ -4157,8 +4158,8 @@ function renderPaperDecisionGraph(options = {}) {
     if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) {
       const loadingExtras = [
         renderPaperOddsStrip(market, null, null),
-        renderOrderBookTable(market, rawPoints, null, null),
         renderPaperActionLog(market, rawPoints),
+        renderOrderBookTable(market, rawPoints, null, null),
       ].join("");
       if (market && !verifiedPaperStartPrice(market)) {
         const startStatus = market.start_price_status || liveStartMetadata(market).start_price_status || "loading";
@@ -4197,8 +4198,8 @@ function renderPaperDecisionGraph(options = {}) {
     const hasPrices = priceRows.some((row) => metricNumber(row?.btc_price) !== null);
     const waitingExtras = [
       renderPaperOddsStrip(market, null, null),
-      renderOrderBookTable(market, rawPoints, null, null),
       renderPaperActionLog(market, rawPoints),
+      renderOrderBookTable(market, rawPoints, null, null),
     ].join("");
     chart.innerHTML = `${svgEmpty(hasPrices && !startMeta ? "Waiting for Polymarket start." : "No usable points.")}${waitingExtras}`;
     return;
@@ -4506,8 +4507,8 @@ function renderPaperDecisionGraph(options = {}) {
     </svg>
     ${oddsStrip}
     ${compactInfoRows}
-    ${orderBookTable}
     ${actionLog}
+    ${orderBookTable}
     ${isLiveView ? "" : renderPaperSessionHistory(session)}
     `;
 }
