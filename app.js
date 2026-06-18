@@ -3130,7 +3130,7 @@ function labelExternalDepthSnapshot(snapshot) {
   return {
     ...snapshot,
     stale: ageMs !== null && ageMs > BINANCE_DEPTH_TABLE_STALE_MS,
-    source: `Binance depth WS${age ? ` · ${age}` : ""}`,
+    source: `Binance depth WS only${age ? ` · ${age}` : ""}`,
   };
 }
 
@@ -3837,7 +3837,7 @@ function selectedOrderBookSnapshot(market, rawPoints, latestRaw) {
     row: {},
     bids: [],
     asks: [],
-    source: "Waiting for Binance depth WS",
+    source: "Waiting for Binance depth WS only",
     waiting: true,
   };
 }
@@ -3875,7 +3875,7 @@ function renderOrderBookTable(market, rawPoints, latestRaw, latestQuote) {
       <td>${escapeHtml(row.notional)}</td>
     </tr>`).join("") : `
     <tr class="paper-book-row is-neutral">
-      <td colspan="4">Waiting for live Binance depth WS.</td>
+      <td colspan="4">Waiting for live Binance depth WS only.</td>
     </tr>`;
   return `
     <div class="paper-book-table">
@@ -3888,7 +3888,7 @@ function renderOrderBookTable(market, rawPoints, latestRaw, latestQuote) {
           <tr>
             <th scope="col">Side</th>
             <th scope="col">Limit</th>
-            <th scope="col">Size</th>
+            <th scope="col">BTC Size</th>
             <th scope="col">Notional</th>
           </tr>
         </thead>
@@ -4161,8 +4161,8 @@ function renderPaperDecisionGraph(options = {}) {
     if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) {
       const loadingExtras = [
         renderPaperOddsStrip(market, null, null),
-        renderPaperActionLog(market, rawPoints),
         renderOrderBookTable(market, rawPoints, null, null),
+        renderPaperActionLog(market, rawPoints),
       ].join("");
       if (market && !verifiedPaperStartPrice(market)) {
         const startStatus = market.start_price_status || liveStartMetadata(market).start_price_status || "loading";
@@ -4201,8 +4201,8 @@ function renderPaperDecisionGraph(options = {}) {
     const hasPrices = priceRows.some((row) => metricNumber(row?.btc_price) !== null);
     const waitingExtras = [
       renderPaperOddsStrip(market, null, null),
-      renderPaperActionLog(market, rawPoints),
       renderOrderBookTable(market, rawPoints, null, null),
+      renderPaperActionLog(market, rawPoints),
     ].join("");
     chart.innerHTML = `${svgEmpty(hasPrices && !startMeta ? "Waiting for Polymarket start." : "No usable points.")}${waitingExtras}`;
     return;
@@ -4509,9 +4509,9 @@ function renderPaperDecisionGraph(options = {}) {
       ${infoRows}
     </svg>
     ${oddsStrip}
-    ${actionLog}
-    ${orderBookTable}
     ${compactInfoRows}
+    ${orderBookTable}
+    ${actionLog}
     ${isLiveView ? "" : renderPaperSessionHistory(session)}
     `;
 }
