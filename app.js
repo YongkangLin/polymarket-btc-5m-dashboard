@@ -59,6 +59,7 @@ const state = {
   paperObservedPointsByMarket: new Map(),
   paperObservedMarkersByMarket: new Map(),
   latestOutcomeOddsByWindow: new Map(),
+  latestExternalDepthSnapshotsByMarket: new Map(),
   liveTickStatus: {
     state: "idle",
     venue: "local_backend_ws",
@@ -3257,9 +3258,19 @@ function latestExternalDepthSnapshotForMarket(market, rawPoints) {
       const ageMs = eventMicro === null ? null : Math.max(0, Date.now() - eventMicro / 1000);
       if (ageMs !== null && ageMs > BINANCE_DEPTH_TABLE_STALE_MS) continue;
     }
-    if (snapshot) return snapshot;
+    if (snapshot) {
+      state.latestExternalDepthSnapshotsByMarket.set(paperMarketWindowKey(market || snapshot.row), snapshot);
+      return snapshot;
+    }
   }
-  return null;
+  const cached = state.latestExternalDepthSnapshotsByMarket.get(paperMarketWindowKey(market));
+  if (!cached) return null;
+  if (marketIsCurrent) {
+    const eventMicro = pointTimestampMicro(cached.row);
+    const ageMs = eventMicro === null ? null : Math.max(0, Date.now() - eventMicro / 1000);
+    if (ageMs !== null && ageMs > BINANCE_DEPTH_TABLE_STALE_MS) return null;
+  }
+  return cached;
 }
 
 function pricePairText(bid, ask) {
@@ -3841,13 +3852,7 @@ function paperPositionPanelRows(positions) {
   if (active.length) return active.slice(0, 2);
   const closed = rows.filter((row) => row.label === "Closed");
   if (closed.length) return closed.slice(0, 2);
-  const canceled = rows.filter((row) => row.label === "Canceled");
-  if (canceled.length) {
-    return [
-      { label: "No open position", value: "None", detail: `last ${compactNote(canceled[0].value, 18)} canceled`, tone: "move-flat" },
-    ];
-  }
-  return [{ label: "No open position", value: "None", detail: "waiting for a fill", tone: "move-flat" }];
+  return [{ label: "No position", value: "None", detail: "waiting for a fill", tone: "move-flat" }];
 }
 
 function latestSessionMetric(market, rawPoints, session, keys) {
@@ -4656,14 +4661,14 @@ function renderPaperDecisionGraph(options = {}) {
   const renderPositionPanel = () => {
     const x = 716;
     return `
-      <rect class="paper-side-section is-positions" x="708" y="288" width="242" height="126" rx="6"></rect>
+      <rect class="paper-side-section is-positions" x="708" y="288" width="242" height="144" rx="6"></rect>
       <text class="paper-side-section-title" x="${x}" y="314">POSITIONS</text>
       ${positionRows.map((row, index) => {
-        const y = 339 + index * 42;
+        const y = 341 + index * 50;
         return `
           <text class="paper-position-status ${row.tone || ""}" x="${x}" y="${y}">${escapeHtml(row.label)}</text>
-          <text class="paper-position-value ${row.tone || ""}" x="${x}" y="${y + 17}">${escapeHtml(compactNote(row.value, 21))}</text>
-          ${row.detail ? `<text class="paper-position-detail" x="${x}" y="${y + 31}">${escapeHtml(compactNote(row.detail, 24))}</text>` : ""}`;
+          <text class="paper-position-value ${row.tone || ""}" x="${x}" y="${y + 17}">${escapeHtml(compactNote(row.value, 18))}</text>
+          ${row.detail ? `<text class="paper-position-detail" x="${x}" y="${y + 32}">${escapeHtml(compactNote(row.detail, 20))}</text>` : ""}`;
       }).join("")}`;
   };
   const infoRows = compact ? "" : `
