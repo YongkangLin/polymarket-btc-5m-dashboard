@@ -15,13 +15,14 @@ const LIVE_TICK_RENDER_MAX_POINTS = 16000;
 const LIVE_TICK_PERSIST_MS = 1000;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 50000;
 const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 10000;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v7";
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v8";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
   "polymarketPaperLiveTicks.v3",
   "polymarketPaperLiveTicks.v4",
   "polymarketPaperLiveTicks.v5",
   "polymarketPaperLiveTicks.v6",
+  "polymarketPaperLiveTicks.v7",
 ];
 const LIVE_PAPER_X_WINDOW_SECONDS = 75;
 const LIVE_PAPER_X_LEAD_SECONDS = 8;
@@ -1417,8 +1418,8 @@ function latestLiveTickForMarket(market) {
 function liveChartTickPointsForMarket(market) {
   const points = liveTickPointsForMarket(market);
   const chainlinkRows = points.filter(isChainlinkPriceRow);
-  const tradeRows = points.filter(isExternalTradePricePoint);
-  if (tradeRows.length) return mergePaperChartRows(chainlinkRows, tradeRows);
+  const externalRows = points.filter(isExternalGraphPricePoint);
+  if (externalRows.length) return mergePaperChartRows(chainlinkRows, externalRows);
   return chainlinkRows;
 }
 
@@ -1626,12 +1627,22 @@ function isExternalTradePricePoint(row) {
   return isExternalPricePoint(row) && row?.decision === "live_tick";
 }
 
+function isExternalBookTickerPricePoint(row) {
+  return isExternalBookPricePoint(row) && row?.backend_event_kind === "book";
+}
+
+function isExternalGraphPricePoint(row) {
+  return isExternalTradePricePoint(row) || isExternalBookTickerPricePoint(row);
+}
+
 function externalLineRows(rows) {
-  return (rows || []).filter(isExternalTradePricePoint);
+  return (rows || []).filter(isExternalGraphPricePoint);
 }
 
 function externalLineLabel(rows) {
-  return rows?.length ? "Binance WSS trades" : "Binance WSS";
+  if ((rows || []).some(isExternalBookTickerPricePoint)) return "Binance WSS bookTicker";
+  if ((rows || []).some(isExternalTradePricePoint)) return "Binance WSS trades";
+  return "Binance WSS";
 }
 
 function backendBaseUrl() {
@@ -4052,8 +4063,7 @@ function paperActionTimeText(row) {
 function isPaperActionLogRow(row) {
   if (!row) return false;
   const eventType = String(row.event_type || "");
-  return row.decision === "paper_signal"
-    || eventType === "maker_paper_quote"
+  return eventType === "maker_paper_quote"
     || eventType === "maker_paper_fill"
     || eventType === "maker_paper_cancel"
     || eventType === "maker_paper_settlement";
@@ -4062,7 +4072,9 @@ function isPaperActionLogRow(row) {
 function paperActionBuyText(row) {
   const type = paperMarkerType(row);
   if (type === "quote" || type === "fill") return "yes";
-  return "no";
+  if (type === "cancel") return "cancel";
+  if (type === "settlement") return "close";
+  return "action";
 }
 
 function paperActionLogRows(market, rawPoints) {
@@ -4089,10 +4101,11 @@ function renderPaperActionLog(market, rawPoints) {
   const body = rows.length
     ? rows.map((row) => {
       const buy = paperActionBuyText(row);
+      const tone = buy === "yes" ? "yes" : "neutral";
       return `
-        <tr class="paper-action-row is-${escapeHtml(buy === "yes" ? "yes" : "neutral")}">
+        <tr class="paper-action-row is-${escapeHtml(tone)}">
           <td>${escapeHtml(paperActionTimeText(row))}</td>
-          <td><span class="paper-action-pill is-${escapeHtml(buy === "yes" ? "yes" : "neutral")}">${escapeHtml(buy)}</span></td>
+          <td><span class="paper-action-pill is-${escapeHtml(tone)}">${escapeHtml(buy)}</span></td>
           <td>${escapeHtml(paperActionName(row))}</td>
           <td>${escapeHtml(paperActionWhy(row))}</td>
         </tr>`;
@@ -4108,7 +4121,7 @@ function renderPaperActionLog(market, rawPoints) {
         <thead>
           <tr>
             <th scope="col">Time</th>
-            <th scope="col">Buy?</th>
+            <th scope="col">Result</th>
             <th scope="col">Action</th>
             <th scope="col">Why</th>
           </tr>
@@ -4285,8 +4298,7 @@ function renderPaperDecisionGraph(options = {}) {
     return bestDelta <= 5 ? best : null;
   };
   const seenMarkers = new Set();
-  const pointSignals = rawPoints.filter((row) => row.decision === "paper_signal");
-  const markerRows = [...paperMarkersFor(market), ...pointSignals]
+  const markerRows = [...paperMarkersFor(market)]
     .filter((row) => paperMarkerType(row) !== "fail")
     .filter((row) => {
       const key = `${paperMarkerType(row)}:${row.generated_at || row.ts || ""}:${row.seconds_left ?? ""}:${row.quote_id || ""}`;
