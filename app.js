@@ -3965,9 +3965,10 @@ function orderBookTableRows(market, rawPoints, latestRaw, latestQuote, snapshot 
 function renderOrderBookTable(market, rawPoints, latestRaw, latestQuote) {
   const snapshot = selectedOrderBookSnapshot(market, rawPoints, latestRaw);
   const rows = orderBookTableRows(market, rawPoints, latestRaw, latestQuote, snapshot);
+  const ageText = ageMsText(snapshot.ageMs);
   const depthLabel = snapshot.waiting
-    ? "waiting for depth"
-    : (snapshot.stale ? "depth snapshot stale" : "depth snapshot");
+    ? "waiting for Binance depth WS"
+    : (snapshot.stale ? `Binance depth WS stale${ageText ? ` | ${ageText}` : ""}` : `Binance depth WS${ageText ? ` | ${ageText}` : ""}`);
   const body = rows.length ? rows.map((row) => `
     <tr class="paper-book-row is-${escapeHtml(row.sideClass || "neutral")}">
       <th scope="row">${escapeHtml(row.side)}</th>
@@ -3981,7 +3982,7 @@ function renderOrderBookTable(market, rawPoints, latestRaw, latestQuote) {
   return `
     <div class="paper-book-table">
       <div class="paper-book-heading">
-        <span>BTC Order Book Depth</span>
+        <span>BTC Binance Depth</span>
         <span>${escapeHtml(depthLabel)}</span>
       </div>
       <table>
@@ -4262,8 +4263,8 @@ function renderPaperDecisionGraph(options = {}) {
     if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) {
       const loadingExtras = [
         renderPaperOddsStrip(market, null, null),
-        renderPaperActionLog(market, rawPoints),
         renderOrderBookTable(market, rawPoints, null, null),
+        renderPaperActionLog(market, rawPoints),
       ].join("");
       if (market && !verifiedPaperStartPrice(market)) {
         const startStatus = market.start_price_status || liveStartMetadata(market).start_price_status || "loading";
@@ -4302,8 +4303,8 @@ function renderPaperDecisionGraph(options = {}) {
     const hasPrices = priceRows.some((row) => metricNumber(row?.btc_price) !== null);
     const waitingExtras = [
       renderPaperOddsStrip(market, null, null),
-      renderPaperActionLog(market, rawPoints),
       renderOrderBookTable(market, rawPoints, null, null),
+      renderPaperActionLog(market, rawPoints),
     ].join("");
     chart.innerHTML = `${svgEmpty(hasPrices && !startMeta ? "Waiting for Polymarket start." : "No usable points.")}${waitingExtras}`;
     return;
@@ -4611,8 +4612,8 @@ function renderPaperDecisionGraph(options = {}) {
     </svg>
     ${oddsStrip}
     ${compactInfoRows}
-    ${actionLog}
     ${orderBookTable}
+    ${actionLog}
     ${isLiveView ? "" : renderPaperSessionHistory(session)}
     `;
 }
