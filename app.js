@@ -32,9 +32,6 @@ const LIVE_PAPER_Y_BUCKET = 4;
 const LIVE_PAPER_RENDER_BUCKET_SECONDS = 0.075;
 const LIVE_CHAINLINK_RENDER_BUCKET_SECONDS = null;
 const LIVE_BINANCE_RENDER_BUCKET_SECONDS = null;
-const CHAINLINK_MAX_UNCONFIRMED_STEP_DOLLARS = 10;
-const CHAINLINK_MAX_STEP_RESIDUAL_DOLLARS = 8;
-const CHAINLINK_NEAREST_EXTERNAL_SECONDS = 2.5;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const BINANCE_DEPTH_TABLE_STALE_MS = 15000;
@@ -659,54 +656,6 @@ function latestRenderedLinePoint(...linePointGroups) {
       return (left.sample.row?.receive_time_micro || 0) - (right.sample.row?.receive_time_micro || 0);
     })
     .at(-1) || null;
-}
-
-function nearestSampleByElapsed(samples, elapsedSeconds, maxGapSeconds = CHAINLINK_NEAREST_EXTERNAL_SECONDS) {
-  let best = null;
-  let bestGap = Number.POSITIVE_INFINITY;
-  (samples || []).forEach((sample) => {
-    if (!Number.isFinite(sample?.elapsedSeconds)) return;
-    const gap = Math.abs(sample.elapsedSeconds - elapsedSeconds);
-    if (gap <= maxGapSeconds && gap < bestGap) {
-      best = sample;
-      bestGap = gap;
-    }
-  });
-  return best;
-}
-
-function removeUnconfirmedChainlinkSpikes(samples, externalSamples) {
-  const rows = (samples || [])
-    .filter((sample) => sample && Number.isFinite(sample.elapsedSeconds) && Number.isFinite(sample.dollarMove))
-    .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
-  const output = [];
-  rows.forEach((sample) => {
-    if (sample.row?.decision === "chainlink_anchor" || !output.length) {
-      output.push(sample);
-      return;
-    }
-    const previous = output[output.length - 1];
-    const elapsedDelta = Math.max(1, sample.elapsedSeconds - previous.elapsedSeconds);
-    const chainStep = sample.dollarMove - previous.dollarMove;
-    const allowedUnconfirmed = CHAINLINK_MAX_UNCONFIRMED_STEP_DOLLARS * Math.sqrt(elapsedDelta);
-    if (Math.abs(chainStep) <= allowedUnconfirmed) {
-      output.push(sample);
-      return;
-    }
-    const externalNow = nearestSampleByElapsed(externalSamples, sample.elapsedSeconds);
-    const externalPrev = nearestSampleByElapsed(externalSamples, previous.elapsedSeconds);
-    const externalStep = externalNow && externalPrev
-      ? externalNow.dollarMove - externalPrev.dollarMove
-      : null;
-    const residual = externalStep === null ? Math.abs(chainStep) : Math.abs(chainStep - externalStep);
-    const allowedResidual = externalStep === null
-      ? allowedUnconfirmed * 2.5
-      : Math.max(CHAINLINK_MAX_STEP_RESIDUAL_DOLLARS, Math.abs(externalStep) * 3 + 4);
-    if (residual <= allowedResidual) {
-      output.push(sample);
-    }
-  });
-  return output.length >= 2 ? output : rows;
 }
 
 function sideKey(outcome) {
@@ -1658,16 +1607,6 @@ function freshestTruthDisplaySample(market, truthSamples, marketTruthPoint) {
   return sortTruthDisplayCandidates(candidates)[0];
 }
 
-function fallbackTruthDisplaySample(market, truthSamples, marketTruthPoint) {
-  const candidates = [
-    ...liveTruthSnapshotCandidates(market),
-    ...(Array.isArray(truthSamples) ? truthSamples : [truthSamples]),
-    truthDisplayCandidateFromRow(market, marketTruthPoint),
-  ].filter((sample) => sample && sample.btcPrice !== null && truthSampleMatchesMarket(sample, market));
-  if (!candidates.length) return null;
-  return sortTruthDisplayCandidates(candidates)[0];
-}
-
 function isExternalPricePoint(row) {
   return isBinanceLivePoint(row)
     || isBackendLivePoint(row)
@@ -1885,28 +1824,6 @@ function paperGraphSamples(rows, startPrice, source) {
   return (rows || [])
     .map((row, index) => paperGraphSample(row, index, rows.length, startPrice, source))
     .filter(Boolean);
-}
-
-function chainlinkAnchorRow(market, startMeta, elapsedSeconds = 0) {
-  const start = metricNumber(startMeta?.price);
-  if (start === null) return null;
-  const windowStart = marketWindowStartUnix(market);
-  return {
-    decision: "chainlink_anchor",
-    generated_at: startMeta?.capturedAt || market?.window_start || null,
-    time_unix: windowStart === null ? null : windowStart + elapsedSeconds,
-    window_start_unix: windowStart,
-    seconds_left: Math.max(0, 300 - elapsedSeconds),
-    btc_price: start,
-    start_price: start,
-    start_price_source: startMeta?.source || POLYMARKET_TRUTH_SOURCE,
-    btc_price_source: startMeta?.source || POLYMARKET_TRUTH_SOURCE,
-    btc_price_venue: chainlinkVenueFromSource(startMeta?.source),
-    price_role: chainlinkVenueFromSource(startMeta?.source),
-    btc_price_is_truth: true,
-    truth_current_price_missing: false,
-    distance_bps: 0,
-  };
 }
 
 function paperPointSecondsLeft(row, fallbackIndex = 0, total = 1) {
@@ -3204,38 +3121,6 @@ function latestBookRowForMarket(market, rawPoints) {
   return rawPoints?.[rawPoints.length - 1] || null;
 }
 
-function hasDepthLevels(row) {
-  return Boolean(normalizeBookLevels(row?.book_bids).length || normalizeBookLevels(row?.book_asks).length);
-}
-
-function hasPmDepthLevels(row) {
-  return Boolean(
-    normalizeBookLevels(row?.pm_up_bids).length
-    || normalizeBookLevels(row?.pm_up_asks).length
-    || normalizeBookLevels(row?.pm_down_bids).length
-    || normalizeBookLevels(row?.pm_down_asks).length
-  );
-}
-
-function latestDepthRowForMarket(market, rawPoints) {
-  const candidates = [
-    ...(rawPoints || []),
-    ...paperMarkersFor(market),
-    ...paperPointsFor(market),
-    ...liveTickPointsForMarket(market),
-  ];
-  for (let index = candidates.length - 1; index >= 0; index -= 1) {
-    const row = candidates[index];
-    if (row?.backend_event_kind === "depth" || hasDepthLevels(row) || hasPmDepthLevels(row)) return row;
-  }
-  return null;
-}
-
-function latestExternalDepthRowForMarket(market, rawPoints) {
-  const snapshot = latestExternalDepthSnapshotForMarket(market, rawPoints);
-  return snapshot?.row || null;
-}
-
 function externalDepthSnapshotFromRow(row) {
   const bids = normalizeBookLevels(row?.book_bids);
   const asks = normalizeBookLevels(row?.book_asks);
@@ -3273,57 +3158,6 @@ function latestExternalDepthSnapshotForMarket(market, rawPoints) {
   return cached;
 }
 
-function pricePairText(bid, ask) {
-  return bid === null && ask === null ? "--" : `${formatPrice(bid)} / ${formatPrice(ask)}`;
-}
-
-function qtyPairText(bidQty, askQty) {
-  if (bidQty === null && askQty === null) return "--";
-  const left = bidQty === null ? "--" : bidQty.toFixed(4);
-  const right = askQty === null ? "--" : askQty.toFixed(4);
-  return `${left} / ${right}`;
-}
-
-function orderBookSummaryRows(market, rawPoints, latestRaw, latestQuote) {
-  const row = latestBookRowForMarket(market, rawPoints) || latestRaw || {};
-  const quoteSide = latestQuote?.side || latestQuote?.intended_outcome || latestRaw?.side || latestRaw?.intended_outcome;
-  const outcome = quoteSide === "Up" || quoteSide === "Down" ? quoteSide : decisionOutcome(latestRaw || {});
-  const selectedSide = sideKey(outcome);
-  const oppositeSide = oppositeSideKey(outcome);
-  const bookBid = metricNumber(row.book_bid ?? latestRaw?.book_bid);
-  const bookAsk = metricNumber(row.book_ask ?? latestRaw?.book_ask);
-  const bookBidQty = metricNumber(row.book_bid_qty ?? latestRaw?.book_bid_qty);
-  const bookAskQty = metricNumber(row.book_ask_qty ?? latestRaw?.book_ask_qty);
-  const bookSpread = metricNumber(row.book_spread_bps ?? latestRaw?.book_spread_bps ?? row.external_book_spread_bps);
-  const bookMicro = metricNumber(row.book_microprice ?? latestRaw?.book_microprice);
-  const externalMicroEdge = metricNumber(row.external_book_microprice_edge_bps ?? latestRaw?.external_book_microprice_edge_bps);
-  const externalMicroSupport = metricNumber(row.external_book_microprice_support_bps ?? latestRaw?.external_book_microprice_support_bps);
-  const externalImbalance = metricNumber(row.external_book_imbalance ?? latestRaw?.external_book_imbalance);
-  const externalTradeFlow = metricNumber(row.external_trade_flow_support ?? latestRaw?.external_trade_flow_support);
-
-  const selectedBid = sideField(row, selectedSide, "bid") ?? metricNumber(row.signal_bid);
-  const selectedAsk = sideField(row, selectedSide, "ask") ?? metricNumber(row.signal_ask);
-  const oppositeBid = sideField(row, oppositeSide, "bid");
-  const oppositeAsk = sideField(row, oppositeSide, "ask");
-  const selectedDepth = sideField(row, selectedSide, "ask_depth_5") ?? metricNumber(row.signal_ask_depth_5);
-  const selectedLean = metricNumber(row[`${selectedSide}_depth_imbalance`] ?? row.signal_depth_imbalance ?? row.side_depth_imbalance);
-  const complementAskSum = metricNumber(row.complement_ask_sum ?? latestRaw?.complement_ask_sum);
-
-  const microText = externalMicroSupport !== null
-    ? `${formatBpsDeep(externalMicroSupport)} support`
-    : bookMicro === null
-    ? (externalMicroEdge === null ? "--" : formatBpsDeep(externalMicroEdge))
-    : formatPrice(bookMicro);
-  return [
-    ["BTC book", compactNote(`${pricePairText(bookBid, bookAsk)} | ${bookSpread === null ? "--" : formatBpsDeep(bookSpread)}`, 31)],
-    ["BTC pressure", compactNote(`${externalImbalance === null ? "--" : percentText(externalImbalance)} | micro ${microText}`, 31)],
-    ["BTC flow", externalTradeFlow === null ? "--" : formatBookMoney(externalTradeFlow)],
-    [`PM ${outcome}`, compactNote(`${pricePairText(selectedBid, selectedAsk)} | depth ${selectedDepth === null ? "--" : money.format(selectedDepth)}`, 31)],
-    [`PM ${oppositeSide === "up" ? "Up" : "Down"}`, compactNote(pricePairText(oppositeBid, oppositeAsk), 31)],
-    ["PM lean", compactNote(`${selectedLean === null ? "--" : percentText(selectedLean)} | asks ${complementAskSum === null ? "--" : complementAskSum.toFixed(2)}`, 31)],
-  ];
-}
-
 function formatBookMoney(value) {
   const number = metricNumber(value);
   if (number === null) return "--";
@@ -3337,12 +3171,6 @@ function formatBookQty(value) {
   if (Math.abs(number) >= 1000) return fmt.format(Math.round(number));
   if (Math.abs(number) >= 10) return number.toFixed(1);
   return number.toFixed(4);
-}
-
-function formatPredictionPrice(value) {
-  const number = metricNumber(value);
-  if (number === null) return "--";
-  return number.toFixed(3);
 }
 
 function formatOutcomePercent(value) {
@@ -4004,51 +3832,6 @@ function normalizeBookLevels(value) {
     .filter(Boolean);
 }
 
-function pmBookLevels(row, side, bookSide) {
-  const levels = normalizeBookLevels(row?.[`pm_${side}_${bookSide}`]);
-  if (levels.length) return levels;
-  const top = sideField(row, side, bookSide === "bids" ? "bid" : "ask");
-  const size = sideField(row, side, bookSide === "bids" ? "bid_size" : "ask_size")
-    ?? sideField(row, side, bookSide === "bids" ? "bid_depth_5" : "ask_depth_5");
-  return top === null ? [] : [[top, size || 0]];
-}
-
-function pmOrderBookTableRows(row, latestRaw, latestQuote) {
-  const source = { ...(latestRaw || {}), ...(row || {}) };
-  const quoteSide = latestQuote?.side || latestQuote?.intended_outcome || source.side || source.intended_outcome;
-  const first = quoteSide === "Down" ? "down" : "up";
-  const sides = first === "up" ? ["up", "down"] : ["down", "up"];
-  const labelFor = (side) => side === "up" ? "Up" : "Down";
-  const rows = [];
-  sides.forEach((side) => {
-    const asks = pmBookLevels(source, side, "asks").slice(0, 4);
-    const bids = pmBookLevels(source, side, "bids").slice(0, 4);
-    asks.forEach(([price, size], index) => {
-      rows.push({
-        side: `${labelFor(side)} Sell ${index + 1}`,
-        sideClass: "sell",
-        bookSide: "Ask",
-        limit: formatPredictionPrice(price),
-        size: formatBookQty(size),
-        notional: formatBookMoney(price * size),
-        source: "Polymarket",
-      });
-    });
-    bids.forEach(([price, size], index) => {
-      rows.push({
-        side: `${labelFor(side)} Buy ${index + 1}`,
-        sideClass: "buy",
-        bookSide: "Bid",
-        limit: formatPredictionPrice(price),
-        size: formatBookQty(size),
-        notional: formatBookMoney(price * size),
-        source: "Polymarket",
-      });
-    });
-  });
-  return rows;
-}
-
 function selectedOrderBookSnapshot(market, rawPoints, latestRaw) {
   const depthSnapshot = latestExternalDepthSnapshotForMarket(market, rawPoints);
   if (depthSnapshot) return depthSnapshot;
@@ -4398,14 +4181,10 @@ function renderPaperDecisionGraph(options = {}) {
 
   const startMeta = preferredPaperStartMetadata(market);
   const priceRows = rawPoints;
-  const anchor = chainlinkAnchorRow(market, startMeta, 0);
   let truthRows = priceRows.filter(isPolymarketTruthPoint);
   const marketTruthPoint = chainlinkPointFromMarket(market);
   if (marketTruthPoint && !truthRows.some((row) => row.point_id === marketTruthPoint.point_id || row.event_time_micro === marketTruthPoint.event_time_micro)) {
     truthRows = [...truthRows, marketTruthPoint];
-  }
-  if (anchor && !truthRows.some((row) => Math.abs(paperPointElapsedSeconds(row, 0, 1)) < 0.001)) {
-    truthRows = [anchor, ...truthRows];
   }
   const externalCandidates = priceRows.filter((row) => isExternalPricePoint(row) && !isPolymarketTruthPoint(row));
   const externalRows = externalLineRows(externalCandidates);
@@ -4436,7 +4215,7 @@ function renderPaperDecisionGraph(options = {}) {
     : { left: 76, right: 306, top: 42, height: 360 };
   const plotWidth = view.width - plot.left - plot.right;
   const plotBottom = plot.top + plot.height;
-  const realTruthSamples = truthSamples.filter((point) => point.row?.decision !== "chainlink_anchor");
+  const realTruthSamples = truthSamples;
   const latestTruth = realTruthSamples[realTruthSamples.length - 1] || null;
   const latestExternal = externalSamples[externalSamples.length - 1] || null;
   const truthDisplaySample = freshestTruthDisplaySample(market, realTruthSamples, marketTruthPoint);
@@ -4523,7 +4302,7 @@ function renderPaperDecisionGraph(options = {}) {
   const nearestTruthSample = (row) => {
     const markerElapsed = paperPointElapsedSeconds(row);
     const candidates = truthSamples
-      .filter((sample) => sample.row?.decision !== "chainlink_anchor")
+      .filter((sample) => sample.row)
       .filter((sample) => Number.isFinite(sample.elapsedSeconds) && Number.isFinite(sample.dollarMove));
     if (!candidates.length || !Number.isFinite(markerElapsed)) return null;
     let best = candidates[0];
@@ -4535,7 +4314,7 @@ function renderPaperDecisionGraph(options = {}) {
         bestDelta = delta;
       }
     });
-    return bestDelta <= Math.max(5, CHAINLINK_NEAREST_EXTERNAL_SECONDS * 2) ? best : null;
+    return bestDelta <= 5 ? best : null;
   };
   const seenMarkers = new Set();
   const pointSignals = rawPoints.filter((row) => row.decision === "paper_signal");
