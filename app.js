@@ -816,19 +816,19 @@ function uPlotDataFromSamples(truthSamples, externalSamples) {
   const x = [];
   const chainlinkValues = [];
   const binanceValues = [];
-  let latestChainlink = null;
-  let latestBinance = null;
   let index = 0;
   while (index < events.length) {
     const elapsedSeconds = events[index].elapsedSeconds;
+    let chainlinkValue = null;
+    let binanceValue = null;
     while (index < events.length && Math.abs(events[index].elapsedSeconds - elapsedSeconds) < 0.000001) {
-      if (events[index].source === "chainlink") latestChainlink = events[index].dollarMove;
-      if (events[index].source === "binance") latestBinance = events[index].dollarMove;
+      if (events[index].source === "chainlink") chainlinkValue = events[index].dollarMove;
+      if (events[index].source === "binance") binanceValue = events[index].dollarMove;
       index += 1;
     }
     x.push(elapsedSeconds);
-    chainlinkValues.push(latestChainlink);
-    binanceValues.push(latestBinance);
+    chainlinkValues.push(chainlinkValue);
+    binanceValues.push(binanceValue);
   }
   return [x, chainlinkValues, binanceValues];
 }
@@ -2127,6 +2127,24 @@ function preferBookOdds(bookOdds, fallbackOdds) {
     };
   }
   return fallbackOdds;
+}
+
+function completeOutcomeOdds(primaryOdds, cachedOdds = null) {
+  const output = {
+    up: metricNumber(primaryOdds?.up),
+    down: metricNumber(primaryOdds?.down),
+  };
+  const cached = {
+    up: metricNumber(cachedOdds?.up),
+    down: metricNumber(cachedOdds?.down),
+  };
+  if (output.up === null && output.down !== null) output.up = Math.max(0, Math.min(1, 1 - output.down));
+  if (output.down === null && output.up !== null) output.down = Math.max(0, Math.min(1, 1 - output.up));
+  if (output.up === null && cached.up !== null) output.up = cached.up;
+  if (output.down === null && cached.down !== null) output.down = cached.down;
+  if (output.up === null && output.down !== null) output.up = Math.max(0, Math.min(1, 1 - output.down));
+  if (output.down === null && output.up !== null) output.down = Math.max(0, Math.min(1, 1 - output.up));
+  return output;
 }
 
 function isExternalPricePoint(row) {
@@ -3887,7 +3905,7 @@ function sameWindowOutcomeOddsRows(market) {
     ...state.livePersistedMarkets.values(),
     ...state.paperObservedMarkets.values(),
   ];
-  return pools.filter((row) => row && start !== null && marketWindowStartUnix(row) === start && rowHasOutcomeOdds(row));
+  return pools.filter((row) => row && start !== null && marketWindowStartUnix(row) === start && rowHasUsableOutcomeOdds(row));
 }
 
 function paperOutcomeCandidates(market, latestRaw, latestBookRaw) {
@@ -3927,7 +3945,7 @@ function paperOutcomeCandidates(market, latestRaw, latestBookRaw) {
 function sameWindowPaperGraphMarkets(market) {
   const start = marketWindowStartUnix(market);
   if (start === null) return [];
-  return paperGraphMarkets().filter((row) => row && marketWindowStartUnix(row) === start && rowHasOutcomeOdds(row));
+  return paperGraphMarkets().filter((row) => row && marketWindowStartUnix(row) === start && rowHasUsableOutcomeOdds(row));
 }
 
 function paperPanelOutcomeCandidates(market, latestRaw, latestBookRaw) {
@@ -3967,8 +3985,10 @@ function paperPanelOutcomeProbabilities(market, latestRaw, latestBookRaw) {
   const candidates = paperPanelOutcomeCandidates(market, latestRaw, latestBookRaw);
   const oddsRows = currentMarketOddsRows(candidates);
   const cached = cachedOutcomeOddsForMarket(market);
-  const odds = preferBookOdds(outcomeBookOddsFromCandidates(oddsRows), outcomeOddsFromCandidates(oddsRows));
-  if (odds.up === null && odds.down === null && cached) return outcomeOddsFromCandidates([cached]);
+  const odds = completeOutcomeOdds(
+    preferBookOdds(outcomeBookOddsFromCandidates(oddsRows), outcomeOddsFromCandidates(oddsRows)),
+    cached ? outcomeOddsFromCandidates([cached]) : null,
+  );
   if (odds.up !== null || odds.down !== null) applyOutcomeOddsFromCandidates(market, candidates);
   return odds;
 }
@@ -4033,7 +4053,11 @@ function paperOutcomeProbabilities(market, latestRaw, latestBookRaw) {
   const liveAnchor = isCurrentBtcWindowMarket(market) ? currentBackendLiveMarketShell() : null;
   const remembered = rememberOutcomeOddsForWindow(market, [liveAnchor, ...candidates]);
   const rows = currentMarketOddsRows([market, remembered, liveAnchor, ...candidates].filter(Boolean));
-  const odds = preferBookOdds(outcomeBookOddsFromCandidates(rows), outcomeOddsFromCandidates(rows));
+  const cached = cachedOutcomeOddsForMarket(market);
+  const odds = completeOutcomeOdds(
+    preferBookOdds(outcomeBookOddsFromCandidates(rows), outcomeOddsFromCandidates(rows)),
+    cached ? outcomeOddsFromCandidates([cached]) : null,
+  );
   if (odds.up !== null || odds.down !== null) applyOutcomeOddsFromCandidates(market, rows);
   return odds;
 }
