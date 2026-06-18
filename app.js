@@ -749,31 +749,41 @@ function canUseUPlot() {
 }
 
 function uPlotDataFromSamples(truthSamples, externalSamples) {
-  const rows = [];
-  (truthSamples || []).forEach((sample) => {
-    if (!Number.isFinite(sample.elapsedSeconds) || !Number.isFinite(sample.dollarMove)) return;
-    rows.push({ x: sample.elapsedSeconds, chainlink: sample.dollarMove, binance: null });
-  });
-  (externalSamples || []).forEach((sample) => {
-    if (!Number.isFinite(sample.elapsedSeconds) || !Number.isFinite(sample.dollarMove)) return;
-    rows.push({ x: sample.elapsedSeconds, chainlink: null, binance: sample.dollarMove });
-  });
-  rows.sort((left, right) => left.x - right.x);
-  const merged = [];
-  rows.forEach((row) => {
-    const last = merged[merged.length - 1];
-    if (last && Math.abs(last.x - row.x) < 0.000001) {
-      if (row.chainlink !== null) last.chainlink = row.chainlink;
-      if (row.binance !== null) last.binance = row.binance;
+  const chainlink = (truthSamples || [])
+    .filter((sample) => Number.isFinite(sample.elapsedSeconds) && Number.isFinite(sample.dollarMove));
+  const binance = (externalSamples || [])
+    .filter((sample) => Number.isFinite(sample.elapsedSeconds) && Number.isFinite(sample.dollarMove));
+  const x = [];
+  const chainlinkValues = [];
+  const binanceValues = [];
+  let chainlinkIndex = 0;
+  let binanceIndex = 0;
+  while (chainlinkIndex < chainlink.length || binanceIndex < binance.length) {
+    const chainlinkSample = chainlink[chainlinkIndex] || null;
+    const binanceSample = binance[binanceIndex] || null;
+    if (
+      chainlinkSample
+      && binanceSample
+      && Math.abs(chainlinkSample.elapsedSeconds - binanceSample.elapsedSeconds) < 0.000001
+    ) {
+      x.push(chainlinkSample.elapsedSeconds);
+      chainlinkValues.push(chainlinkSample.dollarMove);
+      binanceValues.push(binanceSample.dollarMove);
+      chainlinkIndex += 1;
+      binanceIndex += 1;
+    } else if (!binanceSample || (chainlinkSample && chainlinkSample.elapsedSeconds < binanceSample.elapsedSeconds)) {
+      x.push(chainlinkSample.elapsedSeconds);
+      chainlinkValues.push(chainlinkSample.dollarMove);
+      binanceValues.push(null);
+      chainlinkIndex += 1;
     } else {
-      merged.push({ ...row });
+      x.push(binanceSample.elapsedSeconds);
+      chainlinkValues.push(null);
+      binanceValues.push(binanceSample.dollarMove);
+      binanceIndex += 1;
     }
-  });
-  return [
-    merged.map((row) => row.x),
-    merged.map((row) => row.chainlink),
-    merged.map((row) => row.binance),
-  ];
+  }
+  return [x, chainlinkValues, binanceValues];
 }
 
 function renderPaperLiveSideHtml(marketMetrics, accountMetrics, positionRows) {
@@ -1765,12 +1775,25 @@ function liveTickPointsForMarket(market) {
       rows.push(point);
     });
   });
-  return rows.sort((left, right) => (pointTimestampMicro(left) || 0) - (pointTimestampMicro(right) || 0));
+  return sortRowsIfNeeded(rows, pointTimestampMicro);
 }
 
 function latestLiveTickForMarket(market) {
   const points = liveTickPointsForMarket(market);
   return points[points.length - 1] || null;
+}
+
+function sortRowsIfNeeded(rows, timestampFn) {
+  const output = rows || [];
+  let previous = -Infinity;
+  for (const row of output) {
+    const current = timestampFn(row) ?? 0;
+    if (current < previous) {
+      return [...output].sort((left, right) => (timestampFn(left) ?? 0) - (timestampFn(right) ?? 0));
+    }
+    previous = current;
+  }
+  return output;
 }
 
 function liveRenderRowElapsedSeconds(row, source) {
@@ -1782,13 +1805,12 @@ function liveRenderRowElapsedSeconds(row, source) {
 }
 
 function limitLiveRowsToRenderWindow(rows, source, market) {
-  const ordered = (rows || [])
-    .filter((row) => metricNumber(row?.btc_price) !== null)
-    .sort((left, right) => (pointPlotTimestampMicro(left, source) || 0) - (pointPlotTimestampMicro(right, source) || 0));
+  const ordered = sortRowsIfNeeded(
+    (rows || []).filter((row) => metricNumber(row?.btc_price) !== null),
+    (row) => pointPlotTimestampMicro(row, source),
+  );
   if (!ordered.length || !isCurrentPaperMarket(market)) return ordered;
-  const latestElapsed = newestElapsedSeconds(ordered.map((row) => ({
-    elapsedSeconds: liveRenderRowElapsedSeconds(row, source),
-  })));
+  const latestElapsed = liveRenderRowElapsedSeconds(ordered[ordered.length - 1], source);
   if (!Number.isFinite(latestElapsed)) return downsamplePoints(ordered, LIVE_RENDER_MAX_POINTS_PER_LINE);
   const cutoff = Math.max(0, latestElapsed - LIVE_PAPER_RENDER_TAIL_SECONDS);
   const visible = [];
@@ -2100,9 +2122,7 @@ function priceChangingRows(rows, minDollarChange = 0.01) {
 }
 
 function externalLineRows(rows) {
-  const ordered = (rows || [])
-    .filter(isExternalGraphPricePoint)
-    .sort((left, right) => (pointTimestampMicro(left) || 0) - (pointTimestampMicro(right) || 0));
+  const ordered = sortRowsIfNeeded((rows || []).filter(isExternalGraphPricePoint), pointTimestampMicro);
   const bookTicks = ordered.filter(isExternalBookTickerPricePoint);
   const depthTicks = ordered.filter(isExternalDepthPricePoint);
   const trades = ordered.filter(isExternalTradePricePoint);
@@ -2230,7 +2250,10 @@ function mergePaperChartRows(baseRows, liveRows) {
 function paperChartPointsFor(market) {
   const points = paperPointsFor(market);
   const liveTicks = liveChartTickPointsForMarket(market);
-  if (isCurrentPaperMarket(market)) return liveTicks.length ? mergePaperChartRows(points, liveTicks) : points;
+  if (isCurrentPaperMarket(market)) {
+    const recentPaperPoints = points.filter((row) => isPaperEventPoint(row)).slice(-300);
+    return liveTicks.length ? mergePaperChartRows(recentPaperPoints, liveTicks) : recentPaperPoints;
+  }
   const ticks = downsamplePoints(liveTicks, LIVE_TICK_RENDER_MAX_POINTS);
   const merged = ticks.length ? mergePaperChartRows(points, ticks) : points;
   return merged;
@@ -5501,12 +5524,15 @@ function rememberBackendStreamPoints(market, allPoints) {
 
 function handleBackendTickBatch(messages) {
   const rows = Array.isArray(messages) ? messages : [];
-  const binanceMessages = rows.filter((message) => (
-    message?.type === "tick"
-    && message?.point
-    && isBinanceLivePoint(message.point)
-  ));
-  const otherMessages = rows.filter((message) => !binanceMessages.includes(message));
+  const binanceMessages = [];
+  const otherMessages = [];
+  rows.forEach((message) => {
+    if (message?.type === "tick" && message?.point && isBinanceLivePoint(message.point)) {
+      binanceMessages.push(message);
+    } else {
+      otherMessages.push(message);
+    }
+  });
   if (binanceMessages.length) {
     const latestMessage = binanceMessages[binanceMessages.length - 1];
     const market = rememberBackendStreamMarket(latestMessage.market || latestMessage.point, { addTruthPoint: false }) || latestMessage.point;
