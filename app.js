@@ -3389,9 +3389,16 @@ function externalDepthSnapshotFromRow(row) {
   return { row, bids, asks, source: "Binance depth WS", sourceKind: "binance_depth_ws" };
 }
 
+function externalDepthSnapshotTimeMicro(snapshot) {
+  return metricNumber(snapshot?.row?.receive_time_micro)
+    ?? metricNumber(snapshot?.row?.event_time_micro)
+    ?? pointTimestampMicro(snapshot?.row)
+    ?? 0;
+}
+
 function labelExternalDepthSnapshot(snapshot) {
   if (!snapshot) return null;
-  const eventMicro = pointTimestampMicro(snapshot.row);
+  const eventMicro = externalDepthSnapshotTimeMicro(snapshot);
   const ageMs = eventMicro === null ? null : Math.max(0, Date.now() - eventMicro / 1000);
   return {
     ...snapshot,
@@ -3403,15 +3410,12 @@ function labelExternalDepthSnapshot(snapshot) {
 }
 
 function latestExternalDepthSnapshotForMarket(market, rawPoints) {
-  const candidates = liveTickPointsForMarket(market)
-    .filter((row) => rowBelongsToMarketWindow(row, market));
-  for (let index = candidates.length - 1; index >= 0; index -= 1) {
-    const snapshot = externalDepthSnapshotFromRow(candidates[index]);
-    if (snapshot) {
-      return labelExternalDepthSnapshot(snapshot);
-    }
-  }
-  return null;
+  const snapshots = liveTickPointsForMarket(market)
+    .filter((row) => rowBelongsToMarketWindow(row, market))
+    .map(externalDepthSnapshotFromRow)
+    .filter(Boolean)
+    .sort((left, right) => externalDepthSnapshotTimeMicro(right) - externalDepthSnapshotTimeMicro(left));
+  return snapshots.length ? labelExternalDepthSnapshot(snapshots[0]) : null;
 }
 
 function formatBookMoney(value) {
