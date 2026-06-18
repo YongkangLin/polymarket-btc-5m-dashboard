@@ -1826,6 +1826,19 @@ function paperGraphSample(row, index, total, startPrice, source) {
   };
 }
 
+function graphBaselinePrice(rows, source, fallbackPrice = null) {
+  const ordered = (rows || [])
+    .map((row, index) => ({
+      row,
+      index,
+      elapsedSeconds: paperGraphElapsedSeconds(row, index, rows.length, source),
+      price: metricNumber(row?.btc_price),
+    }))
+    .filter((item) => item.price !== null && item.price > 0 && Number.isFinite(item.elapsedSeconds))
+    .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds || left.index - right.index);
+  return ordered[0]?.price ?? metricNumber(fallbackPrice);
+}
+
 function paperGraphSamples(rows, startPrice, source) {
   return (rows || [])
     .map((row, index) => paperGraphSample(row, index, rows.length, startPrice, source))
@@ -4168,7 +4181,7 @@ function renderPaperDecisionGraph(options = {}) {
   }
   const externalCandidates = priceRows.filter((row) => isExternalPricePoint(row) && !isPolymarketTruthPoint(row));
   const externalRows = externalLineRows(externalCandidates);
-  const externalStartPrice = startMeta?.price ?? null;
+  const externalStartPrice = graphBaselinePrice(externalRows, "binance");
   const externalSamples = externalStartPrice === null ? [] : paperGraphSamples(externalRows, externalStartPrice, "binance")
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
   const rawTruthSamples = (startMeta ? paperGraphSamples(truthRows, startMeta.price, "chainlink") : [])
@@ -4201,7 +4214,7 @@ function renderPaperDecisionGraph(options = {}) {
   const truthDisplaySample = freshestTruthDisplaySample(market, realTruthSamples, marketTruthPoint);
   const displayedTruthSample = truthDisplaySample;
   const latest = displayedTruthSample || latestTruth || truthSamples[truthSamples.length - 1] || latestExternal || allSamples[allSamples.length - 1];
-  const latestDomainSample = allSamples[allSamples.length - 1];
+  const latestDomainSample = (truthSamples[truthSamples.length - 1] || allSamples[allSamples.length - 1]);
   const latestElapsed = Number.isFinite(latestDomainSample.elapsedSeconds)
     ? latestDomainSample.elapsedSeconds
     : Math.max(0, 300 - latestDomainSample.secondsLeft);
@@ -4217,7 +4230,7 @@ function renderPaperDecisionGraph(options = {}) {
     const clamped = Math.max(xDomain.min, Math.min(xDomain.max, Number(elapsedSeconds)));
     return plot.left + ((clamped - xDomain.min) / (xDomain.max - xDomain.min)) * plotWidth;
   };
-  const dollarDomain = selectedCurrent ? livePaperDollarDomain(market, allSamples) : paperDollarDomain(visibleSamples, 2);
+  const dollarDomain = selectedCurrent ? livePaperDollarDomain(market, visibleSamples) : paperDollarDomain(visibleSamples, 2);
   const yForDollarMove = (value) => plot.top + ((dollarDomain.max - Number(value)) / (dollarDomain.max - dollarDomain.min)) * plot.height;
   const truthLinePoints = compressLinePoints(truthLineSamples.map((point) => ({
     x: xForElapsed(point.elapsedSeconds),
