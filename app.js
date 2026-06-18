@@ -5,13 +5,13 @@ const ACTIVE_BACKTEST_KEY = "strict_directional_maker";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_REFRESH_MS = 30000;
-const LIVE_TICK_RENDER_THROTTLE_MS = 33;
+const LIVE_TICK_RENDER_THROTTLE_MS = 16;
 const LIVE_TICK_STALE_MS = 10000;
 const LIVE_TICK_RECONNECT_MS = 2000;
 const LIVE_SOCKET_CONNECT_TIMEOUT_MS = 3500;
 const REMOTE_LIVE_SOCKET_CONNECT_TIMEOUT_MS = 25000;
 const PUBLIC_BACKEND_BASE = "https://resolved-poor-bare-dale.trycloudflare.com";
-const LIVE_TICK_RENDER_MAX_POINTS = 3200;
+const LIVE_TICK_RENDER_MAX_POINTS = 12000;
 const LIVE_AUX_RENDER_THROTTLE_MS = 500;
 const LIVE_TICK_PERSIST_MS = 1000;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 12000;
@@ -37,7 +37,7 @@ const LIVE_PAPER_Y_EXPANSION_PAD = 1.24;
 const LIVE_PAPER_Y_BUCKET = 4;
 const LIVE_PAPER_RENDER_BUCKET_SECONDS = 0.075;
 const LIVE_CHAINLINK_RENDER_BUCKET_SECONDS = null;
-const LIVE_BINANCE_RENDER_BUCKET_SECONDS = 0.05;
+const LIVE_BINANCE_RENDER_BUCKET_SECONDS = null;
 const LIVE_PAPER_RENDER_TAIL_SECONDS = 95;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -45,7 +45,7 @@ const BINANCE_DEPTH_TABLE_STALE_MS = 15000;
 const LOCAL_BACKEND_BASE = configuredBackendBase();
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
 const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 1000;
-const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 3200;
+const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 12000;
 const POLYMARKET_TRUTH_SOURCE = "chainlink_data_streams";
 
 function configuredInitialTab() {
@@ -1870,16 +1870,48 @@ function isExternalDepthPricePoint(row) {
 }
 
 function isExternalGraphPricePoint(row) {
-  return isExternalDepthPricePoint(row);
+  return isExternalBookTickerPricePoint(row)
+    || isExternalDepthPricePoint(row)
+    || isExternalTradePricePoint(row);
+}
+
+function priceChangingRows(rows, minDollarChange = 0.01) {
+  const ordered = (rows || [])
+    .filter((row) => metricNumber(row?.btc_price) !== null)
+    .sort((left, right) => (pointTimestampMicro(left) || 0) - (pointTimestampMicro(right) || 0));
+  if (ordered.length <= 2) return ordered;
+  const output = [ordered[0]];
+  let lastKeptPrice = metricNumber(ordered[0]?.btc_price);
+  for (let index = 1; index < ordered.length - 1; index += 1) {
+    const price = metricNumber(ordered[index]?.btc_price);
+    if (price === null || lastKeptPrice === null) continue;
+    if (Math.abs(price - lastKeptPrice) >= minDollarChange) {
+      output.push(ordered[index]);
+      lastKeptPrice = price;
+    }
+  }
+  const last = ordered[ordered.length - 1];
+  if (output[output.length - 1] !== last) output.push(last);
+  return output;
 }
 
 function externalLineRows(rows) {
-  return (rows || []).filter(isExternalGraphPricePoint);
+  const ordered = (rows || [])
+    .filter(isExternalGraphPricePoint)
+    .sort((left, right) => (pointTimestampMicro(left) || 0) - (pointTimestampMicro(right) || 0));
+  const preferred = [
+    ordered.filter(isExternalBookTickerPricePoint),
+    ordered.filter(isExternalDepthPricePoint),
+    ordered.filter(isExternalTradePricePoint),
+  ].find((group) => group.length) || [];
+  return priceChangingRows(preferred, 0.01);
 }
 
 function externalLineLabel(rows) {
+  if ((rows || []).some(isExternalBookTickerPricePoint)) return "Binance WSS bookTicker";
   if ((rows || []).some(isExternalDepthPricePoint)) return "Binance WSS depth";
-  return "Binance WSS depth";
+  if ((rows || []).some(isExternalTradePricePoint)) return "Binance WSS trades";
+  return "Binance WSS";
 }
 
 function backendBaseUrl() {
@@ -1993,8 +2025,9 @@ function mergePaperChartRows(baseRows, liveRows) {
 
 function paperChartPointsFor(market) {
   const points = paperPointsFor(market);
-  const ticks = downsamplePoints(liveChartTickPointsForMarket(market), LIVE_TICK_RENDER_MAX_POINTS);
-  if (isCurrentPaperMarket(market)) return ticks.length ? mergePaperChartRows(points, ticks) : points;
+  const liveTicks = liveChartTickPointsForMarket(market);
+  if (isCurrentPaperMarket(market)) return liveTicks.length ? mergePaperChartRows(points, liveTicks) : points;
+  const ticks = downsamplePoints(liveTicks, LIVE_TICK_RENDER_MAX_POINTS);
   const merged = ticks.length ? mergePaperChartRows(points, ticks) : points;
   return merged;
 }
@@ -2037,7 +2070,7 @@ function pointPlotTimestampMicro(row, source) {
   if (source === "chainlink" && isChainlinkPriceRow(row) && isChainlinkDataStreamsSource(priceSource) && receiveMicro !== null) {
     return receiveMicro;
   }
-  if (source === "binance" && isExternalDepthPricePoint(row) && receiveMicro !== null) {
+  if (source === "binance" && isExternalPricePoint(row) && receiveMicro !== null) {
     return receiveMicro;
   }
   return pointTimestampMicro(row);
