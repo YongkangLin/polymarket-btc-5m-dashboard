@@ -74,6 +74,7 @@ const state = {
   paperObservedPointsByMarket: new Map(),
   paperObservedMarkersByMarket: new Map(),
   latestOutcomeOddsByWindow: new Map(),
+  lastDisplayedOutcomeOddsByWindow: new Map(),
   liveTickStatus: {
     state: "idle",
     venue: "local_backend_ws",
@@ -816,6 +817,8 @@ function uPlotDataFromSamples(truthSamples, externalSamples) {
   const x = [];
   const chainlinkValues = [];
   const binanceValues = [];
+  let latestChainlinkValue = null;
+  let latestBinanceValue = null;
   let index = 0;
   while (index < events.length) {
     const elapsedSeconds = events[index].elapsedSeconds;
@@ -826,9 +829,11 @@ function uPlotDataFromSamples(truthSamples, externalSamples) {
       if (events[index].source === "binance") binanceValue = events[index].dollarMove;
       index += 1;
     }
+    if (chainlinkValue !== null) latestChainlinkValue = chainlinkValue;
+    if (binanceValue !== null) latestBinanceValue = binanceValue;
     x.push(elapsedSeconds);
-    chainlinkValues.push(chainlinkValue);
-    binanceValues.push(binanceValue);
+    chainlinkValues.push(latestChainlinkValue);
+    binanceValues.push(latestBinanceValue);
   }
   return [x, chainlinkValues, binanceValues];
 }
@@ -1503,9 +1508,13 @@ function marketSecondsLeftNow(market) {
 }
 
 function preserveExistingOutcomeOdds(target, existing, incoming) {
+  const cached = cachedOutcomeOddsForMarket(target)
+    || cachedOutcomeOddsForMarket(incoming)
+    || cachedOutcomeOddsForMarket(existing);
+  copyOutcomeOddsFields(target, cached);
   copyOutcomeOddsFields(target, existing);
   copyOutcomeOddsFields(target, incoming);
-  applyOutcomeOddsFromCandidates(target, [target, incoming, existing]);
+  applyOutcomeOddsFromCandidates(target, [target, incoming, existing, cached]);
 }
 
 function rememberLiveMarket(market, options = {}) {
@@ -2111,7 +2120,7 @@ function chainlinkDisplayStatusText(sample) {
 }
 
 function outcomeBookOddsFromCandidates(candidates) {
-  const rows = (candidates || []).filter(Boolean);
+  const rows = outcomeRowsNewestFirst(candidates);
   let up = rows.map((row) => outcomeDisplayBookProbability(row, "up")).find((value) => value !== null) ?? null;
   let down = rows.map((row) => outcomeDisplayBookProbability(row, "down")).find((value) => value !== null) ?? null;
   if (up === null && down !== null) up = Math.max(0, Math.min(1, 1 - down));
@@ -3841,9 +3850,20 @@ function outcomeOddsCacheKeys(row) {
 }
 
 function outcomeOddsTimestampMicro(row) {
-  return pointTimestampMicro(row)
+  return metricNumber(row?._odds_updated_micro)
+    ?? pointTimestampMicro(row)
     ?? (Number.isFinite(Date.parse(row?.generated_at || "")) ? Date.parse(row.generated_at) * 1000 : null)
     ?? (Number.isFinite(Date.parse(row?.market_odds_fetched_at || "")) ? Date.parse(row.market_odds_fetched_at) * 1000 : null);
+}
+
+function outcomeRowsNewestFirst(candidates) {
+  return currentMarketOddsRows(candidates)
+    .sort((left, right) => {
+      const leftTime = outcomeOddsTimestampMicro(left) ?? 0;
+      const rightTime = outcomeOddsTimestampMicro(right) ?? 0;
+      if (rightTime !== leftTime) return rightTime - leftTime;
+      return (rowHasOutcomeOdds(right) ? 1 : 0) - (rowHasOutcomeOdds(left) ? 1 : 0);
+    });
 }
 
 function cachedOutcomeOddsForMarket(market) {
@@ -4010,7 +4030,7 @@ function bestExplicitOutcomeProbability(side, candidates) {
 }
 
 function outcomeOddsFromCandidates(candidates) {
-  const rows = (candidates || []).filter(Boolean);
+  const rows = outcomeRowsNewestFirst(candidates);
   let up = bestExplicitOutcomeProbability("up", rows);
   let down = bestExplicitOutcomeProbability("down", rows);
   if (up === null && down !== null) up = Math.max(0, Math.min(1, 1 - down));
@@ -4064,7 +4084,10 @@ function paperOutcomeProbabilities(market, latestRaw, latestBookRaw) {
 
 function renderPaperOddsStrip(market, latestRaw, latestBookRaw, odds = null) {
   if (!market) return "";
-  const resolved = odds || paperPanelOutcomeProbabilities(market, latestRaw, latestBookRaw);
+  const resolved = stickyOutcomeOddsForMarket(
+    market,
+    odds || paperPanelOutcomeProbabilities(market, latestRaw, latestBookRaw),
+  );
   return `
     <div class="paper-odds-strip" role="status" aria-label="Current Polymarket odds">
       <div>
@@ -4076,6 +4099,27 @@ function renderPaperOddsStrip(market, latestRaw, latestBookRaw, odds = null) {
         <strong class="move-down">${escapeHtml(formatOutcomePercent(resolved.down))}</strong>
       </div>
     </div>`;
+}
+
+function stickyOutcomeOddsForMarket(market, odds) {
+  const keys = outcomeOddsCacheKeys(market);
+  const previouslyDisplayed = keys
+    .map((key) => state.lastDisplayedOutcomeOddsByWindow.get(key))
+    .find(Boolean);
+  const cached = cachedOutcomeOddsForMarket(market);
+  const resolved = completeOutcomeOdds(
+    odds,
+    previouslyDisplayed || (cached ? outcomeOddsFromCandidates([cached]) : null),
+  );
+  if (resolved.up !== null || resolved.down !== null) {
+    const stored = {
+      up: resolved.up,
+      down: resolved.down,
+      _odds_updated_micro: Date.now() * 1000,
+    };
+    keys.forEach((key) => state.lastDisplayedOutcomeOddsByWindow.set(key, stored));
+  }
+  return resolved;
 }
 
 function paperSession() {
