@@ -39,6 +39,7 @@ const LIVE_PAPER_RENDER_BUCKET_SECONDS = 0.075;
 const LIVE_CHAINLINK_RENDER_BUCKET_SECONDS = null;
 const LIVE_BINANCE_RENDER_BUCKET_SECONDS = null;
 const LIVE_PAPER_RENDER_TAIL_SECONDS = 95;
+const LIVE_RENDER_MAX_POINTS_PER_LINE = 12000;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const BINANCE_DEPTH_TABLE_STALE_MS = 15000;
@@ -91,6 +92,9 @@ const state = {
   },
   paperSelectSignature: "",
   paperAuxRenderCache: new Map(),
+  paperAuxVersion: 0,
+  paperAuxBookKey: "",
+  paperUPlotCharts: new Map(),
   liveGate: "paper_to_live",
 };
 
@@ -667,18 +671,46 @@ function limitLiveSamplesForRender(samples, latestElapsed, tailSeconds = LIVE_PA
   return [samples[firstVisibleIndex - 1], ...samples.slice(firstVisibleIndex)];
 }
 
-function paperAuxCacheKey(chartId, market, isLiveView) {
+function rowFreshnessKey(row) {
+  if (!row) return "";
+  return [
+    row.point_id,
+    row.event_id,
+    row.quote_id,
+    row.event_type,
+    row.backend_event_kind,
+    row.receive_time_micro,
+    row.event_time_micro,
+    row.generated_at,
+  ].filter(Boolean).join("|");
+}
+
+function latestPolymarketDepthTimeMicro(snapshot) {
+  const row = snapshot?.row || {};
+  return Math.max(
+    metricNumber(row.up_book_snapshot_time_micro) ?? 0,
+    metricNumber(row.down_book_snapshot_time_micro) ?? 0,
+    metricNumber(row.polymarket_book_snapshot_time_micro) ?? 0,
+  );
+}
+
+function paperAuxCacheKey(chartId, market, isLiveView, rawPoints = [], latestRaw = null, latestBookRaw = null) {
+  const latestMarker = [...paperMarkersFor(market)].pop();
   return [
     chartId || "paperChart",
     isLiveView ? "live" : "paper",
     paperMarketWindowKey(market),
     paperGraphKey(market) || "current",
+    state.paperAuxVersion,
+    rowFreshnessKey(latestRaw),
+    rowFreshnessKey(latestBookRaw),
+    rowFreshnessKey(latestMarker),
   ].join(":");
 }
 
 function renderPaperAuxHtml({ chartId, selectedCurrent, market, rawPoints, latestRaw, latestBookRaw, latestQuote, session, isLiveView }) {
   const cacheable = Boolean(selectedCurrent && market);
-  const cacheKey = cacheable ? paperAuxCacheKey(chartId, market, isLiveView) : "";
+  const cacheKey = cacheable ? paperAuxCacheKey(chartId, market, isLiveView, rawPoints, latestRaw, latestBookRaw) : "";
   const now = Date.now();
   const cached = cacheable ? state.paperAuxRenderCache.get(cacheKey) : null;
   if (cached && now - cached.renderedAt < LIVE_AUX_RENDER_THROTTLE_MS) return cached.html;
@@ -690,6 +722,144 @@ function renderPaperAuxHtml({ chartId, selectedCurrent, market, rawPoints, lates
   ].join("");
   if (cacheable) state.paperAuxRenderCache.set(cacheKey, { renderedAt: now, html });
   return html;
+}
+
+function setPaperChartContent(chart, visualHtml, auxHtml = "") {
+  if (!chart) return;
+  if (!chart._paperSplitContent) {
+    chart.innerHTML = '<div class="paper-chart-visual"></div><div class="paper-chart-aux"></div>';
+    chart._paperSplitContent = true;
+    chart._paperVisualHtml = "";
+    chart._paperAuxHtml = "";
+  }
+  const visual = chart.querySelector(".paper-chart-visual");
+  const aux = chart.querySelector(".paper-chart-aux");
+  if (visual && chart._paperVisualHtml !== visualHtml) {
+    visual.innerHTML = visualHtml;
+    chart._paperVisualHtml = visualHtml;
+  }
+  if (aux && chart._paperAuxHtml !== auxHtml) {
+    aux.innerHTML = auxHtml;
+    chart._paperAuxHtml = auxHtml;
+  }
+}
+
+function canUseUPlot() {
+  return typeof window !== "undefined" && typeof window.uPlot === "function";
+}
+
+function uPlotDataFromSamples(truthSamples, externalSamples) {
+  const rows = [];
+  (truthSamples || []).forEach((sample) => {
+    if (!Number.isFinite(sample.elapsedSeconds) || !Number.isFinite(sample.dollarMove)) return;
+    rows.push({ x: sample.elapsedSeconds, chainlink: sample.dollarMove, binance: null });
+  });
+  (externalSamples || []).forEach((sample) => {
+    if (!Number.isFinite(sample.elapsedSeconds) || !Number.isFinite(sample.dollarMove)) return;
+    rows.push({ x: sample.elapsedSeconds, chainlink: null, binance: sample.dollarMove });
+  });
+  rows.sort((left, right) => left.x - right.x);
+  const merged = [];
+  rows.forEach((row) => {
+    const last = merged[merged.length - 1];
+    if (last && Math.abs(last.x - row.x) < 0.000001) {
+      if (row.chainlink !== null) last.chainlink = row.chainlink;
+      if (row.binance !== null) last.binance = row.binance;
+    } else {
+      merged.push({ ...row });
+    }
+  });
+  return [
+    merged.map((row) => row.x),
+    merged.map((row) => row.chainlink),
+    merged.map((row) => row.binance),
+  ];
+}
+
+function renderPaperLiveSideHtml(marketMetrics, accountMetrics, positionRows) {
+  const metricRows = (rows) => rows.map((row) => `
+    <div class="paper-live-side-row">
+      <span>${escapeHtml(row.label)}</span>
+      <strong class="${escapeHtml(row.tone || "")}">${escapeHtml(String(row.value))}</strong>
+    </div>`).join("");
+  const positionHtml = (positionRows || []).map((row) => `
+    <div class="paper-live-position-row">
+      <strong class="${escapeHtml(row.tone || "")}">${escapeHtml(row.label)}</strong>
+      <span>${escapeHtml(row.value)}${row.detail ? ` | ${escapeHtml(row.detail)}` : ""}</span>
+    </div>`).join("");
+  return `
+    <aside class="paper-live-side-html" aria-label="Current paper trade state">
+      <section class="paper-live-side-section">
+        <h3>Market</h3>
+        ${metricRows(marketMetrics)}
+      </section>
+      <section class="paper-live-side-section">
+        <h3>Account</h3>
+        ${metricRows(accountMetrics)}
+      </section>
+      <section class="paper-live-side-section">
+        <h3>Positions</h3>
+        ${positionHtml || '<div class="paper-live-position-row"><strong>No position</strong><span>waiting for a fill</span></div>'}
+      </section>
+    </aside>`;
+}
+
+function updatePaperUPlot(chart, options) {
+  try {
+    if (!canUseUPlot() || !chart) return false;
+    const target = chart.querySelector(".paper-live-uplot");
+    if (!target) return false;
+    const width = Math.max(320, Math.floor(target.clientWidth || chart.clientWidth || 680));
+    const height = Math.max(260, Math.floor(target.clientHeight || (isCompactPaperChart() ? 300 : 392)));
+    const data = uPlotDataFromSamples(options.truthSamples, options.externalSamples);
+    const key = `${chart.id || "paperChart"}:${options.compact ? "compact" : "wide"}`;
+    const makeOptions = () => ({
+      width,
+      height,
+      legend: { show: false },
+      cursor: { show: false },
+      padding: [8, 10, 0, 0],
+      scales: {
+        x: { time: false, min: options.xDomain.min, max: options.xDomain.max },
+        y: { min: options.dollarDomain.min, max: options.dollarDomain.max },
+      },
+      axes: [
+        {
+          size: 34,
+          stroke: "#687682",
+          grid: { stroke: "#e5e9ed", width: 1 },
+          values: (_, values) => values.map((value) => `${Math.round(value)}s`),
+        },
+        {
+          size: 64,
+          stroke: "#687682",
+          grid: { stroke: "#e5e9ed", width: 1 },
+          values: (_, values) => values.map((value) => formatDollarMove(value)),
+        },
+      ],
+      series: [
+        {},
+        { label: "Chainlink", stroke: "#148256", width: 2, points: { show: false } },
+        { label: "Binance", stroke: "#3c62d8", width: 2, dash: [8, 6], points: { show: false } },
+      ],
+    });
+    const existing = state.paperUPlotCharts.get(chart.id || "paperChart");
+    if (!existing || existing.key !== key) {
+      if (existing?.plot) existing.plot.destroy();
+      target.innerHTML = "";
+      const plot = new window.uPlot(makeOptions(), data, target);
+      state.paperUPlotCharts.set(chart.id || "paperChart", { key, plot });
+      return true;
+    }
+    existing.plot.setSize({ width, height });
+    existing.plot.setData(data, false);
+    existing.plot.setScale("x", { min: options.xDomain.min, max: options.xDomain.max });
+    existing.plot.setScale("y", { min: options.dollarDomain.min, max: options.dollarDomain.max });
+    return true;
+  } catch (error) {
+    console.warn("uPlot live chart update failed", error);
+    return false;
+  }
 }
 
 function latestRenderedLinePoint(...linePointGroups) {
@@ -1342,6 +1512,7 @@ function rememberObservedPaperMarket(market, points = [], markers = []) {
         key,
         mergePaperChartRows(existingMarkers, markers).slice(-2000),
       );
+      state.paperAuxVersion += 1;
     }
   });
   state.paperSelectSignature = "";
@@ -1602,10 +1773,43 @@ function latestLiveTickForMarket(market) {
   return points[points.length - 1] || null;
 }
 
+function liveRenderRowElapsedSeconds(row, source) {
+  const start = metricNumber(row?.window_start_unix);
+  const timestampMicro = pointPlotTimestampMicro(row, source);
+  if (start === null || timestampMicro === null) return null;
+  const elapsed = timestampMicro / 1_000_000 - start;
+  return Number.isFinite(elapsed) ? Math.max(0, Math.min(300, elapsed)) : null;
+}
+
+function limitLiveRowsToRenderWindow(rows, source, market) {
+  const ordered = (rows || [])
+    .filter((row) => metricNumber(row?.btc_price) !== null)
+    .sort((left, right) => (pointPlotTimestampMicro(left, source) || 0) - (pointPlotTimestampMicro(right, source) || 0));
+  if (!ordered.length || !isCurrentPaperMarket(market)) return ordered;
+  const latestElapsed = newestElapsedSeconds(ordered.map((row) => ({
+    elapsedSeconds: liveRenderRowElapsedSeconds(row, source),
+  })));
+  if (!Number.isFinite(latestElapsed)) return downsamplePoints(ordered, LIVE_RENDER_MAX_POINTS_PER_LINE);
+  const cutoff = Math.max(0, latestElapsed - LIVE_PAPER_RENDER_TAIL_SECONDS);
+  const visible = [];
+  let carry = null;
+  ordered.forEach((row) => {
+    const elapsed = liveRenderRowElapsedSeconds(row, source);
+    if (!Number.isFinite(elapsed)) return;
+    if (elapsed < cutoff) {
+      carry = row;
+      return;
+    }
+    visible.push(row);
+  });
+  const limited = carry ? [carry, ...visible] : visible;
+  return downsamplePoints(limited, LIVE_RENDER_MAX_POINTS_PER_LINE);
+}
+
 function liveChartTickPointsForMarket(market) {
   const points = liveTickPointsForMarket(market);
-  const chainlinkRows = points.filter(isChainlinkPriceRow);
-  const externalRows = points.filter(isExternalGraphPricePoint);
+  const chainlinkRows = limitLiveRowsToRenderWindow(points.filter(isChainlinkPriceRow), "chainlink", market);
+  const externalRows = limitLiveRowsToRenderWindow(externalLineRows(points.filter(isExternalGraphPricePoint)), "binance", market);
   if (externalRows.length) return mergePaperChartRows(chainlinkRows, externalRows);
   return chainlinkRows;
 }
@@ -1899,12 +2103,12 @@ function externalLineRows(rows) {
   const ordered = (rows || [])
     .filter(isExternalGraphPricePoint)
     .sort((left, right) => (pointTimestampMicro(left) || 0) - (pointTimestampMicro(right) || 0));
-  const preferred = [
-    ordered.filter(isExternalBookTickerPricePoint),
-    ordered.filter(isExternalDepthPricePoint),
-    ordered.filter(isExternalTradePricePoint),
-  ].find((group) => group.length) || [];
-  return priceChangingRows(preferred, 0.01);
+  const bookTicks = ordered.filter(isExternalBookTickerPricePoint);
+  const depthTicks = ordered.filter(isExternalDepthPricePoint);
+  const trades = ordered.filter(isExternalTradePricePoint);
+  if (bookTicks.length >= 3) return bookTicks;
+  if (depthTicks.length >= 3) return depthTicks;
+  return trades.length ? trades : ordered;
 }
 
 function externalLineLabel(rows) {
@@ -4571,15 +4775,15 @@ function renderPaperDecisionGraph(options = {}) {
       if (market && !verifiedPaperStartPrice(market)) {
         const startStatus = market.start_price_status || liveStartMetadata(market).start_price_status || "loading";
         const startError = market.start_price_error || liveStartMetadata(market).start_price_error || "";
-        chart.innerHTML = `${svgEmpty(startStatus === "error"
+        setPaperChartContent(chart, svgEmpty(startStatus === "error"
           ? `Start error${startError ? `: ${startError}` : ""}.`
-          : "Loading start.")}${loadingExtras}`;
+          : "Loading start."), loadingExtras);
         return;
       }
-      chart.innerHTML = `${svgEmpty("Loading ticks.")}${loadingExtras}`;
+      setPaperChartContent(chart, svgEmpty("Loading ticks."), loadingExtras);
       return;
     }
-    chart.innerHTML = svgEmpty("No path.");
+    setPaperChartContent(chart, svgEmpty("No path."), "");
     return;
   }
 
@@ -4619,7 +4823,7 @@ function renderPaperDecisionGraph(options = {}) {
         isLiveView,
       }),
     ].join("");
-    chart.innerHTML = `${svgEmpty(hasPrices && !startMeta ? "Waiting for Polymarket start." : "No usable points.")}${waitingExtras}`;
+    setPaperChartContent(chart, svgEmpty(hasPrices && !startMeta ? "Waiting for Polymarket start." : "No usable points."), waitingExtras);
     return;
   }
 
@@ -4636,10 +4840,12 @@ function renderPaperDecisionGraph(options = {}) {
   const truthDisplaySample = freshestTruthDisplaySample(market, realTruthSamples, marketTruthPoint);
   const displayedTruthSample = truthDisplaySample;
   const latest = displayedTruthSample || latestTruth || truthSamples[truthSamples.length - 1] || latestExternal || allSamples[allSamples.length - 1];
-  const latestDomainSample = (truthSamples[truthSamples.length - 1] || allSamples[allSamples.length - 1]);
-  const latestElapsed = Number.isFinite(latestDomainSample.elapsedSeconds)
-    ? latestDomainSample.elapsedSeconds
-    : Math.max(0, 300 - latestDomainSample.secondsLeft);
+  const latestDomainSample = allSamples[allSamples.length - 1] || truthSamples[truthSamples.length - 1];
+  const latestElapsed = Number.isFinite(latestElapsedSeed)
+    ? latestElapsedSeed
+    : (Number.isFinite(latestDomainSample.elapsedSeconds)
+      ? latestDomainSample.elapsedSeconds
+      : Math.max(0, 300 - latestDomainSample.secondsLeft));
   const xDomain = selectedCurrent ? livePaperXDomain(market, latestElapsed) : { min: 0, max: 300 };
   if (xDomain.max - xDomain.min < 1) xDomain.max = xDomain.min + 1;
   const samples = allSamples.filter((point) => point.elapsedSeconds >= xDomain.min && point.elapsedSeconds <= xDomain.max);
@@ -4910,32 +5116,66 @@ function renderPaperDecisionGraph(options = {}) {
   });
 
   const chartAriaLabel = isLiveView ? "Live trade BTC path and events" : "Paper trade BTC path and events";
-  chart.innerHTML = `${liveNotice}
-    <svg class="paper-live-svg" viewBox="0 0 ${view.width} ${view.height}" role="img" aria-label="${chartAriaLabel}">
-      <title>${escapeHtml(`${paperMarketLabel(market)} | ${latestTitle}`)}</title>
-      <rect class="plot" x="${plot.left}" y="${plot.top}" width="${plotWidth}" height="${plot.height}"></rect>
-      ${decisionBand}
-      ${closeBand}
-      ${xMinorTicks}
-      ${xTicks}
-      ${yTicks}
-      ${truthPath}
-      ${externalPath}
-      ${chainlinkStartDot}
-      ${externalStartDot}
-      ${truthLegend}
-      ${externalLegend}
-      ${eventDots}
-      ${hasTruthHead ? `<line class="paper-latest-line" x1="${headX}" y1="${plot.top}" x2="${headX}" y2="${plotBottom}"></line>` : ""}
-      ${hasTruthHead ? `<circle class="dot latest ${selectedCurrent ? "live-now" : ""}" cx="${headX}" cy="${headY}" r="6">
-        <title>${escapeHtml(latestTitle)}</title>
-      </circle>` : ""}
-      ${infoRows}
-    </svg>
-    ${oddsStrip}
-    ${compactInfoRows}
-    ${auxHtml}
-    `;
+  const sideHtml = compact ? "" : renderPaperLiveSideHtml(marketMetrics, accountMetrics, positionRows);
+  let visualHtml = "";
+  const useUPlot = canUseUPlot();
+  if (useUPlot) {
+    visualHtml = `${liveNotice}
+      <div class="paper-live-fast" role="img" aria-label="${escapeHtml(chartAriaLabel)}">
+        <div class="paper-live-uplot"></div>
+        <div class="paper-live-side-slot"></div>
+      </div>
+      <div class="paper-live-status-slot"></div>`;
+  } else {
+    visualHtml = `${liveNotice}
+      <svg class="paper-live-svg" viewBox="0 0 ${view.width} ${view.height}" role="img" aria-label="${chartAriaLabel}">
+        <title>${escapeHtml(`${paperMarketLabel(market)} | ${latestTitle}`)}</title>
+        <rect class="plot" x="${plot.left}" y="${plot.top}" width="${plotWidth}" height="${plot.height}"></rect>
+        ${decisionBand}
+        ${closeBand}
+        ${xMinorTicks}
+        ${xTicks}
+        ${yTicks}
+        ${truthPath}
+        ${externalPath}
+        ${chainlinkStartDot}
+        ${externalStartDot}
+        ${truthLegend}
+        ${externalLegend}
+        ${eventDots}
+        ${hasTruthHead ? `<line class="paper-latest-line" x1="${headX}" y1="${plot.top}" x2="${headX}" y2="${plotBottom}"></line>` : ""}
+        ${hasTruthHead ? `<circle class="dot latest ${selectedCurrent ? "live-now" : ""}" cx="${headX}" cy="${headY}" r="6">
+          <title>${escapeHtml(latestTitle)}</title>
+        </circle>` : ""}
+        ${infoRows}
+      </svg>
+      ${oddsStrip}
+      ${compactInfoRows}`;
+  }
+  const auxContent = auxHtml;
+  setPaperChartContent(chart, visualHtml, auxContent);
+  if (useUPlot) {
+    const fastChart = chart.querySelector(".paper-live-fast");
+    if (fastChart) fastChart.setAttribute("title", `${paperMarketLabel(market)} | ${latestTitle}`);
+    const sideSlot = chart.querySelector(".paper-live-side-slot");
+    if (sideSlot && sideSlot._paperSideHtml !== sideHtml) {
+      sideSlot.innerHTML = sideHtml;
+      sideSlot._paperSideHtml = sideHtml;
+    }
+    const statusSlot = chart.querySelector(".paper-live-status-slot");
+    const statusHtml = `${oddsStrip}${compactInfoRows}`;
+    if (statusSlot && statusSlot._paperStatusHtml !== statusHtml) {
+      statusSlot.innerHTML = statusHtml;
+      statusSlot._paperStatusHtml = statusHtml;
+    }
+    updatePaperUPlot(chart, {
+      truthSamples: truthLineSamples,
+      externalSamples: externalLineSamples,
+      xDomain,
+      dollarDomain,
+      compact,
+    });
+  }
 }
 
 function renderPaperChart(options = {}) {
@@ -5036,33 +5276,47 @@ function trimLiveBtcPointsForKey(key, points) {
   return trimmed;
 }
 
-function appendLiveBtcPoint(market, point) {
+function appendLiveBtcPoints(market, incomingPoints) {
   const keys = liveTickStorageKeysForMarket(market);
-  if (!keys.length || (!isBinanceLivePoint(point) && !isChainlinkPriceRow(point))) return;
-  enrichPointWithMarketOutcomeOdds(point, market);
+  const pointsToAppend = (incomingPoints || []).filter((point) => isBinanceLivePoint(point) || isChainlinkPriceRow(point));
+  if (!keys.length || !pointsToAppend.length) return;
   const startMeta = preferredPaperStartMetadata(market);
   const startPrice = startMeta?.price ?? null;
   const startSource = startMeta?.source ?? null;
-  const price = metricNumber(point.btc_price);
-  if (price !== null && startPrice !== null && startPrice > 0) {
-    const distanceBps = Math.log(price / startPrice) * 10000;
-    point.start_price = startPrice;
-    point.start_price_source = startSource;
-    point.distance_bps = distanceBps;
-    point.side = distanceBps > 0 ? "Up" : (distanceBps < 0 ? "Down" : null);
-  }
   rememberLiveMarket(market);
+  let auxChanged = false;
+  pointsToAppend.forEach((point) => {
+    enrichPointWithMarketOutcomeOdds(point, market);
+    const price = metricNumber(point.btc_price);
+    if (price !== null && startPrice !== null && startPrice > 0) {
+      const distanceBps = Math.log(price / startPrice) * 10000;
+      point.start_price = startPrice;
+      point.start_price_source = startSource;
+      point.distance_bps = distanceBps;
+      point.side = distanceBps > 0 ? "Up" : (distanceBps < 0 ? "Down" : null);
+    }
+    if (point?.backend_event_kind === "depth" || point?.books || point?.pm_up_bids || point?.pm_down_bids) auxChanged = true;
+  });
   keys.forEach((key) => {
     let points = state.liveBtcTicksByMarket.get(key) || [];
-    const pointKey = liveBtcPointKey(point);
     const keySet = liveTickKeySetForMarket(key, points);
-    if (keySet.has(pointKey)) return;
-    keySet.add(pointKey);
-    points.push(point);
+    pointsToAppend.forEach((point) => {
+      const pointKey = liveBtcPointKey(point);
+      if (keySet.has(pointKey)) return;
+      keySet.add(pointKey);
+      points.push(point);
+    });
     points = trimLiveBtcPointsForKey(key, points);
     state.liveBtcTicksByMarket.set(key, points);
   });
-  if (shouldPersistLivePoint(point)) schedulePaperTickPersist();
+  if (auxChanged) {
+    state.paperAuxVersion += 1;
+  }
+  if (pointsToAppend.some(shouldPersistLivePoint)) schedulePaperTickPersist();
+}
+
+function appendLiveBtcPoint(market, point) {
+  appendLiveBtcPoints(market, [point]);
 }
 
 function verifiedPaperStartPrice(market) {
@@ -5176,6 +5430,16 @@ function rememberBackendStreamMarket(market, options = {}) {
     is_open: market.is_open !== false,
     status: "backend_live",
   });
+  const bookKey = [
+    market.condition_id,
+    market.up_book_snapshot_time_micro,
+    market.down_book_snapshot_time_micro,
+    market.polymarket_book_source,
+  ].filter(Boolean).join(":");
+  if (bookKey && bookKey !== state.paperAuxBookKey) {
+    state.paperAuxBookKey = bookKey;
+    state.paperAuxVersion += 1;
+  }
   if (options.recomputeDistances === true) recomputeLiveTickDistances(stored);
   if (addTruthPoint) {
     const chainlinkPoint = chainlinkPointFromMarket(stored);
@@ -5235,8 +5499,53 @@ function rememberBackendStreamPoints(market, allPoints) {
   return { truthPoints, externalPoints };
 }
 
+function handleBackendTickBatch(messages) {
+  const rows = Array.isArray(messages) ? messages : [];
+  const binanceMessages = rows.filter((message) => (
+    message?.type === "tick"
+    && message?.point
+    && isBinanceLivePoint(message.point)
+  ));
+  const otherMessages = rows.filter((message) => !binanceMessages.includes(message));
+  if (binanceMessages.length) {
+    const latestMessage = binanceMessages[binanceMessages.length - 1];
+    const market = rememberBackendStreamMarket(latestMessage.market || latestMessage.point, { addTruthPoint: false }) || latestMessage.point;
+    const batchPoints = [];
+    binanceMessages.forEach((message) => {
+      if (Array.isArray(message.points)) {
+        batchPoints.push(...message.points.filter(isBinanceLivePoint));
+      }
+      batchPoints.push(message.point);
+    });
+    batchPoints.sort((left, right) => (pointTimestampMicro(left) || 0) - (pointTimestampMicro(right) || 0));
+    appendLiveBtcPoints(market, batchPoints);
+    const latestPoint = batchPoints[batchPoints.length - 1] || latestMessage.point;
+    state.backendStatus = {
+      ...state.backendStatus,
+      state: "open",
+      lastError: null,
+      lastStreamAt: new Date(),
+      pointsLoaded: (state.backendStatus.pointsLoaded || 0) + batchPoints.length,
+      url: backendWebSocketUrl(),
+    };
+    state.liveTickStatus = {
+      ...state.liveTickStatus,
+      state: "open",
+      lastTickAt: new Date(Math.floor((pointTimestampMicro(latestPoint) || Date.now() * 1000) / 1000)),
+      lastError: null,
+      url: backendWebSocketUrl(),
+    };
+  }
+  otherMessages.forEach((message) => handleBackendStreamMessage(message));
+  scheduleLiveTickRender();
+}
+
 function handleBackendStreamMessage(payload) {
   if (!payload || typeof payload !== "object") return;
+  if (payload.type === "tick_batch") {
+    handleBackendTickBatch(payload.messages || []);
+    return;
+  }
   if (payload.type === "paper_sql_snapshot") {
     state.paperSqlSession = payload.session || null;
     rememberPaperSqlActivity(payload);

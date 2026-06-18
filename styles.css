@@ -198,6 +198,101 @@ select {
   padding: 16px;
 }
 
+.paper-live-fast {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 266px;
+  gap: 16px;
+  min-width: 920px;
+}
+
+.paper-live-uplot {
+  min-width: 0;
+  height: 392px;
+}
+
+.paper-live-uplot .u-wrap {
+  width: 100%;
+}
+
+.paper-live-side-html {
+  display: grid;
+  gap: 10px;
+}
+
+.paper-live-side-section {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fbfcfd;
+  padding: 12px;
+}
+
+.paper-live-side-section h3 {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.paper-live-side-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-top: 1px solid rgba(214, 221, 226, 0.72);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.paper-live-side-row:first-of-type {
+  border-top: 0;
+}
+
+.paper-live-side-row span {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.paper-live-side-row strong {
+  min-width: 0;
+  text-align: right;
+}
+
+.paper-live-position-row {
+  padding: 7px 0;
+  border-top: 1px solid rgba(214, 221, 226, 0.72);
+}
+
+.paper-live-position-row:first-of-type {
+  border-top: 0;
+}
+
+.paper-live-position-row strong,
+.paper-live-position-row span {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.paper-live-position-row strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.paper-live-position-row span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .live-mode-strip {
   margin-bottom: 10px;
   border: 1px solid #d6dde2;
@@ -943,6 +1038,19 @@ svg {
     min-height: 0;
     overflow-x: hidden;
     padding: 8px;
+  }
+
+  .paper-live-fast {
+    display: block;
+    min-width: 0;
+  }
+
+  .paper-live-uplot {
+    height: 300px;
+  }
+
+  .paper-live-side-html {
+    display: none;
   }
 
   #paperChart svg.paper-live-svg,
