@@ -320,7 +320,10 @@ function formatMicroTimestamp(value) {
 }
 
 function liveFeedLabel(row) {
-  if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws_book")) return "Local backend book";
+  if (row?.decision === "live_book_tick" && row?.backend_event_kind === "depth") return "Binance depth WS";
+  if (row?.decision === "live_book_tick" && row?.backend_event_kind === "book") return "Binance top-of-book WS";
+  if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws_depth")) return "Binance depth WS";
+  if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws_book")) return "Binance top-of-book WS";
   if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws")) return "Local backend trade";
   if (String(row?.btc_price_venue || row?.btc_price_source || "").includes("chainlink_data_streams")) return "Chainlink Data Streams";
   if (row?.decision === "live_tick") return "Local backend WS trade";
@@ -1409,13 +1412,8 @@ function liveChartTickPointsForMarket(market) {
   const points = liveTickPointsForMarket(market);
   const chainlinkRows = points.filter(isChainlinkPriceRow);
   const tradeRows = points.filter(isExternalTradePricePoint);
-  const depthRows = points.filter((point) => isExternalBookPricePoint(point) && point.backend_event_kind === "depth");
-  if (depthRows.length >= 2) return mergePaperChartRows(chainlinkRows, depthRows);
-  const bookRows = points.filter((point) => isExternalBookPricePoint(point) && point.backend_event_kind === "book");
-  if (bookRows.length >= 2) return mergePaperChartRows(chainlinkRows, bookRows);
-  if (tradeRows.length >= 2) return mergePaperChartRows(chainlinkRows, tradeRows);
   if (tradeRows.length) return mergePaperChartRows(chainlinkRows, tradeRows);
-  return chainlinkRows.length ? chainlinkRows : points;
+  return chainlinkRows;
 }
 
 function liveTradePointsForMarket(market) {
@@ -1623,20 +1621,11 @@ function isExternalTradePricePoint(row) {
 }
 
 function externalLineRows(rows) {
-  const depthRows = (rows || []).filter((row) => isExternalBookPricePoint(row) && row?.backend_event_kind === "depth");
-  if (depthRows.length >= 2) return depthRows;
-  const bookRows = (rows || []).filter((row) => isExternalBookPricePoint(row) && row?.backend_event_kind === "book");
-  if (bookRows.length >= 2) return bookRows;
-  const tradeRows = (rows || []).filter(isExternalTradePricePoint);
-  return tradeRows;
+  return (rows || []).filter(isExternalTradePricePoint);
 }
 
 function externalLineLabel(rows) {
-  const kinds = new Set((rows || []).map((row) => row?.backend_event_kind).filter(Boolean));
-  if (kinds.has("depth")) return "Binance WSS depth";
-  if (kinds.has("book")) return "Binance WSS book";
-  if (kinds.has("trade")) return "Binance WSS trades";
-  return "Binance WSS";
+  return rows?.length ? "Binance WSS trades" : "Binance WSS";
 }
 
 function backendBaseUrl() {
@@ -3125,7 +3114,7 @@ function externalDepthSnapshotFromRow(row) {
   const bids = normalizeBookLevels(row?.book_bids);
   const asks = normalizeBookLevels(row?.book_asks);
   if (row?.backend_event_kind !== "depth" || !isExternalBookPricePoint(row) || bids.length + asks.length < 4) return null;
-  return { row, bids, asks, source: "Depth WS" };
+  return { row, bids, asks, source: "Binance depth WS" };
 }
 
 function latestExternalDepthSnapshotForMarket(market, rawPoints) {
@@ -3868,7 +3857,7 @@ function orderBookTableRows(market, rawPoints, latestRaw, latestQuote, snapshot 
 function renderOrderBookTable(market, rawPoints, latestRaw, latestQuote) {
   const snapshot = selectedOrderBookSnapshot(market, rawPoints, latestRaw);
   const rows = orderBookTableRows(market, rawPoints, latestRaw, latestQuote, snapshot);
-  const sourceLabel = rows.length ? "Binance depth WS" : snapshot.source;
+  const sourceLabel = snapshot.source;
   const body = rows.length ? rows.map((row) => `
     <tr class="paper-book-row is-${escapeHtml(row.sideClass || "neutral")}">
       <th scope="row">${escapeHtml(row.side)}</th>
@@ -3877,7 +3866,7 @@ function renderOrderBookTable(market, rawPoints, latestRaw, latestQuote) {
       <td>${escapeHtml(row.notional)}</td>
     </tr>`).join("") : `
     <tr class="paper-book-row is-neutral">
-      <td colspan="4">Waiting for Binance depth WS.</td>
+      <td colspan="4">Waiting for live Binance depth WS.</td>
     </tr>`;
   return `
     <div class="paper-book-table">
