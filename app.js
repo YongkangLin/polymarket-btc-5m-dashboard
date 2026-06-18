@@ -884,6 +884,39 @@ const OUTCOME_ODDS_FIELDS = [
   "market_odds_error",
 ];
 
+const POLYMARKET_BOOK_FIELDS = [
+  "books",
+  "book_token_ids",
+  "polymarket_book_source",
+  "polymarket_book_max_age_ms",
+  "polymarket_book_stale",
+  "pm_book_condition_id",
+  "up_token_id",
+  "up_bid",
+  "up_ask",
+  "up_bid_size",
+  "up_ask_size",
+  "up_bid_depth_5",
+  "up_ask_depth_5",
+  "up_depth_imbalance",
+  "up_book_snapshot_time_micro",
+  "up_book_age_ms",
+  "down_token_id",
+  "down_bid",
+  "down_ask",
+  "down_bid_size",
+  "down_ask_size",
+  "down_bid_depth_5",
+  "down_ask_depth_5",
+  "down_depth_imbalance",
+  "down_book_snapshot_time_micro",
+  "down_book_age_ms",
+  "pm_up_bids",
+  "pm_up_asks",
+  "pm_down_bids",
+  "pm_down_asks",
+];
+
 const PERSISTED_ROW_FIELDS = new Set([
   "market_key",
   "condition_id",
@@ -979,6 +1012,7 @@ const PERSISTED_ROW_FIELDS = new Set([
   "market_odds_stale",
   "market_odds_error",
   ...OUTCOME_ODDS_FIELDS,
+  ...POLYMARKET_BOOK_FIELDS,
 ]);
 
 function copyOutcomeOddsFields(target, source) {
@@ -3917,6 +3951,74 @@ function normalizeBookLevels(value) {
     .filter(Boolean);
 }
 
+function polymarketBookDepthFromOutcomeBook(book) {
+  if (!book || typeof book !== "object") return null;
+  const bids = normalizeBookLevels(book.bids);
+  const asks = normalizeBookLevels(book.asks);
+  if (!bids.length && !asks.length) return null;
+  return {
+    bids,
+    asks,
+    ageMs: metricNumber(book.snapshot_age_ms),
+    stale: Boolean(book.error) || Boolean(book.stale),
+    source: book.source || "local_postgres_polymarket_order_books",
+  };
+}
+
+function polymarketDepthSnapshotFromRow(row) {
+  if (!row) return null;
+  const books = row.books && typeof row.books === "object" ? row.books : null;
+  const upFromBook = polymarketBookDepthFromOutcomeBook(books?.Up);
+  const downFromBook = polymarketBookDepthFromOutcomeBook(books?.Down);
+  const upBids = upFromBook?.bids || normalizeBookLevels(row.pm_up_bids);
+  const upAsks = upFromBook?.asks || normalizeBookLevels(row.pm_up_asks);
+  const downBids = downFromBook?.bids || normalizeBookLevels(row.pm_down_bids);
+  const downAsks = downFromBook?.asks || normalizeBookLevels(row.pm_down_asks);
+  if (!upBids.length && !upAsks.length && !downBids.length && !downAsks.length) return null;
+  const sourceText = [
+    row.polymarket_book_source,
+    upFromBook?.source,
+    downFromBook?.source,
+  ].filter(Boolean).join(" ").toLowerCase();
+  if (sourceText && !sourceText.includes("local_postgres_polymarket_order_books")) return null;
+  const ages = [
+    metricNumber(row.polymarket_book_max_age_ms),
+    metricNumber(row.up_book_age_ms),
+    metricNumber(row.down_book_age_ms),
+    upFromBook?.ageMs,
+    downFromBook?.ageMs,
+  ].filter((value) => value !== null);
+  return {
+    row,
+    upBids,
+    upAsks,
+    downBids,
+    downAsks,
+    source: "Rust Polymarket book recorder",
+    sourceKind: "local_postgres_polymarket_order_books",
+    ageMs: ages.length ? Math.max(...ages) : null,
+    stale: Boolean(row.polymarket_book_stale) || Boolean(upFromBook?.stale) || Boolean(downFromBook?.stale),
+  };
+}
+
+function latestPolymarketDepthSnapshotForMarket(market, rawPoints) {
+  const candidates = [
+    market,
+    ...paperStorageKeysForMarket(market).flatMap((storageKey) => [
+      state.livePersistedMarkets.get(storageKey),
+      state.paperObservedMarkets.get(storageKey),
+    ]),
+    ...(rawPoints || []),
+    ...paperMarkersFor(market),
+    ...paperPointsFor(market),
+  ].filter((row) => row && rowBelongsToMarketWindow(row, market));
+  for (let index = candidates.length - 1; index >= 0; index -= 1) {
+    const snapshot = polymarketDepthSnapshotFromRow(candidates[index]);
+    if (snapshot) return snapshot;
+  }
+  return null;
+}
+
 function selectedOrderBookSnapshot(market, rawPoints, latestRaw) {
   const depthSnapshot = latestExternalDepthSnapshotForMarket(market, rawPoints);
   if (depthSnapshot) return depthSnapshot;
@@ -3927,6 +4029,66 @@ function selectedOrderBookSnapshot(market, rawPoints, latestRaw) {
     source: "Waiting for Binance depth WS",
     waiting: true,
   };
+}
+
+function polymarketBookTableRows(snapshot = null) {
+  if (!snapshot) return [];
+  const sideRows = (outcome, bookSide, levels) => {
+    const isBuy = bookSide === "Bid";
+    return levels.slice(0, 5).map(([price, shares], index) => ({
+      outcome,
+      side: `${isBuy ? "Buy" : "Sell"} ${index + 1}`,
+      sideClass: isBuy ? "buy" : "sell",
+      limit: formatPrice(price),
+      shares: formatBookQty(shares),
+      notional: formatBookMoney(price * shares),
+    }));
+  };
+  return [
+    ...sideRows("Up", "Ask", snapshot.upAsks || []),
+    ...sideRows("Up", "Bid", snapshot.upBids || []),
+    ...sideRows("Down", "Ask", snapshot.downAsks || []),
+    ...sideRows("Down", "Bid", snapshot.downBids || []),
+  ];
+}
+
+function renderPolymarketBookTable(market, rawPoints) {
+  const snapshot = latestPolymarketDepthSnapshotForMarket(market, rawPoints);
+  const rows = polymarketBookTableRows(snapshot);
+  const ageText = ageMsText(snapshot?.ageMs);
+  const sourceLabel = !snapshot
+    ? "waiting for Rust Polymarket book recorder"
+    : (snapshot.stale ? `Rust Polymarket book stale${ageText ? ` | ${ageText}` : ""}` : `Rust Polymarket book${ageText ? ` | ${ageText}` : ""}`);
+  const body = rows.length ? rows.map((row) => `
+    <tr class="paper-book-row is-${escapeHtml(row.sideClass || "neutral")}">
+      <th scope="row">${escapeHtml(row.outcome)}</th>
+      <td>${escapeHtml(row.side)}</td>
+      <td>${escapeHtml(row.limit)}</td>
+      <td>${escapeHtml(row.shares)}</td>
+      <td>${escapeHtml(row.notional)}</td>
+    </tr>`).join("") : `
+    <tr class="paper-book-row is-neutral">
+      <td colspan="5">Waiting for Rust Polymarket book recorder.</td>
+    </tr>`;
+  return `
+    <div class="paper-book-table">
+      <div class="paper-book-heading">
+        <span>Polymarket Up/Down Depth</span>
+        <span>${escapeHtml(sourceLabel)}</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Outcome</th>
+            <th scope="col">Side</th>
+            <th scope="col">Limit</th>
+            <th scope="col">Shares</th>
+            <th scope="col">Notional</th>
+          </tr>
+        </thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>`;
 }
 
 function orderBookTableRows(market, rawPoints, latestRaw, latestQuote, snapshot = null) {
@@ -4251,6 +4413,7 @@ function renderPaperDecisionGraph(options = {}) {
     if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) {
       const loadingExtras = [
         renderPaperOddsStrip(market, null, null),
+        renderPolymarketBookTable(market, rawPoints),
         renderOrderBookTable(market, rawPoints, null, null),
         renderPaperActionLog(market, rawPoints),
       ].join("");
@@ -4291,6 +4454,7 @@ function renderPaperDecisionGraph(options = {}) {
     const hasPrices = priceRows.some((row) => metricNumber(row?.btc_price) !== null);
     const waitingExtras = [
       renderPaperOddsStrip(market, null, null),
+      renderPolymarketBookTable(market, rawPoints),
       renderOrderBookTable(market, rawPoints, null, null),
       renderPaperActionLog(market, rawPoints),
     ].join("");
@@ -4573,6 +4737,7 @@ function renderPaperDecisionGraph(options = {}) {
     : "";
   const oddsStrip = renderPaperOddsStrip(market, latestRaw, latestBookRaw, outcomeOdds);
   const actionLog = renderPaperActionLog(market, rawPoints);
+  const polymarketBookTable = renderPolymarketBookTable(market, rawPoints);
   const orderBookTable = renderOrderBookTable(market, rawPoints, latestBookRaw, latestQuote);
 
   const chartAriaLabel = isLiveView ? "Live trade BTC path and events" : "Paper trade BTC path and events";
@@ -4600,6 +4765,7 @@ function renderPaperDecisionGraph(options = {}) {
     </svg>
     ${oddsStrip}
     ${compactInfoRows}
+    ${polymarketBookTable}
     ${orderBookTable}
     ${actionLog}
     ${isLiveView ? "" : renderPaperSessionHistory(session)}
