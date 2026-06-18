@@ -4413,9 +4413,9 @@ function renderPaperDecisionGraph(options = {}) {
     if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) {
       const loadingExtras = [
         renderPaperOddsStrip(market, null, null),
+        renderPaperActionLog(market, rawPoints),
         renderPolymarketBookTable(market, rawPoints),
         renderOrderBookTable(market, rawPoints, null, null),
-        renderPaperActionLog(market, rawPoints),
       ].join("");
       if (market && !verifiedPaperStartPrice(market)) {
         const startStatus = market.start_price_status || liveStartMetadata(market).start_price_status || "loading";
@@ -4454,9 +4454,9 @@ function renderPaperDecisionGraph(options = {}) {
     const hasPrices = priceRows.some((row) => metricNumber(row?.btc_price) !== null);
     const waitingExtras = [
       renderPaperOddsStrip(market, null, null),
+      renderPaperActionLog(market, rawPoints),
       renderPolymarketBookTable(market, rawPoints),
       renderOrderBookTable(market, rawPoints, null, null),
-      renderPaperActionLog(market, rawPoints),
     ].join("");
     chart.innerHTML = `${svgEmpty(hasPrices && !startMeta ? "Waiting for Polymarket start." : "No usable points.")}${waitingExtras}`;
     return;
@@ -4765,9 +4765,9 @@ function renderPaperDecisionGraph(options = {}) {
     </svg>
     ${oddsStrip}
     ${compactInfoRows}
+    ${actionLog}
     ${polymarketBookTable}
     ${orderBookTable}
-    ${actionLog}
     ${isLiveView ? "" : renderPaperSessionHistory(session)}
     `;
 }
