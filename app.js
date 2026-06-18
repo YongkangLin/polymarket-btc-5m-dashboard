@@ -3117,8 +3117,19 @@ function externalDepthSnapshotFromRow(row) {
   return { row, bids, asks, source: "Binance depth WS" };
 }
 
+function labelExternalDepthSnapshot(snapshot) {
+  if (!snapshot) return null;
+  const eventMicro = pointTimestampMicro(snapshot.row);
+  const ageMs = eventMicro === null ? null : Math.max(0, Date.now() - eventMicro / 1000);
+  const age = ageMsText(ageMs);
+  return {
+    ...snapshot,
+    stale: ageMs !== null && ageMs > BINANCE_DEPTH_TABLE_STALE_MS,
+    source: `Binance depth WS${age ? ` · ${age}` : ""}`,
+  };
+}
+
 function latestExternalDepthSnapshotForMarket(market, rawPoints) {
-  const marketIsCurrent = isCurrentPaperMarket(market);
   const candidates = [
     ...(rawPoints || []),
     ...paperMarkersFor(market),
@@ -3127,24 +3138,14 @@ function latestExternalDepthSnapshotForMarket(market, rawPoints) {
   ];
   for (let index = candidates.length - 1; index >= 0; index -= 1) {
     const snapshot = externalDepthSnapshotFromRow(candidates[index]);
-    if (snapshot && marketIsCurrent) {
-      const eventMicro = pointTimestampMicro(snapshot.row);
-      const ageMs = eventMicro === null ? null : Math.max(0, Date.now() - eventMicro / 1000);
-      if (ageMs !== null && ageMs > BINANCE_DEPTH_TABLE_STALE_MS) continue;
-    }
     if (snapshot) {
-      state.latestExternalDepthSnapshotsByMarket.set(paperMarketWindowKey(market || snapshot.row), snapshot);
-      return snapshot;
+      const labeled = labelExternalDepthSnapshot(snapshot);
+      state.latestExternalDepthSnapshotsByMarket.set(paperMarketWindowKey(market || snapshot.row), labeled);
+      return labeled;
     }
   }
   const cached = state.latestExternalDepthSnapshotsByMarket.get(paperMarketWindowKey(market));
-  if (!cached) return null;
-  if (marketIsCurrent) {
-    const eventMicro = pointTimestampMicro(cached.row);
-    const ageMs = eventMicro === null ? null : Math.max(0, Date.now() - eventMicro / 1000);
-    if (ageMs !== null && ageMs > BINANCE_DEPTH_TABLE_STALE_MS) return null;
-  }
-  return cached;
+  return labelExternalDepthSnapshot(cached);
 }
 
 function formatBookMoney(value) {
