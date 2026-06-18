@@ -108,17 +108,10 @@ function isCompactPaperChart() {
 function configuredBackendBase() {
   const params = new URLSearchParams(window.location.search || "");
   const host = window.location.hostname;
-  if (host === "yongkanglin.github.io") {
-    if (params.has("backend") && window.history?.replaceState) {
-      params.delete("backend");
-      const query = params.toString();
-      window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash || ""}`);
-    }
-    return PUBLIC_BACKEND_BASE;
-  }
   const explicit = window.POLYMARKET_BACKEND_BASE
     || params.get("backend");
   if (explicit) return String(explicit).replace(/\/+$/, "");
+  if (host === "yongkanglin.github.io") return PUBLIC_BACKEND_BASE;
   const saved = window.localStorage?.getItem("POLYMARKET_BACKEND_BASE");
   if (saved) return String(saved).replace(/\/+$/, "");
   const protocol = window.location.protocol === "https:" ? "https:" : "http:";
@@ -1639,8 +1632,12 @@ function isExternalBookTickerPricePoint(row) {
   return isExternalBookPricePoint(row) && row?.backend_event_kind === "book";
 }
 
+function isExternalDepthPricePoint(row) {
+  return isExternalBookPricePoint(row) && row?.backend_event_kind === "depth";
+}
+
 function isExternalGraphPricePoint(row) {
-  return isExternalTradePricePoint(row) || isExternalBookTickerPricePoint(row);
+  return isExternalDepthPricePoint(row);
 }
 
 function externalLineRows(rows) {
@@ -1648,9 +1645,8 @@ function externalLineRows(rows) {
 }
 
 function externalLineLabel(rows) {
-  if ((rows || []).some(isExternalBookTickerPricePoint)) return "Binance WSS bookTicker";
-  if ((rows || []).some(isExternalTradePricePoint)) return "Binance WSS trades";
-  return "Binance WSS";
+  if ((rows || []).some(isExternalDepthPricePoint)) return "Binance WSS depth";
+  return "Binance WSS depth";
 }
 
 function backendBaseUrl() {
