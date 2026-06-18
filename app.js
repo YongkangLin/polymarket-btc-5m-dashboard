@@ -3123,11 +3123,11 @@ function labelExternalDepthSnapshot(snapshot) {
   if (!snapshot) return null;
   const eventMicro = pointTimestampMicro(snapshot.row);
   const ageMs = eventMicro === null ? null : Math.max(0, Date.now() - eventMicro / 1000);
-  const age = ageMsText(ageMs);
   return {
     ...snapshot,
     stale: ageMs !== null && ageMs > BINANCE_DEPTH_TABLE_STALE_MS,
-    source: `Binance depth WS${age ? ` · ${age}` : ""}`,
+    ageMs,
+    source: "Binance depth WS",
   };
 }
 
@@ -3139,10 +3139,10 @@ function latestExternalDepthSnapshotForMarket(market, rawPoints) {
     if (snapshot) {
       const labeled = labelExternalDepthSnapshot(snapshot);
       const cacheKey = paperMarketWindowKey(market || snapshot.row);
-      if (cacheKey && labeled && !labeled.stale) {
+      if (cacheKey && labeled) {
         state.latestExternalDepthSnapshotsByMarket.set(cacheKey, snapshot);
       }
-      return labeled && !labeled.stale ? labeled : null;
+      return labeled;
     }
   }
   return null;
@@ -3151,8 +3151,7 @@ function latestExternalDepthSnapshotForMarket(market, rawPoints) {
 function cachedExternalDepthSnapshotForMarket(market) {
   const cacheKey = paperMarketWindowKey(market);
   const cached = cacheKey ? state.latestExternalDepthSnapshotsByMarket.get(cacheKey) : null;
-  const labeled = cached ? labelExternalDepthSnapshot(cached) : null;
-  return labeled && !labeled.stale ? labeled : null;
+  return cached ? labelExternalDepthSnapshot(cached) : null;
 }
 
 function formatBookMoney(value) {
@@ -3863,7 +3862,9 @@ function orderBookTableRows(market, rawPoints, latestRaw, latestQuote, snapshot 
 function renderOrderBookTable(market, rawPoints, latestRaw, latestQuote) {
   const snapshot = selectedOrderBookSnapshot(market, rawPoints, latestRaw);
   const rows = orderBookTableRows(market, rawPoints, latestRaw, latestQuote, snapshot);
-  const sourceLabel = snapshot.waiting ? "Binance depth WS" : snapshot.source;
+  const depthLabel = snapshot.waiting
+    ? "waiting for depth"
+    : (snapshot.stale ? "depth snapshot stale" : "depth snapshot");
   const body = rows.length ? rows.map((row) => `
     <tr class="paper-book-row is-${escapeHtml(row.sideClass || "neutral")}">
       <th scope="row">${escapeHtml(row.side)}</th>
@@ -3878,7 +3879,7 @@ function renderOrderBookTable(market, rawPoints, latestRaw, latestQuote) {
     <div class="paper-book-table">
       <div class="paper-book-heading">
         <span>BTC Order Book Depth</span>
-        <span>${escapeHtml(sourceLabel)}</span>
+        <span>${escapeHtml(depthLabel)}</span>
       </div>
       <table>
         <thead>
