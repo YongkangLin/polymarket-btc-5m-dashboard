@@ -67,7 +67,6 @@ const state = {
   paperObservedPointsByMarket: new Map(),
   paperObservedMarkersByMarket: new Map(),
   latestOutcomeOddsByWindow: new Map(),
-  latestExternalDepthSnapshotsByMarket: new Map(),
   liveTickStatus: {
     state: "idle",
     venue: "local_backend_ws",
@@ -1560,6 +1559,7 @@ function rowUsesExternalBinancePrice(row) {
 }
 
 function hasStrictPolymarketTruthPrice(row) {
+  if (isPaperEventPoint(row)) return false;
   if (!hasChainlinkDataStreamsPrice(row)) return false;
   if (rowUsesExternalBinancePrice(row)) return false;
   return row?.btc_price_is_truth === true && row?.truth_current_price_missing === false;
@@ -1586,6 +1586,7 @@ function chainlinkVenueFromSource(source) {
 }
 
 function isChainlinkPriceRow(row) {
+  if (isPaperEventPoint(row)) return false;
   return hasChainlinkDataStreamsPrice(row) && !rowUsesExternalBinancePrice(row);
 }
 
@@ -3240,21 +3241,10 @@ function latestExternalDepthSnapshotForMarket(market, rawPoints) {
   for (let index = candidates.length - 1; index >= 0; index -= 1) {
     const snapshot = externalDepthSnapshotFromRow(candidates[index]);
     if (snapshot) {
-      const labeled = labelExternalDepthSnapshot(snapshot);
-      const cacheKey = paperMarketWindowKey(market || snapshot.row);
-      if (cacheKey && labeled) {
-        state.latestExternalDepthSnapshotsByMarket.set(cacheKey, labeled);
-      }
-      return labeled;
+      return labelExternalDepthSnapshot(snapshot);
     }
   }
   return null;
-}
-
-function cachedExternalDepthSnapshotForMarket(market) {
-  const cacheKey = paperMarketWindowKey(market);
-  const cached = cacheKey ? state.latestExternalDepthSnapshotsByMarket.get(cacheKey) : null;
-  return cached ? labelExternalDepthSnapshot(cached) : null;
 }
 
 function formatBookMoney(value) {
@@ -3930,8 +3920,6 @@ function normalizeBookLevels(value) {
 function selectedOrderBookSnapshot(market, rawPoints, latestRaw) {
   const depthSnapshot = latestExternalDepthSnapshotForMarket(market, rawPoints);
   if (depthSnapshot) return depthSnapshot;
-  const cachedDepthSnapshot = cachedExternalDepthSnapshotForMarket(market);
-  if (cachedDepthSnapshot) return cachedDepthSnapshot;
   return {
     row: {},
     bids: [],
