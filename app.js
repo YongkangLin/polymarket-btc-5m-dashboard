@@ -321,9 +321,9 @@ function formatMicroTimestamp(value) {
 
 function liveFeedLabel(row) {
   if (row?.decision === "live_book_tick" && row?.backend_event_kind === "depth") return "Binance depth WS";
-  if (row?.decision === "live_book_tick" && row?.backend_event_kind === "book") return "Binance top-of-book WS";
+  if (row?.decision === "live_book_tick" && row?.backend_event_kind === "book") return "Binance bookTicker WS";
   if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws_depth")) return "Binance depth WS";
-  if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws_book")) return "Binance top-of-book WS";
+  if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws_book")) return "Binance bookTicker WS";
   if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws")) return "Local backend trade";
   if (String(row?.btc_price_venue || row?.btc_price_source || "").includes("chainlink_data_streams")) return "Chainlink Data Streams";
   if (row?.decision === "live_tick") return "Local backend WS trade";
