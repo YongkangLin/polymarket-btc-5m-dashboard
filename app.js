@@ -14,9 +14,9 @@ const PUBLIC_BACKEND_BASE = "https://refuse-exists-enrolled-cage.trycloudflare.c
 const LIVE_TICK_RENDER_MAX_POINTS = 2400;
 const LIVE_AUX_RENDER_THROTTLE_MS = 500;
 const LIVE_TICK_PERSIST_MS = 1000;
-const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 12000;
-const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 3000;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v12";
+const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 50000;
+const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 5000;
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v13";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
   "polymarketPaperLiveTicks.v3",
@@ -28,6 +28,7 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v9",
   "polymarketPaperLiveTicks.v10",
   "polymarketPaperLiveTicks.v11",
+  "polymarketPaperLiveTicks.v12",
 ];
 const LIVE_PAPER_X_WINDOW_SECONDS = 75;
 const LIVE_PAPER_X_LEAD_SECONDS = 8;
@@ -48,8 +49,8 @@ const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const BINANCE_DEPTH_TABLE_STALE_MS = 15000;
 const LOCAL_BACKEND_BASE = configuredBackendBase();
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
-const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 1000;
-const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 12000;
+const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 5000;
+const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 50000;
 const POLYMARKET_TRUTH_SOURCE = "chainlink_data_streams";
 
 function configuredInitialTab() {
@@ -802,39 +803,32 @@ function canUseUPlot() {
 }
 
 function uPlotDataFromSamples(truthSamples, externalSamples) {
-  const chainlink = (truthSamples || [])
-    .filter((sample) => Number.isFinite(sample.elapsedSeconds) && Number.isFinite(sample.dollarMove));
-  const binance = (externalSamples || [])
-    .filter((sample) => Number.isFinite(sample.elapsedSeconds) && Number.isFinite(sample.dollarMove));
+  const events = [];
+  const addEvents = (samples, source) => {
+    (samples || []).forEach((sample) => {
+      if (!Number.isFinite(sample?.elapsedSeconds) || !Number.isFinite(sample?.dollarMove)) return;
+      events.push({ elapsedSeconds: sample.elapsedSeconds, dollarMove: sample.dollarMove, source });
+    });
+  };
+  addEvents(truthSamples, "chainlink");
+  addEvents(externalSamples, "binance");
+  events.sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
   const x = [];
   const chainlinkValues = [];
   const binanceValues = [];
-  let chainlinkIndex = 0;
-  let binanceIndex = 0;
-  while (chainlinkIndex < chainlink.length || binanceIndex < binance.length) {
-    const chainlinkSample = chainlink[chainlinkIndex] || null;
-    const binanceSample = binance[binanceIndex] || null;
-    if (
-      chainlinkSample
-      && binanceSample
-      && Math.abs(chainlinkSample.elapsedSeconds - binanceSample.elapsedSeconds) < 0.000001
-    ) {
-      x.push(chainlinkSample.elapsedSeconds);
-      chainlinkValues.push(chainlinkSample.dollarMove);
-      binanceValues.push(binanceSample.dollarMove);
-      chainlinkIndex += 1;
-      binanceIndex += 1;
-    } else if (!binanceSample || (chainlinkSample && chainlinkSample.elapsedSeconds < binanceSample.elapsedSeconds)) {
-      x.push(chainlinkSample.elapsedSeconds);
-      chainlinkValues.push(chainlinkSample.dollarMove);
-      binanceValues.push(null);
-      chainlinkIndex += 1;
-    } else {
-      x.push(binanceSample.elapsedSeconds);
-      chainlinkValues.push(null);
-      binanceValues.push(binanceSample.dollarMove);
-      binanceIndex += 1;
+  let latestChainlink = null;
+  let latestBinance = null;
+  let index = 0;
+  while (index < events.length) {
+    const elapsedSeconds = events[index].elapsedSeconds;
+    while (index < events.length && Math.abs(events[index].elapsedSeconds - elapsedSeconds) < 0.000001) {
+      if (events[index].source === "chainlink") latestChainlink = events[index].dollarMove;
+      if (events[index].source === "binance") latestBinance = events[index].dollarMove;
+      index += 1;
     }
+    x.push(elapsedSeconds);
+    chainlinkValues.push(latestChainlink);
+    binanceValues.push(latestBinance);
   }
   return [x, chainlinkValues, binanceValues];
 }
@@ -881,6 +875,7 @@ function updatePaperUPlot(chart, options) {
       height,
       legend: { show: false },
       cursor: { show: false },
+      spanGaps: true,
       padding: [8, 10, 0, 0],
       scales: {
         x: { time: false, min: options.xDomain.min, max: options.xDomain.max },
@@ -3764,6 +3759,14 @@ function rowHasOutcomeOdds(row) {
   return OUTCOME_ODDS_FIELDS.some((field) => row?.[field] !== null && row?.[field] !== undefined);
 }
 
+function rowHasUsableOutcomeOdds(row) {
+  if (!row) return false;
+  return outcomeDirectProbability(row, "up") !== null
+    || outcomeDirectProbability(row, "down") !== null
+    || outcomeBookProbability(row, "up") !== null
+    || outcomeBookProbability(row, "down") !== null;
+}
+
 function isActionOnlyPaperOddsRow(row) {
   const eventType = String(row?.event_type || "").toLowerCase();
   if (eventType === "paper_evaluation" || eventType === "paper_settlement") return true;
@@ -3772,7 +3775,7 @@ function isActionOnlyPaperOddsRow(row) {
 }
 
 function currentMarketOddsRows(rows) {
-  return (rows || []).filter((row) => row && !isActionOnlyPaperOddsRow(row));
+  return (rows || []).filter((row) => row && !isActionOnlyPaperOddsRow(row) && rowHasUsableOutcomeOdds(row));
 }
 
 function outcomeDirectProbability(row, key) {
