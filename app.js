@@ -6,11 +6,12 @@ const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_REFRESH_MS = 30000;
 const LIVE_TICK_RENDER_THROTTLE_MS = 16;
+const LIVE_CHART_CLOCK_MS = 33;
 const LIVE_TICK_STALE_MS = 10000;
 const LIVE_TICK_RECONNECT_MS = 2000;
 const LIVE_SOCKET_CONNECT_TIMEOUT_MS = 3500;
-const REMOTE_LIVE_SOCKET_CONNECT_TIMEOUT_MS = 25000;
-const PUBLIC_BACKEND_BASE = "https://refuse-exists-enrolled-cage.trycloudflare.com";
+const LOCAL_BACKEND_BASE_KEY = "POLYMARKET_LOCAL_BACKEND_BASE";
+const DEFAULT_BACKEND_BASE = "http://127.0.0.1:8788";
 const LIVE_TICK_RENDER_MAX_POINTS = 2400;
 const LIVE_AUX_RENDER_THROTTLE_MS = 500;
 const LIVE_TICK_PERSIST_MS = 1000;
@@ -32,18 +33,18 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
 ];
 const LIVE_PAPER_X_WINDOW_SECONDS = 75;
 const LIVE_PAPER_X_LEAD_SECONDS = 8;
-const LIVE_PAPER_X_SCROLL_STEP_SECONDS = 0.1;
 const LIVE_PAPER_Y_MIN_RADIUS = 8;
 const LIVE_PAPER_Y_EXPANSION_PAD = 1.24;
 const LIVE_PAPER_Y_BUCKET = 4;
 const LIVE_PAPER_RENDER_BUCKET_SECONDS = 0.075;
 const LIVE_CHAINLINK_RENDER_BUCKET_SECONDS = null;
 const LIVE_BINANCE_RENDER_BUCKET_SECONDS = null;
+const LIVE_STEP_EPS_SECONDS = 0.0005;
 const LIVE_PAPER_RENDER_TAIL_SECONDS = 82;
-const LIVE_RENDER_MAX_SOURCE_ROWS_PER_LINE = 6500;
-const LIVE_RENDER_MIN_POINTS_PER_LINE = 420;
-const LIVE_RENDER_MAX_POINTS_PER_LINE = 1300;
-const LIVE_RENDER_POINTS_PER_PIXEL = 1.15;
+const LIVE_RENDER_MAX_SOURCE_ROWS_PER_LINE = 12000;
+const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
+const LIVE_RENDER_MAX_POINTS_PER_LINE = 5000;
+const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const BINANCE_DEPTH_TABLE_STALE_MS = 15000;
@@ -109,6 +110,7 @@ let liveTickReconnectTimer = null;
 let liveTickRenderFrame = null;
 let liveTickLastRenderAt = 0;
 let liveTickPersistTimer = null;
+let liveChartClockTimer = null;
 
 function byId(id) {
   return document.getElementById(id);
@@ -122,25 +124,15 @@ function configuredBackendBase() {
   const params = new URLSearchParams(window.location.search || "");
   const host = window.location.hostname;
   if (window.POLYMARKET_BACKEND_BASE) return String(window.POLYMARKET_BACKEND_BASE).replace(/\/+$/, "");
-  if (host === "yongkanglin.github.io") return PUBLIC_BACKEND_BASE;
   const explicit = params.get("backend");
   if (explicit) return String(explicit).replace(/\/+$/, "");
-  const saved = window.localStorage?.getItem("POLYMARKET_BACKEND_BASE");
+  const saved = window.localStorage?.getItem(LOCAL_BACKEND_BASE_KEY);
   if (saved) return String(saved).replace(/\/+$/, "");
   const protocol = window.location.protocol === "https:" ? "https:" : "http:";
   if (host && !["127.0.0.1", "localhost", "yongkanglin.github.io"].includes(host)) {
     return `${protocol}//${host}:8788`;
   }
-  return "http://127.0.0.1:8788";
-}
-
-function backendBaseIsRemote(base) {
-  try {
-    const url = new URL(base, window.location.href);
-    return url.protocol === "https:" && !["127.0.0.1", "localhost"].includes(url.hostname);
-  } catch (error) {
-    return false;
-  }
+  return DEFAULT_BACKEND_BASE;
 }
 
 function loadJson(path) {
@@ -450,6 +442,18 @@ function pathFrom(points) {
   return points.map((point, index) => `${index === 0 ? "M" : "L"}${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ");
 }
 
+function stepPathFrom(points) {
+  if (!Array.isArray(points) || !points.length) return "";
+  const output = [`M${points[0].x.toFixed(2)},${points[0].y.toFixed(2)}`];
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1];
+    const point = points[index];
+    output.push(`L${point.x.toFixed(2)},${previous.y.toFixed(2)}`);
+    output.push(`L${point.x.toFixed(2)},${point.y.toFixed(2)}`);
+  }
+  return output.join("");
+}
+
 function compressLinePoints(points, minPixelGap = 0.75) {
   const output = [];
   points.forEach((point) => {
@@ -599,13 +603,23 @@ function paperLiveScaleKey(market) {
   return `${key}:${windowStart}`;
 }
 
+function liveMarketElapsedSeconds(market) {
+  const start = marketWindowStartUnix(market);
+  if (start === null) return null;
+  const elapsed = Date.now() / 1000 - start;
+  return Number.isFinite(elapsed) ? Math.max(0, Math.min(300, elapsed)) : null;
+}
+
 function livePaperXDomain(market, latestElapsed) {
-  const latest = Math.max(0, Math.min(300, Number(latestElapsed) || 0));
+  const clockElapsed = liveMarketElapsedSeconds(market);
+  const latest = Math.max(0, Math.min(300, Math.max(
+    Number(latestElapsed) || 0,
+    clockElapsed ?? 0,
+  )));
   const windowSeconds = LIVE_PAPER_X_WINDOW_SECONDS;
   const leadSeconds = LIVE_PAPER_X_LEAD_SECONDS;
   const scrollAfter = windowSeconds - leadSeconds;
-  const step = LIVE_PAPER_X_SCROLL_STEP_SECONDS;
-  let min = latest <= scrollAfter ? 0 : Math.floor((latest - scrollAfter) / step) * step;
+  let min = latest <= scrollAfter ? 0 : latest - scrollAfter;
   min = Math.max(0, Math.min(300 - windowSeconds, min));
   const key = paperLiveScaleKey(market);
   const cached = state.paperLiveChartScales.get(key) || {};
@@ -803,13 +817,37 @@ function canUseUPlot() {
   return typeof window !== "undefined" && typeof window.uPlot === "function";
 }
 
+function steppedPlotEvents(samples, source) {
+  const rows = orderedUniqueSamples(samples);
+  const events = [];
+  let previous = null;
+  rows.forEach((sample) => {
+    if (!Number.isFinite(sample?.elapsedSeconds) || !Number.isFinite(sample?.dollarMove)) return;
+    const elapsedSeconds = previous
+      ? Math.max(sample.elapsedSeconds, previous.elapsedSeconds + LIVE_STEP_EPS_SECONDS)
+      : sample.elapsedSeconds;
+    if (previous && elapsedSeconds - previous.elapsedSeconds > LIVE_STEP_EPS_SECONDS * 2) {
+      events.push({
+        elapsedSeconds: elapsedSeconds - LIVE_STEP_EPS_SECONDS,
+        dollarMove: previous.dollarMove,
+        source,
+      });
+    }
+    const point = {
+      elapsedSeconds,
+      dollarMove: sample.dollarMove,
+      source,
+    };
+    events.push(point);
+    previous = point;
+  });
+  return events;
+}
+
 function uPlotDataFromSamples(truthSamples, externalSamples) {
   const events = [];
   const addEvents = (samples, source) => {
-    (samples || []).forEach((sample) => {
-      if (!Number.isFinite(sample?.elapsedSeconds) || !Number.isFinite(sample?.dollarMove)) return;
-      events.push({ elapsedSeconds: sample.elapsedSeconds, dollarMove: sample.dollarMove, source });
-    });
+    events.push(...steppedPlotEvents(samples, source));
   };
   addEvents(truthSamples, "chainlink");
   addEvents(externalSamples, "binance");
@@ -832,6 +870,33 @@ function uPlotDataFromSamples(truthSamples, externalSamples) {
     binanceValues.push(binanceValue);
   }
   return [x, chainlinkValues, binanceValues];
+}
+
+function liveSampleSignature(sample) {
+  if (!sample) return "";
+  return [
+    sample.row?.point_id,
+    sample.row?.event_id,
+    sample.row?.receive_time_micro,
+    sample.row?.event_time_micro,
+    sample.elapsedSeconds,
+    sample.dollarMove,
+    sample.btcPrice,
+  ].filter((value) => value !== undefined && value !== null).join(":");
+}
+
+function liveSeriesSignature(samples) {
+  const rows = samples || [];
+  return [
+    rows.length,
+    liveSampleSignature(rows[0]),
+    liveSampleSignature(rows[Math.max(0, rows.length - 2)]),
+    liveSampleSignature(rows[rows.length - 1]),
+  ].join("|");
+}
+
+function liveChartDataSignature(truthSamples, externalSamples) {
+  return `${liveSeriesSignature(truthSamples)}::${liveSeriesSignature(externalSamples)}`;
 }
 
 function renderPaperLiveSideHtml(marketMetrics, accountMetrics, positionRows) {
@@ -869,14 +934,15 @@ function updatePaperUPlot(chart, options) {
     if (!target) return false;
     const width = Math.max(320, Math.floor(target.clientWidth || chart.clientWidth || 680));
     const height = Math.max(260, Math.floor(target.clientHeight || (isCompactPaperChart() ? 300 : 392)));
-    const data = uPlotDataFromSamples(options.truthSamples, options.externalSamples);
     const key = `${chart.id || "paperChart"}:${options.compact ? "compact" : "wide"}`;
+    const dataSignature = liveChartDataSignature(options.truthSamples, options.externalSamples);
     const makeOptions = () => ({
       width,
       height,
       legend: { show: false },
       cursor: { show: false },
       spanGaps: true,
+      pxAlign: false,
       padding: [8, 10, 0, 0],
       scales: {
         x: { time: false, min: options.xDomain.min, max: options.xDomain.max },
@@ -907,12 +973,21 @@ function updatePaperUPlot(chart, options) {
     if (!existing || existing.key !== key || !targetHasPlot) {
       if (existing?.plot) existing.plot.destroy();
       target.innerHTML = "";
+      const data = uPlotDataFromSamples(options.truthSamples, options.externalSamples);
       const plot = new window.uPlot(makeOptions(), data, target);
-      state.paperUPlotCharts.set(chart.id || "paperChart", { key, plot });
+      state.paperUPlotCharts.set(chart.id || "paperChart", { key, plot, dataSignature, width, height });
       return true;
     }
-    existing.plot.setSize({ width, height });
-    existing.plot.setData(data, false);
+    if (existing.width !== width || existing.height !== height) {
+      existing.plot.setSize({ width, height });
+      existing.width = width;
+      existing.height = height;
+    }
+    if (existing.dataSignature !== dataSignature) {
+      const data = uPlotDataFromSamples(options.truthSamples, options.externalSamples);
+      existing.plot.setData(data, false);
+      existing.dataSignature = dataSignature;
+    }
     existing.plot.setScale("x", { min: options.xDomain.min, max: options.xDomain.max });
     existing.plot.setScale("y", { min: options.dollarDomain.min, max: options.dollarDomain.max });
     return true;
@@ -5197,10 +5272,10 @@ function renderPaperDecisionGraph(options = {}) {
 	      <text class="paper-marker-label" x="${x + 8}" y="${y - 8}">${escapeHtml(paperMarkerLabel(row))}</text>`;
   }).join("");
   const truthPath = truthLinePoints.length
-    ? `<path class="line line-chainlink" d="${pathFrom(truthLinePoints)}"></path>`
+    ? `<path class="line line-chainlink" d="${selectedCurrent ? stepPathFrom(truthLinePoints) : pathFrom(truthLinePoints)}"></path>`
     : "";
   const externalPath = externalLinePoints.length
-    ? `<path class="line line-external" d="${pathFrom(externalLinePoints)}"></path>`
+    ? `<path class="line line-external" d="${selectedCurrent ? stepPathFrom(externalLinePoints) : pathFrom(externalLinePoints)}"></path>`
     : "";
   const truthLabel = chainlinkLineLabel(truthRows);
   const externalLabel = externalLineLabel(externalRows);
@@ -5627,6 +5702,29 @@ function scheduleLiveTickRender() {
   });
 }
 
+function liveChartClockShouldRun() {
+  return ["paper", "live"].includes(state.activeTab)
+    && currentPaperViewSelected()
+    && document.visibilityState !== "hidden";
+}
+
+function clearLiveChartClock() {
+  if (!liveChartClockTimer) return;
+  window.clearInterval(liveChartClockTimer);
+  liveChartClockTimer = null;
+}
+
+function ensureLiveChartClock() {
+  if (liveChartClockTimer || !liveChartClockShouldRun()) return;
+  liveChartClockTimer = window.setInterval(() => {
+    if (!liveChartClockShouldRun()) {
+      clearLiveChartClock();
+      return;
+    }
+    scheduleLiveTickRender();
+  }, LIVE_CHART_CLOCK_MS);
+}
+
 function clearLiveTickReconnect() {
   if (liveTickReconnectTimer) {
     window.clearTimeout(liveTickReconnectTimer);
@@ -5636,6 +5734,7 @@ function clearLiveTickReconnect() {
 
 function closeLiveTickStream() {
   clearLiveTickReconnect();
+  clearLiveChartClock();
   if (liveTickSocket) {
     if (liveTickSocket._connectTimer) window.clearTimeout(liveTickSocket._connectTimer);
     liveTickSocket.onopen = null;
@@ -5893,6 +5992,7 @@ function handleBackendStreamMessage(payload) {
 
 function ensureLiveTickStream() {
   if (!["paper", "live"].includes(state.activeTab)) return;
+  ensureLiveChartClock();
   if (liveTickSocket && [WebSocket.CONNECTING, WebSocket.OPEN].includes(liveTickSocket.readyState)) return;
   if (liveTickReconnectTimer) return;
   const url = backendWebSocketUrl();
@@ -5923,7 +6023,7 @@ function ensureLiveTickStream() {
         // ignored
       }
     }
-  }, backendBaseIsRemote(backendBaseUrl()) ? REMOTE_LIVE_SOCKET_CONNECT_TIMEOUT_MS : LIVE_SOCKET_CONNECT_TIMEOUT_MS);
+  }, LIVE_SOCKET_CONNECT_TIMEOUT_MS);
   liveTickSocket.onopen = () => {
     if (liveTickSocket?._connectTimer) {
       window.clearTimeout(liveTickSocket._connectTimer);
@@ -5989,6 +6089,7 @@ function ensureLiveTickStream() {
 
 function refreshLivePaperFeeds() {
   ensureLiveTickStream();
+  ensureLiveChartClock();
   if (state.activeTab === "paper" && (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) renderPaperChart();
   if (state.activeTab === "live" && (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) renderLiveChart();
 }
@@ -6071,7 +6172,13 @@ async function main() {
   window.addEventListener("pagehide", flushPaperTickPersist);
   window.addEventListener("beforeunload", flushPaperTickPersist);
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") flushPaperTickPersist();
+    if (document.visibilityState === "hidden") {
+      flushPaperTickPersist();
+      clearLiveChartClock();
+    } else if (state.activeTab === "paper" || state.activeTab === "live") {
+      ensureLiveTickStream();
+      ensureLiveChartClock();
+    }
   });
 }
 
