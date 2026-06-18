@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-18T07:53:51.887503+00:00",
+  "generated_at": "2026-06-18T09:39:09.774579+00:00",
   "status": "passed",
   "feature_summary": {
     "markets": 2010,
@@ -57,7 +57,7 @@
     },
     "maker_route": {
       "mode": "join_best_bid",
-      "quote_horizon_seconds": 5,
+      "quote_horizon_seconds": 60,
       "max_queue_ahead_notional": null
     },
     "quote_notional_dollars": 5.0,
@@ -226,13 +226,13 @@
       "actual": {
         "status": "paper_collecting",
         "maker_route_ready": false,
-        "selected_route_id": "maker_join_bid_h5",
+        "selected_route_id": "maker_join_bid_h60",
         "selected_route_type": "maker"
       },
       "expected": {
         "status": "paper_collecting",
         "maker_route_ready": false,
-        "selected_route_id": "maker_join_bid_h5",
+        "selected_route_id": "maker_join_bid_h60",
         "selected_route_type": "maker"
       },
       "passed": true
@@ -240,8 +240,8 @@
     {
       "id": "public_workflow_synced",
       "label": "Public dashboard workflow is synced",
-      "actual": "1911bce10b2b9d67b2a30df051d7d9535f301c82d03417ba64bfeba9a039184f",
-      "expected": "1911bce10b2b9d67b2a30df051d7d9535f301c82d03417ba64bfeba9a039184f",
+      "actual": "d753b97bea021190ba355e9e3ff27527237c6bb32698353c9948158ee67b79de",
+      "expected": "d753b97bea021190ba355e9e3ff27527237c6bb32698353c9948158ee67b79de",
       "passed": true
     },
     {
@@ -367,12 +367,12 @@
       "label": "Rust maker route matches selected maker policy",
       "actual": {
         "mode": "join_best_bid",
-        "quote_horizon_seconds": 5,
+        "quote_horizon_seconds": 60,
         "max_queue_ahead_notional": null
       },
       "expected": {
         "mode": "join_best_bid",
-        "quote_horizon_seconds": 5,
+        "quote_horizon_seconds": 60,
         "max_queue_ahead_notional": null
       },
       "passed": true
