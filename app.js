@@ -5028,9 +5028,7 @@ async function main() {
   renderStatus();
   renderStrategyPanels();
   renderBacktestSelects();
-  renderBacktestChart();
-  renderPaperChart();
-  renderLiveChart();
+  renderActiveTab();
   refreshBackendPaperFeeds({ render: false });
   refreshLivePaperFeeds();
 
