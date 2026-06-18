@@ -45,6 +45,7 @@ const POLYMARKET_TRUTH_SOURCE = "chainlink_data_streams";
 
 const state = {
   workflow: null,
+  paperSqlSession: null,
   activeTab: "backtest",
   marketFilter: "all",
   backtestMarket: "",
@@ -1475,9 +1476,7 @@ function liveTradePointsForMarket(market) {
 }
 
 function marketUsesPolymarketTruthPrice(market) {
-  return market?.price_role === "polymarket_truth"
-    || market?.btc_price_is_truth === true
-    || market?.truth_current_price_missing === false;
+  return hasStrictPolymarketTruthPrice(market);
 }
 
 function rowPriceSourceText(row) {
@@ -1595,12 +1594,14 @@ function truthSampleMatchesMarket(sample, market) {
 function truthDisplayCandidateFromRow(market, row) {
   if (!row) return null;
   if (!hasStrictPolymarketTruthPrice(row)) return null;
+  const startMeta = preferredPaperStartMetadata(market) || startMetadataFromSource(row);
+  if (!startMeta) return null;
   return {
     row,
     btcPrice: metricNumber(row.btc_price ?? row.latest_btc_price),
     elapsedSeconds: paperPointElapsedSeconds(row),
     secondsLeft: paperPointSecondsLeft(row),
-    dollarMove: paperDollarMoveFromStart(row, metricNumber(market?.start_price)),
+    dollarMove: paperDollarMoveFromStart(row, startMeta.price),
     source: "chainlink",
   };
 }
@@ -1697,20 +1698,25 @@ function externalLineLabel(rows) {
   return "Binance WSS";
 }
 
-function firstExternalStartPrice(rows) {
-  const candidates = (rows || [])
-    .map((row) => ({ row, price: metricNumber(row?.btc_price), time: pointPlotTimestampMicro(row, "binance") }))
-    .filter((item) => item.price !== null)
-    .sort((left, right) => {
-      const leftTime = left.time ?? Number.MAX_SAFE_INTEGER;
-      const rightTime = right.time ?? Number.MAX_SAFE_INTEGER;
-      return leftTime - rightTime;
-    });
-  return candidates[0]?.price ?? null;
-}
-
 function backendBaseUrl() {
   return String(LOCAL_BACKEND_BASE || "").replace(/\/+$/, "");
+}
+
+function activePaperEdgeId() {
+  return state.workflow?.paper_trade?.edge_id
+    || state.workflow?.active_backtest_key
+    || ACTIVE_BACKTEST_KEY;
+}
+
+function backendJsonUrl(path, params = {}) {
+  const base = backendBaseUrl();
+  if (!base) return "";
+  const url = new URL(base);
+  url.pathname = path;
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") url.searchParams.set(key, String(value));
+  });
+  return url.toString();
 }
 
 function backendWebSocketUrl() {
@@ -1724,6 +1730,8 @@ function backendWebSocketUrl() {
     symbol: "BTCUSDT",
     chainlink_snapshot_limit: String(BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT),
     binance_snapshot_limit: String(BACKEND_WS_BINANCE_SNAPSHOT_LIMIT),
+    paper_edge_id: activePaperEdgeId(),
+    paper_history_limit: "36",
   }).toString();
   return url.toString();
 }
@@ -1732,6 +1740,32 @@ function refreshBackendPaperFeeds(options = {}) {
   ensureLiveTickStream();
   if (options.render && state.activeTab === "paper") renderPaperChart();
   return currentPaperMarket();
+}
+
+function rememberPaperSqlActivity(payload) {
+  const markers = Array.isArray(payload?.markers)
+    ? payload.markers
+    : Array.isArray(payload?.session?.markers)
+      ? payload.session.markers
+      : [];
+  if (!markers.length) return;
+  const grouped = new Map();
+  markers.forEach((marker) => {
+    const key = paperGraphKey(marker) || marker.condition_id || marker.market_key || "paper-sql";
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(marker);
+  });
+  grouped.forEach((rows, key) => {
+    const latest = rows[rows.length - 1] || {};
+    rememberObservedPaperMarket({
+      ...latest,
+      market_key: latest.market_key || key,
+      condition_id: latest.condition_id || key,
+      slug: latest.slug || latest.market_key || key,
+      points: [],
+      markers: [],
+    }, [], rows);
+  });
 }
 
 function historicalPaperMarkets() {
@@ -2152,7 +2186,7 @@ function renderStrategyPanels() {
   const activeSummary = state.workflow.active_backtest?.summary || {};
   const missRoute = paperMissRoute();
   const policy = state.workflow.live_trade.execution_policy || {};
-  const routeLabel = paperSummary.maker_route_label || policy.selected_route_label || "Maker improve one tick for 60s";
+  const routeLabel = paperSummary.maker_route_label || policy.selected_route_label || "Maker improve one tick for 5s";
   const bookChecks = Number(paperSummary.external_book_checks || 0);
   const flowChecks = Number(paperSummary.external_trade_flow_checks || 0);
   const depthSupportText = bookChecks > 0 || flowChecks > 0 ? "BTC pressure checked" : "BTC pressure pending";
@@ -3195,6 +3229,32 @@ function latestDepthRowForMarket(market, rawPoints) {
   return null;
 }
 
+function latestExternalDepthRowForMarket(market, rawPoints) {
+  const snapshot = latestExternalDepthSnapshotForMarket(market, rawPoints);
+  return snapshot?.row || null;
+}
+
+function externalDepthSnapshotFromRow(row) {
+  const bids = normalizeBookLevels(row?.book_bids);
+  const asks = normalizeBookLevels(row?.book_asks);
+  if (row?.backend_event_kind !== "depth" || bids.length + asks.length < 4) return null;
+  return { row, bids, asks, source: "Depth WS" };
+}
+
+function latestExternalDepthSnapshotForMarket(market, rawPoints) {
+  const candidates = [
+    ...(rawPoints || []),
+    ...paperMarkersFor(market),
+    ...paperPointsFor(market),
+    ...liveTickPointsForMarket(market),
+  ];
+  for (let index = candidates.length - 1; index >= 0; index -= 1) {
+    const snapshot = externalDepthSnapshotFromRow(candidates[index]);
+    if (snapshot) return snapshot;
+  }
+  return null;
+}
+
 function pricePairText(bid, ask) {
   return bid === null && ask === null ? "--" : `${formatPrice(bid)} / ${formatPrice(ask)}`;
 }
@@ -3562,7 +3622,7 @@ function renderPaperOddsStrip(market, latestRaw, latestBookRaw, odds = null) {
 }
 
 function paperSession() {
-  return state.workflow?.paper_trade?.session || {};
+  return state.paperSqlSession || state.workflow?.paper_trade?.session || {};
 }
 
 function paperSessionHistoryRows(session) {
@@ -3834,7 +3894,7 @@ function renderPaperSessionHistory(session) {
     <div class="paper-session-history">
       <div class="paper-book-heading">
         <span>Session P&L History</span>
-        <span>${escapeHtml(`${metricNumber(session?.market_count) ?? 0}/${metricNumber(session?.market_limit) ?? 12} markets`)}</span>
+        <span>${escapeHtml(`${metricNumber(session?.market_count) ?? 0}/${metricNumber(session?.market_limit) ?? 36} markets`)}</span>
       </div>
       <table>
         <thead>
@@ -3977,17 +4037,22 @@ function pmOrderBookTableRows(row, latestRaw, latestQuote) {
   return rows;
 }
 
-function orderBookTableRows(market, rawPoints, latestRaw, latestQuote) {
-  const row = latestDepthRowForMarket(market, rawPoints) || latestBookRowForMarket(market, rawPoints) || latestRaw || {};
-  const bookBid = metricNumber(row.book_bid ?? latestRaw?.book_bid);
-  const bookAsk = metricNumber(row.book_ask ?? latestRaw?.book_ask);
-  const bookBidQty = metricNumber(row.book_bid_qty ?? latestRaw?.book_bid_qty);
-  const bookAskQty = metricNumber(row.book_ask_qty ?? latestRaw?.book_ask_qty);
-  let bids = normalizeBookLevels(row.book_bids ?? latestRaw?.book_bids);
-  let asks = normalizeBookLevels(row.book_asks ?? latestRaw?.book_asks);
-  if (!bids.length && bookBid !== null) bids = [[bookBid, bookBidQty || 0]];
-  if (!asks.length && bookAsk !== null) asks = [[bookAsk, bookAskQty || 0]];
-  if (!bids.length && !asks.length) return pmOrderBookTableRows(row, latestRaw, latestQuote);
+function selectedOrderBookSnapshot(market, rawPoints, latestRaw) {
+  const depthSnapshot = latestExternalDepthSnapshotForMarket(market, rawPoints);
+  if (depthSnapshot) return depthSnapshot;
+  return {
+    row: latestBookRowForMarket(market, rawPoints) || latestRaw || {},
+    bids: [],
+    asks: [],
+    source: "Waiting for Binance depth WS",
+    waiting: true,
+  };
+}
+
+function orderBookTableRows(market, rawPoints, latestRaw, latestQuote, snapshot = null) {
+  const bookSnapshot = snapshot || selectedOrderBookSnapshot(market, rawPoints, latestRaw);
+  const { bids, asks } = bookSnapshot;
+  if (!bids.length && !asks.length) return [];
   const sideRows = (bookSide, levels) => {
     const isBuy = bookSide === "Bid";
     return levels.slice(0, 8).map(([price, size], index) => ({
@@ -3997,7 +4062,6 @@ function orderBookTableRows(market, rawPoints, latestRaw, latestQuote) {
       limit: formatBookMoney(price),
       size: formatBookQty(size),
       notional: formatBookMoney(price * size),
-      source: levels.length > 1 ? "Depth WS" : "Top of book",
     }));
   };
   return [
@@ -4007,23 +4071,23 @@ function orderBookTableRows(market, rawPoints, latestRaw, latestQuote) {
 }
 
 function renderOrderBookTable(market, rawPoints, latestRaw, latestQuote) {
-  const rows = orderBookTableRows(market, rawPoints, latestRaw, latestQuote);
-  const sourceRow = latestDepthRowForMarket(market, rawPoints) || latestBookRowForMarket(market, rawPoints) || latestRaw;
-  const isPmBook = rows.some((row) => row.source === "Polymarket");
-  const title = isPmBook ? "Polymarket Order Book Depth" : "BTC Order Book Depth";
-  const sourceLabel = isPmBook ? "CLOB snapshot" : liveFeedLabel(sourceRow);
-  const body = rows.map((row) => `
+  const snapshot = selectedOrderBookSnapshot(market, rawPoints, latestRaw);
+  const rows = orderBookTableRows(market, rawPoints, latestRaw, latestQuote, snapshot);
+  const sourceLabel = rows.length ? "Binance depth WS" : snapshot.source;
+  const body = rows.length ? rows.map((row) => `
     <tr class="paper-book-row is-${escapeHtml(row.sideClass || "neutral")}">
       <th scope="row">${escapeHtml(row.side)}</th>
       <td>${escapeHtml(row.limit)}</td>
       <td>${escapeHtml(row.size)}</td>
       <td>${escapeHtml(row.notional)}</td>
-      <td>${escapeHtml(row.source)}</td>
-    </tr>`).join("");
+    </tr>`).join("") : `
+    <tr class="paper-book-row is-neutral">
+      <td colspan="4">Waiting for Binance depth WS.</td>
+    </tr>`;
   return `
     <div class="paper-book-table">
       <div class="paper-book-heading">
-        <span>${escapeHtml(title)}</span>
+        <span>BTC Order Book Depth</span>
         <span>${escapeHtml(sourceLabel)}</span>
       </div>
       <table>
@@ -4033,7 +4097,6 @@ function renderOrderBookTable(market, rawPoints, latestRaw, latestQuote) {
             <th scope="col">Limit</th>
             <th scope="col">Size</th>
             <th scope="col">Notional</th>
-            <th scope="col">Source</th>
           </tr>
         </thead>
         <tbody>${body}</tbody>
@@ -4098,6 +4161,11 @@ function paperNoFillText(row) {
       ? `Sellers traded near our bid, but about ${moneyCents.format(queue)} of visible queue was still ahead of us.`
       : "Sellers traded near our bid, but the visible queue ahead of us did not clear.";
   }
+  if (reason === "visible_book_cross_did_not_clear_queue") {
+    return queue !== null
+      ? `The book crossed our bid, but about ${moneyCents.format(queue)} of visible queue was still ahead of us.`
+      : "The book crossed our bid, but the visible size did not clear the queue ahead of us.";
+  }
   if (reason === "matching_sell_flow_below_min_fill") {
     return minFill !== null
       ? `Seller flow after queue was too small to count as a fill; minimum fill is ${moneyCents.format(minFill)}.`
@@ -4150,6 +4218,11 @@ function paperFriendlyReason(row) {
     return quotePrice !== null
       ? `A seller hit through our ${formatPrice(quotePrice)} bid, so the paper engine counted it as a fill.`
       : "A seller traded through our bid, so the paper engine counted it as a fill.";
+  }
+  if (reason === "visible_book_crossed_resting_bid") {
+    return quotePrice !== null
+      ? `The visible book crossed our ${formatPrice(quotePrice)} bid after clearing the queue ahead, so the paper engine counted it as a fill.`
+      : "The visible book crossed our bid after clearing the queue ahead, so the paper engine counted it as a fill.";
   }
   if (reason === "visible_bid_queue_consumed") return "Enough visible sell flow passed our queue estimate, so the paper engine counted a fill.";
   if (reason === "final_no_trade_window") return "The market was too close to the end, so the bot avoided opening new risk.";
@@ -4226,7 +4299,8 @@ function isPaperActionLogRow(row) {
 
 function paperActionBuyText(row) {
   const type = paperMarkerType(row);
-  return type === "fill" ? "yes" : "no";
+  if (type === "quote" || type === "fill") return "yes";
+  return "no";
 }
 
 function paperActionLogRows(market, rawPoints) {
@@ -4290,16 +4364,20 @@ function renderPaperDecisionGraph(options = {}) {
   const selectedCurrent = (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE && isCurrentPaperMarket(market);
   if (!market || !rawPoints.length) {
     if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) {
-      const oddsStrip = renderPaperOddsStrip(market, null, null);
+      const loadingExtras = [
+        renderPaperOddsStrip(market, null, null),
+        renderPaperActionLog(market, rawPoints),
+        renderOrderBookTable(market, rawPoints, null, null),
+      ].join("");
       if (market && !verifiedPaperStartPrice(market)) {
         const startStatus = market.start_price_status || liveStartMetadata(market).start_price_status || "loading";
         const startError = market.start_price_error || liveStartMetadata(market).start_price_error || "";
-        chart.innerHTML = `${oddsStrip}${svgEmpty(startStatus === "error"
+        chart.innerHTML = `${svgEmpty(startStatus === "error"
           ? `Start error${startError ? `: ${startError}` : ""}.`
-          : "Loading start.")}`;
+          : "Loading start.")}${loadingExtras}`;
         return;
       }
-      chart.innerHTML = `${oddsStrip}${svgEmpty("Loading ticks.")}`;
+      chart.innerHTML = `${svgEmpty("Loading ticks.")}${loadingExtras}`;
       return;
     }
     chart.innerHTML = svgEmpty("No path.");
@@ -4319,8 +4397,8 @@ function renderPaperDecisionGraph(options = {}) {
   }
   const externalCandidates = priceRows.filter((row) => isExternalPricePoint(row) && !isPolymarketTruthPoint(row));
   const externalRows = externalLineRows(externalCandidates);
-  const externalStartPrice = startMeta?.price ?? firstExternalStartPrice(externalRows);
-  const externalSamples = paperGraphSamples(externalRows, externalStartPrice, "binance")
+  const externalStartPrice = startMeta?.price ?? null;
+  const externalSamples = externalStartPrice === null ? [] : paperGraphSamples(externalRows, externalStartPrice, "binance")
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
   const rawTruthSamples = (startMeta ? paperGraphSamples(truthRows, startMeta.price, "chainlink") : [])
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
@@ -4330,7 +4408,12 @@ function renderPaperDecisionGraph(options = {}) {
 
   if (!allSamples.length) {
     const hasPrices = priceRows.some((row) => metricNumber(row?.btc_price) !== null);
-    chart.innerHTML = svgEmpty(hasPrices && !startMeta ? "Waiting for Polymarket start." : "No usable points.");
+    const waitingExtras = [
+      renderPaperOddsStrip(market, null, null),
+      renderPaperActionLog(market, rawPoints),
+      renderOrderBookTable(market, rawPoints, null, null),
+    ].join("");
+    chart.innerHTML = `${svgEmpty(hasPrices && !startMeta ? "Waiting for Polymarket start." : "No usable points.")}${waitingExtras}`;
     return;
   }
 
@@ -4347,7 +4430,7 @@ function renderPaperDecisionGraph(options = {}) {
   const truthDisplaySample = freshestTruthDisplaySample(market, realTruthSamples, marketTruthPoint);
   const staleTruthSample = fallbackTruthDisplaySample(market, realTruthSamples, marketTruthPoint);
   const displayedTruthSample = truthDisplaySample || staleTruthSample;
-  const latest = displayedTruthSample || latestExternal || allSamples[allSamples.length - 1];
+  const latest = displayedTruthSample || latestTruth || truthSamples[truthSamples.length - 1] || latestExternal || allSamples[allSamples.length - 1];
   const latestDomainSample = allSamples[allSamples.length - 1];
   const latestElapsed = Number.isFinite(latestDomainSample.elapsedSeconds)
     ? latestDomainSample.elapsedSeconds
@@ -4535,8 +4618,6 @@ function renderPaperDecisionGraph(options = {}) {
     { label: "Start price", value: startPrice === null ? "Waiting" : formatBookMoney(startPrice) },
     { label: "Current price", value: currentPrice === null ? "Waiting" : formatBookMoney(currentPrice) },
     { label: "Difference", value: priceDifference === null ? "Waiting" : formatDollarMove(priceDifference), tone: moveClass },
-    { label: "Up %", value: formatOutcomePercent(upProbability) },
-    { label: "Down %", value: formatOutcomePercent(downProbability) },
   ];
   const accountMetrics = isLiveView
     ? [
@@ -4569,10 +4650,10 @@ function renderPaperDecisionGraph(options = {}) {
   const renderPositionPanel = () => {
     const x = 716;
     return `
-      <rect class="paper-side-section is-positions" x="708" y="354" width="242" height="126" rx="6"></rect>
-      <text class="paper-side-section-title" x="${x}" y="380">POSITIONS</text>
+      <rect class="paper-side-section is-positions" x="708" y="288" width="242" height="126" rx="6"></rect>
+      <text class="paper-side-section-title" x="${x}" y="314">POSITIONS</text>
       ${positionRows.map((row, index) => {
-        const y = 405 + index * 42;
+        const y = 339 + index * 42;
         return `
           <text class="paper-position-status ${row.tone || ""}" x="${x}" y="${y}">${escapeHtml(row.label)}</text>
           <text class="paper-position-value ${row.tone || ""}" x="${x}" y="${y + 17}">${escapeHtml(compactNote(row.value, 21))}</text>
@@ -4581,8 +4662,8 @@ function renderPaperDecisionGraph(options = {}) {
   };
   const infoRows = compact ? "" : `
     <rect class="note-box" x="696" y="42" width="266" height="444" rx="6"></rect>
-    ${renderPanelSection("MARKET", 56, 190, marketMetrics, { rowGap: 33, inline: true })}
-    ${renderPanelSection("ACCOUNT", 258, 84, accountMetrics, { rowGap: 33, inline: true })}
+    ${renderPanelSection("MARKET", 56, 124, marketMetrics, { rowGap: 33, inline: true })}
+    ${renderPanelSection("ACCOUNT", 192, 84, accountMetrics, { rowGap: 33, inline: true })}
     ${renderPositionPanel()}`;
   const mobileMetrics = [
     ...marketMetrics,
@@ -4611,9 +4692,11 @@ function renderPaperDecisionGraph(options = {}) {
     ? `<div class="live-mode-strip">Live trading is disabled. This is the same current-market view; real balance, orders, fills, and positions plug in here only after manual live approval.</div>`
     : "";
   const oddsStrip = renderPaperOddsStrip(market, latestRaw, latestBookRaw, outcomeOdds);
+  const actionLog = renderPaperActionLog(market, rawPoints);
+  const orderBookTable = renderOrderBookTable(market, rawPoints, latestBookRaw, latestQuote);
 
   const chartAriaLabel = isLiveView ? "Live trade BTC path and events" : "Paper trade BTC path and events";
-  chart.innerHTML = `${liveNotice}${oddsStrip}
+  chart.innerHTML = `${liveNotice}
     <svg class="paper-live-svg" viewBox="0 0 ${view.width} ${view.height}" role="img" aria-label="${chartAriaLabel}">
       <title>${escapeHtml(`${paperMarketLabel(market)} | ${latestTitle}`)}</title>
       <rect class="plot" x="${plot.left}" y="${plot.top}" width="${plotWidth}" height="${plot.height}"></rect>
@@ -4635,10 +4718,12 @@ function renderPaperDecisionGraph(options = {}) {
       </circle>
       ${infoRows}
     </svg>
+    ${oddsStrip}
+    ${actionLog}
+    ${orderBookTable}
     ${compactInfoRows}
-    ${renderPaperActionLog(market, rawPoints)}
     ${isLiveView ? "" : renderPaperSessionHistory(session)}
-    ${renderOrderBookTable(market, rawPoints, latestBookRaw, latestQuote)}`;
+    `;
 }
 
 function renderPaperChart(options = {}) {
@@ -4743,9 +4828,9 @@ function appendLiveBtcPoint(market, point) {
   const keys = liveTickStorageKeysForMarket(market);
   if (!keys.length || !isBinanceLivePoint(point)) return;
   enrichPointWithMarketOutcomeOdds(point, market);
-  const marketStartPrice = metricNumber(market?.start_price);
-  const startPrice = marketStartPrice ?? verifiedPaperStartPrice(market);
-  const startSource = market?.start_price_source || liveStartMetadata(market).start_price_source;
+  const startMeta = preferredPaperStartMetadata(market);
+  const startPrice = startMeta?.price ?? null;
+  const startSource = startMeta?.source ?? null;
   const price = metricNumber(point.btc_price);
   if (price !== null && startPrice !== null && startPrice > 0) {
     const distanceBps = Math.log(price / startPrice) * 10000;
@@ -4937,6 +5022,19 @@ function rememberBackendStreamPoints(market, allPoints) {
 
 function handleBackendStreamMessage(payload) {
   if (!payload || typeof payload !== "object") return;
+  if (payload.type === "paper_sql_snapshot") {
+    state.paperSqlSession = payload.session || null;
+    rememberPaperSqlActivity(payload);
+    state.backendStatus = {
+      ...state.backendStatus,
+      state: "open",
+      lastError: null,
+      lastStreamAt: new Date(),
+      url: backendWebSocketUrl(),
+    };
+    scheduleLiveTickRender();
+    return;
+  }
   if (payload.type === "snapshot") {
     const market = rememberBackendStreamMarket(payload.market, { recomputeDistances: true });
     const { externalPoints } = rememberBackendStreamPoints(market, payload.points);
@@ -5186,7 +5284,6 @@ async function main() {
       state.activeTab = button.dataset.tab;
       renderActiveTab();
       if (state.activeTab === "paper" || state.activeTab === "live") {
-        refreshWorkflow();
         refreshLivePaperFeeds();
       }
     });
@@ -5203,7 +5300,6 @@ async function main() {
   window.setInterval(() => {
     if (state.activeTab === "paper" || state.activeTab === "live") {
       ensureLiveTickStream();
-      refreshWorkflow();
     } else {
       refreshWorkflow();
     }
