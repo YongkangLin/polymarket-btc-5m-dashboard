@@ -1829,8 +1829,8 @@ function chainlinkDisplayStatusText(sample) {
 
 function outcomeBookOddsFromCandidates(candidates) {
   const rows = (candidates || []).filter(Boolean);
-  let up = rows.map((row) => outcomeBookProbability(row, "up")).find((value) => value !== null) ?? null;
-  let down = rows.map((row) => outcomeBookProbability(row, "down")).find((value) => value !== null) ?? null;
+  let up = rows.map((row) => outcomeDisplayBookProbability(row, "up")).find((value) => value !== null) ?? null;
+  let down = rows.map((row) => outcomeDisplayBookProbability(row, "down")).find((value) => value !== null) ?? null;
   if (up === null && down !== null) up = Math.max(0, Math.min(1, 1 - down));
   if (down === null && up !== null) down = Math.max(0, Math.min(1, 1 - up));
   return { up, down };
@@ -3399,7 +3399,7 @@ function formatBookQty(value) {
 function formatOutcomePercent(value) {
   const number = metricNumber(value);
   if (number === null) return "Waiting";
-  return `${(number * 100).toFixed(1)}%`;
+  return `${Math.round(number * 100)}%`;
 }
 
 function firstMetricNumber(...values) {
@@ -3977,6 +3977,12 @@ function outcomeBookProbability(row, side) {
   if (ask !== null) return ask;
   if (bid !== null) return bid;
   return null;
+}
+
+function outcomeDisplayBookProbability(row, side) {
+  const ask = sideField(row, side, "ask");
+  if (ask !== null) return ask;
+  return outcomeBookProbability(row, side);
 }
 
 function startMetadataFromSource(source, fallbackSource = "paper_market_start") {
