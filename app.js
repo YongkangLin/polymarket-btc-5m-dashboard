@@ -5,7 +5,7 @@ const ACTIVE_BACKTEST_KEY = "strict_directional_maker";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_REFRESH_MS = 30000;
-const LIVE_TICK_RENDER_THROTTLE_MS = 16;
+const LIVE_TICK_RENDER_THROTTLE_MS = 33;
 const LIVE_CHART_CLOCK_MS = 33;
 const LIVE_TICK_STALE_MS = 10000;
 const LIVE_TICK_RECONNECT_MS = 2000;
@@ -40,11 +40,13 @@ const LIVE_PAPER_RENDER_BUCKET_SECONDS = 0.075;
 const LIVE_CHAINLINK_RENDER_BUCKET_SECONDS = null;
 const LIVE_BINANCE_RENDER_BUCKET_SECONDS = null;
 const LIVE_STEP_EPS_SECONDS = 0.0005;
+const LIVE_CHAINLINK_MAX_LINE_GAP_SECONDS = 1.25;
+const LIVE_BINANCE_MAX_LINE_GAP_SECONDS = 0.75;
 const LIVE_PAPER_RENDER_TAIL_SECONDS = 82;
-const LIVE_RENDER_MAX_SOURCE_ROWS_PER_LINE = 12000;
+const LIVE_RENDER_MAX_SOURCE_ROWS_PER_LINE = 20000;
 const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
-const LIVE_RENDER_MAX_POINTS_PER_LINE = 5000;
-const LIVE_RENDER_POINTS_PER_PIXEL = 5;
+const LIVE_RENDER_MAX_POINTS_PER_LINE = 8000;
+const LIVE_RENDER_POINTS_PER_PIXEL = 10;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const BINANCE_DEPTH_TABLE_STALE_MS = 15000;
@@ -438,16 +440,37 @@ function svgEmpty(message) {
   return `<div class="empty">${message}</div>`;
 }
 
-function pathFrom(points) {
-  return points.map((point, index) => `${index === 0 ? "M" : "L"}${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ");
+function sourceLineGapSeconds(source) {
+  return source === "binance" ? LIVE_BINANCE_MAX_LINE_GAP_SECONDS : LIVE_CHAINLINK_MAX_LINE_GAP_SECONDS;
 }
 
-function stepPathFrom(points) {
+function pointsAreSeparated(left, right, maxGapSeconds = null) {
+  if (!left || !right || !Number.isFinite(maxGapSeconds)) return false;
+  const leftElapsed = Number(left.elapsedSeconds ?? left.sample?.elapsedSeconds);
+  const rightElapsed = Number(right.elapsedSeconds ?? right.sample?.elapsedSeconds);
+  return Number.isFinite(leftElapsed)
+    && Number.isFinite(rightElapsed)
+    && rightElapsed - leftElapsed > maxGapSeconds;
+}
+
+function pathFrom(points, maxGapSeconds = null) {
+  if (!Array.isArray(points) || !points.length) return "";
+  return points.map((point, index) => {
+    const command = index === 0 || pointsAreSeparated(points[index - 1], point, maxGapSeconds) ? "M" : "L";
+    return `${command}${point.x.toFixed(2)},${point.y.toFixed(2)}`;
+  }).join(" ");
+}
+
+function stepPathFrom(points, maxGapSeconds = null) {
   if (!Array.isArray(points) || !points.length) return "";
   const output = [`M${points[0].x.toFixed(2)},${points[0].y.toFixed(2)}`];
   for (let index = 1; index < points.length; index += 1) {
     const previous = points[index - 1];
     const point = points[index];
+    if (pointsAreSeparated(previous, point, maxGapSeconds)) {
+      output.push(`M${point.x.toFixed(2)},${point.y.toFixed(2)}`);
+      continue;
+    }
     output.push(`L${point.x.toFixed(2)},${previous.y.toFixed(2)}`);
     output.push(`L${point.x.toFixed(2)},${point.y.toFixed(2)}`);
   }
@@ -641,7 +664,8 @@ function livePaperDollarDomain(market, samples) {
   return { min: -radius, max: radius };
 }
 
-function liveRenderPointLimit(plotWidth) {
+function liveRenderPointLimit(plotWidth, denseRenderer = false) {
+  if (denseRenderer) return LIVE_RENDER_MAX_POINTS_PER_LINE;
   const width = Number(plotWidth);
   const target = Number.isFinite(width) ? Math.round(width * LIVE_RENDER_POINTS_PER_PIXEL) : LIVE_TICK_RENDER_MAX_POINTS;
   return Math.max(LIVE_RENDER_MIN_POINTS_PER_LINE, Math.min(LIVE_RENDER_MAX_POINTS_PER_LINE, target));
@@ -821,17 +845,32 @@ function steppedPlotEvents(samples, source) {
   const rows = orderedUniqueSamples(samples);
   const events = [];
   let previous = null;
+  const maxGapSeconds = sourceLineGapSeconds(source);
   rows.forEach((sample) => {
     if (!Number.isFinite(sample?.elapsedSeconds) || !Number.isFinite(sample?.dollarMove)) return;
     const elapsedSeconds = previous
       ? Math.max(sample.elapsedSeconds, previous.elapsedSeconds + LIVE_STEP_EPS_SECONDS)
       : sample.elapsedSeconds;
-    if (previous && elapsedSeconds - previous.elapsedSeconds > LIVE_STEP_EPS_SECONDS * 2) {
+    const gap = previous ? elapsedSeconds - previous.elapsedSeconds : 0;
+    if (previous && gap > LIVE_STEP_EPS_SECONDS * 2 && gap <= maxGapSeconds) {
       events.push({
         elapsedSeconds: elapsedSeconds - LIVE_STEP_EPS_SECONDS,
         dollarMove: previous.dollarMove,
         source,
       });
+    } else if (previous && gap > maxGapSeconds) {
+      events.push({
+        elapsedSeconds: previous.elapsedSeconds + LIVE_STEP_EPS_SECONDS,
+        dollarMove: null,
+        source,
+      });
+      if (elapsedSeconds - previous.elapsedSeconds > LIVE_STEP_EPS_SECONDS * 3) {
+        events.push({
+          elapsedSeconds: elapsedSeconds - LIVE_STEP_EPS_SECONDS,
+          dollarMove: null,
+          source,
+        });
+      }
     }
     const point = {
       elapsedSeconds,
@@ -855,19 +894,18 @@ function uPlotDataFromSamples(truthSamples, externalSamples) {
   const x = [];
   const chainlinkValues = [];
   const binanceValues = [];
+  const current = { chainlink: null, binance: null };
   let index = 0;
   while (index < events.length) {
     const elapsedSeconds = events[index].elapsedSeconds;
-    let chainlinkValue = null;
-    let binanceValue = null;
     while (index < events.length && Math.abs(events[index].elapsedSeconds - elapsedSeconds) < 0.000001) {
-      if (events[index].source === "chainlink") chainlinkValue = events[index].dollarMove;
-      if (events[index].source === "binance") binanceValue = events[index].dollarMove;
+      if (events[index].source === "chainlink") current.chainlink = events[index].dollarMove;
+      if (events[index].source === "binance") current.binance = events[index].dollarMove;
       index += 1;
     }
     x.push(elapsedSeconds);
-    chainlinkValues.push(chainlinkValue);
-    binanceValues.push(binanceValue);
+    chainlinkValues.push(current.chainlink);
+    binanceValues.push(current.binance);
   }
   return [x, chainlinkValues, binanceValues];
 }
@@ -941,7 +979,7 @@ function updatePaperUPlot(chart, options) {
       height,
       legend: { show: false },
       cursor: { show: false },
-      spanGaps: true,
+      spanGaps: false,
       pxAlign: false,
       padding: [8, 10, 0, 0],
       scales: {
@@ -964,8 +1002,8 @@ function updatePaperUPlot(chart, options) {
       ],
       series: [
         {},
-        { label: "Chainlink", stroke: "#148256", width: 2, spanGaps: true, points: { show: false } },
-        { label: "Binance", stroke: "#3c62d8", width: 2, dash: [8, 6], spanGaps: true, points: { show: false } },
+        { label: "Chainlink", stroke: "#148256", width: 2, spanGaps: false, points: { show: false } },
+        { label: "Binance", stroke: "#3c62d8", width: 2, dash: [8, 6], spanGaps: false, points: { show: false } },
       ],
     });
     const existing = state.paperUPlotCharts.get(chart.id || "paperChart");
@@ -2156,6 +2194,25 @@ function freshestTruthDisplaySample(market, truthSamples, marketTruthPoint) {
   return latestTruthDisplaySample(market, truthSamples, marketTruthPoint);
 }
 
+function latestAuthoritativeTruthSample(market, truthSamples, marketTruthPoint) {
+  const tickCandidates = liveTickPointsForMarket(market)
+    .filter(isPolymarketTruthPoint)
+    .map((row) => truthDisplayCandidateFromRow(market, row));
+  const candidates = [
+    ...liveTruthSnapshotCandidates(market),
+    ...tickCandidates,
+    truthDisplayCandidateFromRow(market, marketTruthPoint),
+    ...(Array.isArray(truthSamples) ? truthSamples : [truthSamples]),
+  ].filter((sample) => (
+    sample
+    && sample.btcPrice !== null
+    && truthSampleMatchesMarket(sample, market)
+    && isFreshTruthRow(sample.row)
+  ));
+  if (candidates.length) return sortTruthDisplayCandidates(candidates)[0];
+  return freshestTruthDisplaySample(market, truthSamples, marketTruthPoint);
+}
+
 function latestTruthDisplayCandidates(market, truthSamples, marketTruthPoint) {
   return [
     ...liveTruthSnapshotCandidates(market),
@@ -2281,10 +2338,10 @@ function externalLineRows(rows) {
   const bookTicks = ordered.filter(isExternalBookTickerPricePoint);
   const depthTicks = ordered.filter(isExternalDepthPricePoint);
   const trades = ordered.filter(isExternalTradePricePoint);
-  if (trades.length >= 3) return trades;
   if (bookTicks.length >= 3) return bookTicks;
   if (depthTicks.length >= 3) return depthTicks;
-  return trades.length ? trades : ordered;
+  if (trades.length >= 3) return trades;
+  return bookTicks.length ? bookTicks : (depthTicks.length ? depthTicks : (trades.length ? trades : ordered));
 }
 
 function externalLineLabel(rows) {
@@ -5139,7 +5196,7 @@ function renderPaperDecisionGraph(options = {}) {
   const latestTruth = realTruthSamples[realTruthSamples.length - 1] || null;
   const latestExternal = externalSamples[externalSamples.length - 1] || null;
   const truthDisplaySample = freshestTruthDisplaySample(market, realTruthSamples, marketTruthPoint);
-  const displayedTruthSample = truthDisplaySample;
+  const displayedTruthSample = latestAuthoritativeTruthSample(market, realTruthSamples, marketTruthPoint) || truthDisplaySample;
   const latest = displayedTruthSample || latestTruth || truthSamples[truthSamples.length - 1] || latestExternal || allSamples[allSamples.length - 1];
   const latestDomainSample = allSamples[allSamples.length - 1] || truthSamples[truthSamples.length - 1];
   const latestElapsed = Number.isFinite(latestElapsedSeed)
@@ -5153,7 +5210,8 @@ function renderPaperDecisionGraph(options = {}) {
   const visibleSamples = samples.length ? samples : allSamples.slice(-1);
   const visibleTruthSamples = visibleSamplesWithCarry(truthSamples, xDomain);
   const visibleExternalSamples = visibleSamplesWithCarry(externalSamples, xDomain);
-  const maxLinePoints = selectedCurrent ? liveRenderPointLimit(plotWidth) : LIVE_TICK_RENDER_MAX_POINTS;
+  const useUPlot = canUseUPlot();
+  const maxLinePoints = selectedCurrent ? liveRenderPointLimit(plotWidth, useUPlot) : LIVE_TICK_RENDER_MAX_POINTS;
   const truthLineSamples = selectedCurrent
     ? stableLiveLineSamples(visibleTruthSamples, LIVE_CHAINLINK_RENDER_BUCKET_SECONDS, maxLinePoints, xDomain)
     : visibleTruthSamples;
@@ -5272,10 +5330,10 @@ function renderPaperDecisionGraph(options = {}) {
 	      <text class="paper-marker-label" x="${x + 8}" y="${y - 8}">${escapeHtml(paperMarkerLabel(row))}</text>`;
   }).join("");
   const truthPath = truthLinePoints.length
-    ? `<path class="line line-chainlink" d="${selectedCurrent ? stepPathFrom(truthLinePoints) : pathFrom(truthLinePoints)}"></path>`
+    ? `<path class="line line-chainlink" d="${selectedCurrent ? stepPathFrom(truthLinePoints, LIVE_CHAINLINK_MAX_LINE_GAP_SECONDS) : pathFrom(truthLinePoints, LIVE_CHAINLINK_MAX_LINE_GAP_SECONDS)}"></path>`
     : "";
   const externalPath = externalLinePoints.length
-    ? `<path class="line line-external" d="${selectedCurrent ? stepPathFrom(externalLinePoints) : pathFrom(externalLinePoints)}"></path>`
+    ? `<path class="line line-external" d="${selectedCurrent ? stepPathFrom(externalLinePoints, LIVE_BINANCE_MAX_LINE_GAP_SECONDS) : pathFrom(externalLinePoints, LIVE_BINANCE_MAX_LINE_GAP_SECONDS)}"></path>`
     : "";
   const truthLabel = chainlinkLineLabel(truthRows);
   const externalLabel = externalLineLabel(externalRows);
@@ -5424,7 +5482,6 @@ function renderPaperDecisionGraph(options = {}) {
   const chartAriaLabel = isLiveView ? "Live trade BTC path and events" : "Paper trade BTC path and events";
   const sideHtml = compact ? "" : renderPaperLiveSideHtml(marketMetrics, accountMetrics, positionRows);
   let visualHtml = "";
-  const useUPlot = canUseUPlot();
   if (useUPlot) {
     visualHtml = `${liveNotice}
       <div class="paper-live-fast" role="img" aria-label="${escapeHtml(chartAriaLabel)}">
