@@ -5,8 +5,8 @@ const ACTIVE_BACKTEST_KEY = "strict_directional_maker";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_REFRESH_MS = 30000;
-const LIVE_TICK_RENDER_THROTTLE_MS = 33;
-const LIVE_CHART_CLOCK_MS = 33;
+const LIVE_TICK_RENDER_THROTTLE_MS = 16;
+const LIVE_CHART_CLOCK_MS = 16;
 const LIVE_TICK_STALE_MS = 10000;
 const LIVE_TICK_RECONNECT_MS = 2000;
 const LIVE_SOCKET_CONNECT_TIMEOUT_MS = 3500;
@@ -14,10 +14,11 @@ const LOCAL_BACKEND_BASE_KEY = "POLYMARKET_LOCAL_BACKEND_BASE";
 const DEFAULT_BACKEND_BASE = "http://127.0.0.1:8788";
 const LIVE_TICK_RENDER_MAX_POINTS = 2400;
 const LIVE_AUX_RENDER_THROTTLE_MS = 500;
-const LIVE_TICK_PERSIST_MS = 1000;
-const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 50000;
-const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 5000;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v13";
+const LIVE_TICK_PERSIST_MS = 7500;
+const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 3000;
+const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 300;
+const LIVE_TICK_PERSIST_POINTS_PER_MARKET = 1200;
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v14";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
   "polymarketPaperLiveTicks.v3",
@@ -30,6 +31,7 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v10",
   "polymarketPaperLiveTicks.v11",
   "polymarketPaperLiveTicks.v12",
+  "polymarketPaperLiveTicks.v13",
 ];
 const LIVE_PAPER_X_WINDOW_SECONDS = 75;
 const LIVE_PAPER_X_LEAD_SECONDS = 8;
@@ -45,15 +47,15 @@ const LIVE_BINANCE_MAX_LINE_GAP_SECONDS = 0.75;
 const LIVE_PAPER_RENDER_TAIL_SECONDS = 82;
 const LIVE_RENDER_MAX_SOURCE_ROWS_PER_LINE = 20000;
 const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
-const LIVE_RENDER_MAX_POINTS_PER_LINE = 8000;
-const LIVE_RENDER_POINTS_PER_PIXEL = 10;
+const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
+const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const BINANCE_DEPTH_TABLE_STALE_MS = 15000;
 const LOCAL_BACKEND_BASE = configuredBackendBase();
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
-const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 600;
-const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 9000;
+const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 80;
+const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 320;
 const POLYMARKET_TRUTH_SOURCE = "chainlink_data_streams";
 
 function configuredInitialTab() {
@@ -1816,12 +1818,12 @@ function persistPaperTicksNow() {
     window_start_unix: currentWindowStartUnixNow(),
     live_markets: currentMarketEntries(state.livePersistedMarkets),
     observed_markets: currentMarketEntries(state.paperObservedMarkets),
-    observed_points: currentRowsEntries(state.paperObservedPointsByMarket, LIVE_TICK_STORE_MAX_POINTS_PER_MARKET),
+    observed_points: currentRowsEntries(state.paperObservedPointsByMarket, 600),
     observed_markers: currentRowsEntries(state.paperObservedMarkersByMarket, 400),
     outcome_odds: currentOutcomeOddsEntries(),
     live_ticks: currentRowsEntries(
       state.liveBtcTicksByMarket,
-      LIVE_TICK_STORE_MAX_POINTS_PER_MARKET + LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET,
+      LIVE_TICK_PERSIST_POINTS_PER_MARKET,
     ),
   };
   try {
