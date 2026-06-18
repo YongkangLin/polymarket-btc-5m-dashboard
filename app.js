@@ -15,7 +15,7 @@ const LIVE_TICK_RENDER_MAX_POINTS = 16000;
 const LIVE_TICK_PERSIST_MS = 1000;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 50000;
 const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 10000;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v9";
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v10";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
   "polymarketPaperLiveTicks.v3",
@@ -24,6 +24,7 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v6",
   "polymarketPaperLiveTicks.v7",
   "polymarketPaperLiveTicks.v8",
+  "polymarketPaperLiveTicks.v9",
 ];
 const LIVE_PAPER_X_WINDOW_SECONDS = 75;
 const LIVE_PAPER_X_LEAD_SECONDS = 8;
@@ -1275,7 +1276,7 @@ function loadPersistedPaperTicks() {
 
 function persistPaperTicksNow() {
   const payload = {
-    version: 8,
+    version: 10,
     saved_at: new Date().toISOString(),
     window_start_unix: currentWindowStartUnixNow(),
     live_markets: currentMarketEntries(state.livePersistedMarkets),
@@ -3142,12 +3143,19 @@ function latestExternalDepthSnapshotForMarket(market, rawPoints) {
       const labeled = labelExternalDepthSnapshot(snapshot);
       const cacheKey = paperMarketWindowKey(market || snapshot.row);
       if (cacheKey && labeled && !labeled.stale) {
-        state.latestExternalDepthSnapshotsByMarket.set(cacheKey, labeled);
+        state.latestExternalDepthSnapshotsByMarket.set(cacheKey, snapshot);
       }
       return labeled && !labeled.stale ? labeled : null;
     }
   }
   return null;
+}
+
+function cachedExternalDepthSnapshotForMarket(market) {
+  const cacheKey = paperMarketWindowKey(market);
+  const cached = cacheKey ? state.latestExternalDepthSnapshotsByMarket.get(cacheKey) : null;
+  const labeled = cached ? labelExternalDepthSnapshot(cached) : null;
+  return labeled && !labeled.stale ? labeled : null;
 }
 
 function formatBookMoney(value) {
@@ -3394,10 +3402,6 @@ function outcomeOddsFromCandidates(candidates) {
   const rows = (candidates || []).filter(Boolean);
   let up = bestExplicitOutcomeProbability("up", rows);
   let down = bestExplicitOutcomeProbability("down", rows);
-  if (up === null && down !== null) up = Math.max(0, Math.min(1, 1 - down));
-  if (down === null && up !== null) down = Math.max(0, Math.min(1, 1 - up));
-  if (up === null) up = bestOutcomeProbability("up", rows);
-  if (down === null) down = bestOutcomeProbability("down", rows);
   if (up === null && down !== null) up = Math.max(0, Math.min(1, 1 - down));
   if (down === null && up !== null) down = Math.max(0, Math.min(1, 1 - up));
   return { up, down };
@@ -3827,6 +3831,8 @@ function normalizeBookLevels(value) {
 function selectedOrderBookSnapshot(market, rawPoints, latestRaw) {
   const depthSnapshot = latestExternalDepthSnapshotForMarket(market, rawPoints);
   if (depthSnapshot) return depthSnapshot;
+  const cachedDepthSnapshot = cachedExternalDepthSnapshotForMarket(market);
+  if (cachedDepthSnapshot) return cachedDepthSnapshot;
   return {
     row: {},
     bids: [],
@@ -4610,7 +4616,7 @@ function trimLiveBtcPointsForKey(key, points) {
 
 function appendLiveBtcPoint(market, point) {
   const keys = liveTickStorageKeysForMarket(market);
-  if (!keys.length || !isBinanceLivePoint(point)) return;
+  if (!keys.length || (!isBinanceLivePoint(point) && !isChainlinkPriceRow(point))) return;
   enrichPointWithMarketOutcomeOdds(point, market);
   const startMeta = preferredPaperStartMetadata(market);
   const startPrice = startMeta?.price ?? null;
@@ -4799,7 +4805,10 @@ function rememberBackendStreamPoints(market, allPoints) {
     : [];
   const truthPoints = points.filter(isPolymarketTruthPoint);
   const externalPoints = points.filter(isBinanceLivePoint);
-  if (truthPoints.length) rememberObservedPaperMarket(market || truthPoints[0], truthPoints, []);
+  if (truthPoints.length) {
+    rememberObservedPaperMarket(market || truthPoints[0], truthPoints, []);
+    truthPoints.forEach((point) => appendLiveBtcPoint(market || point, point));
+  }
   externalPoints.forEach((point) => appendLiveBtcPoint(market || point, point));
   return { truthPoints, externalPoints };
 }
