@@ -10,12 +10,12 @@ const LIVE_TICK_STALE_MS = 10000;
 const LIVE_TICK_RECONNECT_MS = 2000;
 const LIVE_SOCKET_CONNECT_TIMEOUT_MS = 3500;
 const REMOTE_LIVE_SOCKET_CONNECT_TIMEOUT_MS = 25000;
-const PUBLIC_BACKEND_BASE = "https://businesses-max-type-returns.trycloudflare.com";
+const PUBLIC_BACKEND_BASE = "https://resolved-poor-bare-dale.trycloudflare.com";
 const LIVE_TICK_RENDER_MAX_POINTS = 16000;
 const LIVE_TICK_PERSIST_MS = 1000;
-const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 50000;
-const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 10000;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v11";
+const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 12000;
+const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 3000;
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v12";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
   "polymarketPaperLiveTicks.v3",
@@ -26,6 +26,7 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v8",
   "polymarketPaperLiveTicks.v9",
   "polymarketPaperLiveTicks.v10",
+  "polymarketPaperLiveTicks.v11",
 ];
 const LIVE_PAPER_X_WINDOW_SECONDS = 75;
 const LIVE_PAPER_X_LEAD_SECONDS = 8;
@@ -884,6 +885,103 @@ const OUTCOME_ODDS_FIELDS = [
   "market_odds_error",
 ];
 
+const PERSISTED_ROW_FIELDS = new Set([
+  "market_key",
+  "condition_id",
+  "slug",
+  "question",
+  "symbol",
+  "window_start",
+  "window_end",
+  "window_start_unix",
+  "window_end_unix",
+  "generated_at",
+  "time_unix",
+  "event_time_micro",
+  "receive_time_micro",
+  "trade_time_micro",
+  "latest_event_time_micro",
+  "latest_chainlink_time_micro",
+  "latest_chainlink_receive_time_micro",
+  "start_event_time_micro",
+  "start_price",
+  "start_price_source",
+  "start_price_status",
+  "btc_price",
+  "latest_btc_price",
+  "btc_price_source",
+  "btc_price_venue",
+  "btc_price_is_truth",
+  "truth_current_price_missing",
+  "truth_source",
+  "price_role",
+  "external_btc_price",
+  "external_btc_source",
+  "external_btc_venue",
+  "backend_event_kind",
+  "decision",
+  "reason",
+  "side",
+  "distance_bps",
+  "point_id",
+  "event_id",
+  "event_type",
+  "quote_id",
+  "signal_id",
+  "maker_route_id",
+  "edge_id",
+  "outcome",
+  "intended_outcome",
+  "price",
+  "entry_price",
+  "quote_price",
+  "maker_quote_price",
+  "bid_price",
+  "shares",
+  "quantity",
+  "size",
+  "order_notional",
+  "filled_cost",
+  "cumulative_filled_cost",
+  "pnl_dollars",
+  "outcome_win",
+  "paper_session_current_capital",
+  "paper_session_total_pnl",
+  "paper_session_total_pnl_dollars",
+  "paper_session_available_capital",
+  "paper_session_committed_capital",
+  "book_update_id",
+  "book_bid",
+  "book_ask",
+  "book_bid_qty",
+  "book_ask_qty",
+  "book_mid",
+  "book_microprice",
+  "book_spread_bps",
+  "book_depth_source_point_id",
+  "external_book_support",
+  "external_book_imbalance",
+  "external_book_spread_bps",
+  "external_book_microprice_edge_bps",
+  "external_book_microprice_support_bps",
+  "external_trade_flow_support",
+  "last_no_fill_reason",
+  "last_matching_sell_notional",
+  "last_queue_remaining_notional",
+  "last_min_fill_notional",
+  "bankroll_max_order",
+  "bankroll_fractional_kelly_fraction",
+  "fair_edge",
+  "fair_edge_vs_signal_bid",
+  "fair_probability",
+  "probability_source",
+  "market_probability_source",
+  "market_odds_fetched_at",
+  "market_odds_stale",
+  "market_odds_error",
+  ...OUTCOME_ODDS_FIELDS,
+]);
+
 function copyOutcomeOddsFields(target, source) {
   OUTCOME_ODDS_FIELDS.forEach((field) => {
     if (source?.[field] !== null && source?.[field] !== undefined) target[field] = source[field];
@@ -1183,6 +1281,7 @@ function compactPersistedRow(row, keepBook = false) {
     if (value === undefined || typeof value === "function") return;
     if (key === "raw") return;
     if (!keepBook && (key === "book_bids" || key === "book_asks")) return;
+    if (!PERSISTED_ROW_FIELDS.has(key) && key !== "book_bids" && key !== "book_asks") return;
     output[key] = value;
   });
   return output;
@@ -1801,6 +1900,9 @@ function pointPlotTimestampMicro(row, source) {
   const receiveMicro = metricNumber(row?.receive_time_micro);
   const priceSource = row?.btc_price_source || row?.btc_price_venue || row?.price_source;
   if (source === "chainlink" && isChainlinkPriceRow(row) && isChainlinkDataStreamsSource(priceSource) && receiveMicro !== null) {
+    return receiveMicro;
+  }
+  if (source === "binance" && isExternalDepthPricePoint(row) && receiveMicro !== null) {
     return receiveMicro;
   }
   return pointTimestampMicro(row);
@@ -3116,7 +3218,7 @@ function externalDepthSnapshotFromRow(row) {
   const bids = normalizeBookLevels(row?.book_bids);
   const asks = normalizeBookLevels(row?.book_asks);
   if (row?.backend_event_kind !== "depth" || !isExternalBookPricePoint(row) || !bids.length || !asks.length) return null;
-  return { row, bids, asks, source: "Binance depth WS" };
+  return { row, bids, asks, source: "Binance depth WS", sourceKind: "binance_depth_ws" };
 }
 
 function labelExternalDepthSnapshot(snapshot) {
@@ -3128,6 +3230,7 @@ function labelExternalDepthSnapshot(snapshot) {
     stale: ageMs !== null && ageMs > BINANCE_DEPTH_TABLE_STALE_MS,
     ageMs,
     source: "Binance depth WS",
+    sourceKind: "binance_depth_ws",
   };
 }
 
@@ -3140,7 +3243,7 @@ function latestExternalDepthSnapshotForMarket(market, rawPoints) {
       const labeled = labelExternalDepthSnapshot(snapshot);
       const cacheKey = paperMarketWindowKey(market || snapshot.row);
       if (cacheKey && labeled) {
-        state.latestExternalDepthSnapshotsByMarket.set(cacheKey, snapshot);
+        state.latestExternalDepthSnapshotsByMarket.set(cacheKey, labeled);
       }
       return labeled;
     }
