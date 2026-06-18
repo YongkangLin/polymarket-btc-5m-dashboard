@@ -11,7 +11,7 @@ const LIVE_TICK_RECONNECT_MS = 2000;
 const LIVE_SOCKET_CONNECT_TIMEOUT_MS = 3500;
 const REMOTE_LIVE_SOCKET_CONNECT_TIMEOUT_MS = 25000;
 const PUBLIC_BACKEND_BASE = "https://resolved-poor-bare-dale.trycloudflare.com";
-const LIVE_TICK_RENDER_MAX_POINTS = 12000;
+const LIVE_TICK_RENDER_MAX_POINTS = 2400;
 const LIVE_AUX_RENDER_THROTTLE_MS = 500;
 const LIVE_TICK_PERSIST_MS = 1000;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 12000;
@@ -38,8 +38,11 @@ const LIVE_PAPER_Y_BUCKET = 4;
 const LIVE_PAPER_RENDER_BUCKET_SECONDS = 0.075;
 const LIVE_CHAINLINK_RENDER_BUCKET_SECONDS = null;
 const LIVE_BINANCE_RENDER_BUCKET_SECONDS = null;
-const LIVE_PAPER_RENDER_TAIL_SECONDS = 95;
-const LIVE_RENDER_MAX_POINTS_PER_LINE = 12000;
+const LIVE_PAPER_RENDER_TAIL_SECONDS = 82;
+const LIVE_RENDER_MAX_SOURCE_ROWS_PER_LINE = 6500;
+const LIVE_RENDER_MIN_POINTS_PER_LINE = 650;
+const LIVE_RENDER_MAX_POINTS_PER_LINE = 2200;
+const LIVE_RENDER_POINTS_PER_PIXEL = 1.85;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const BINANCE_DEPTH_TABLE_STALE_MS = 15000;
@@ -622,24 +625,74 @@ function livePaperDollarDomain(market, samples) {
   return { min: -radius, max: radius };
 }
 
-function stableLiveLineSamples(samples, bucketSeconds = null) {
-  if (!Array.isArray(samples)) return [];
-  const shouldBucket = bucketSeconds !== null || samples.length > LIVE_TICK_RENDER_MAX_POINTS;
-  if (!shouldBucket) return samples;
-  const bucketSize = bucketSeconds ?? LIVE_PAPER_RENDER_BUCKET_SECONDS;
+function liveRenderPointLimit(plotWidth) {
+  const width = Number(plotWidth);
+  const target = Number.isFinite(width) ? Math.round(width * LIVE_RENDER_POINTS_PER_PIXEL) : LIVE_TICK_RENDER_MAX_POINTS;
+  return Math.max(LIVE_RENDER_MIN_POINTS_PER_LINE, Math.min(LIVE_RENDER_MAX_POINTS_PER_LINE, target));
+}
+
+function orderedUniqueSamples(samples) {
+  const seen = new Set();
+  return (samples || [])
+    .filter((sample) => (
+      sample
+      && Number.isFinite(sample.elapsedSeconds)
+      && Number.isFinite(sample.dollarMove)
+    ))
+    .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds)
+    .filter((sample) => {
+      const key = [
+        sample.row?.point_id,
+        sample.row?.event_id,
+        sample.row?.receive_time_micro,
+        sample.row?.event_time_micro,
+        sample.elapsedSeconds,
+        sample.dollarMove,
+      ].filter((value) => value !== undefined && value !== null).join(":");
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function stableLiveLineSamples(samples, bucketSeconds = null, maxPoints = LIVE_TICK_RENDER_MAX_POINTS, xDomain = null) {
+  const ordered = orderedUniqueSamples(samples);
+  if (!ordered.length) return [];
+  if (ordered.length <= maxPoints && bucketSeconds === null) return ordered;
+  const span = xDomain
+    ? Math.max(1, Number(xDomain.max) - Number(xDomain.min))
+    : Math.max(1, ordered[ordered.length - 1].elapsedSeconds - ordered[0].elapsedSeconds);
+  const bucketTarget = Math.max(2, Math.floor(maxPoints / 4));
+  const bucketSize = Math.max(bucketSeconds ?? LIVE_PAPER_RENDER_BUCKET_SECONDS, span / bucketTarget);
   const buckets = new Map();
-  samples.forEach((sample) => {
-    if (!Number.isFinite(sample.elapsedSeconds)) return;
+  ordered.forEach((sample) => {
     const bucket = Math.floor(sample.elapsedSeconds / bucketSize);
-    const existing = buckets.get(bucket);
-    if (!existing || sample.elapsedSeconds >= existing.elapsedSeconds) buckets.set(bucket, sample);
+    let entry = buckets.get(bucket);
+    if (!entry) {
+      entry = { first: sample, last: sample, min: sample, max: sample };
+      buckets.set(bucket, entry);
+      return;
+    }
+    if (sample.elapsedSeconds < entry.first.elapsedSeconds) entry.first = sample;
+    if (sample.elapsedSeconds >= entry.last.elapsedSeconds) entry.last = sample;
+    if (sample.dollarMove < entry.min.dollarMove) entry.min = sample;
+    if (sample.dollarMove > entry.max.dollarMove) entry.max = sample;
   });
-  const output = [...buckets.values()].sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
-  const first = samples[0];
-  const last = samples[samples.length - 1];
+  const output = [];
+  [...buckets.values()]
+    .sort((left, right) => left.first.elapsedSeconds - right.first.elapsedSeconds)
+    .forEach((entry) => {
+      [entry.first, entry.min, entry.max, entry.last]
+        .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds)
+        .forEach((sample) => {
+          if (output[output.length - 1] !== sample) output.push(sample);
+        });
+    });
+  const first = ordered[0];
+  const last = ordered[ordered.length - 1];
   if (first && output[0] !== first) output.unshift(first);
   if (last && output[output.length - 1] !== last) output.push(last);
-  return output;
+  return output.length <= maxPoints ? output : downsamplePoints(output, maxPoints);
 }
 
 function visibleSamplesWithCarry(samples, xDomain) {
@@ -1811,7 +1864,7 @@ function limitLiveRowsToRenderWindow(rows, source, market) {
   );
   if (!ordered.length || !isCurrentPaperMarket(market)) return ordered;
   const latestElapsed = liveRenderRowElapsedSeconds(ordered[ordered.length - 1], source);
-  if (!Number.isFinite(latestElapsed)) return downsamplePoints(ordered, LIVE_RENDER_MAX_POINTS_PER_LINE);
+  if (!Number.isFinite(latestElapsed)) return downsamplePoints(ordered, LIVE_RENDER_MAX_SOURCE_ROWS_PER_LINE);
   const cutoff = Math.max(0, latestElapsed - LIVE_PAPER_RENDER_TAIL_SECONDS);
   const visible = [];
   let carry = null;
@@ -1825,7 +1878,7 @@ function limitLiveRowsToRenderWindow(rows, source, market) {
     visible.push(row);
   });
   const limited = carry ? [carry, ...visible] : visible;
-  return downsamplePoints(limited, LIVE_RENDER_MAX_POINTS_PER_LINE);
+  return downsamplePoints(limited, LIVE_RENDER_MAX_SOURCE_ROWS_PER_LINE);
 }
 
 function liveChartTickPointsForMarket(market) {
@@ -4875,8 +4928,13 @@ function renderPaperDecisionGraph(options = {}) {
   const visibleSamples = samples.length ? samples : allSamples.slice(-1);
   const visibleTruthSamples = visibleSamplesWithCarry(truthSamples, xDomain);
   const visibleExternalSamples = visibleSamplesWithCarry(externalSamples, xDomain);
-  const truthLineSamples = selectedCurrent ? stableLiveLineSamples(visibleTruthSamples, LIVE_CHAINLINK_RENDER_BUCKET_SECONDS) : visibleTruthSamples;
-  const externalLineSamples = selectedCurrent ? stableLiveLineSamples(visibleExternalSamples, LIVE_BINANCE_RENDER_BUCKET_SECONDS) : visibleExternalSamples;
+  const maxLinePoints = selectedCurrent ? liveRenderPointLimit(plotWidth) : LIVE_TICK_RENDER_MAX_POINTS;
+  const truthLineSamples = selectedCurrent
+    ? stableLiveLineSamples(visibleTruthSamples, LIVE_CHAINLINK_RENDER_BUCKET_SECONDS, maxLinePoints, xDomain)
+    : visibleTruthSamples;
+  const externalLineSamples = selectedCurrent
+    ? stableLiveLineSamples(visibleExternalSamples, LIVE_BINANCE_RENDER_BUCKET_SECONDS, maxLinePoints, xDomain)
+    : visibleExternalSamples;
   const xForElapsed = (elapsedSeconds) => {
     const clamped = Math.max(xDomain.min, Math.min(xDomain.max, Number(elapsedSeconds)));
     return plot.left + ((clamped - xDomain.min) / (xDomain.max - xDomain.min)) * plotWidth;
