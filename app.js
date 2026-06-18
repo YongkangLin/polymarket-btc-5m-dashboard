@@ -41,16 +41,16 @@ const LIVE_CHAINLINK_RENDER_BUCKET_SECONDS = null;
 const LIVE_BINANCE_RENDER_BUCKET_SECONDS = null;
 const LIVE_PAPER_RENDER_TAIL_SECONDS = 82;
 const LIVE_RENDER_MAX_SOURCE_ROWS_PER_LINE = 6500;
-const LIVE_RENDER_MIN_POINTS_PER_LINE = 650;
-const LIVE_RENDER_MAX_POINTS_PER_LINE = 2200;
-const LIVE_RENDER_POINTS_PER_PIXEL = 1.85;
+const LIVE_RENDER_MIN_POINTS_PER_LINE = 420;
+const LIVE_RENDER_MAX_POINTS_PER_LINE = 1300;
+const LIVE_RENDER_POINTS_PER_PIXEL = 1.15;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const BINANCE_DEPTH_TABLE_STALE_MS = 15000;
 const LOCAL_BACKEND_BASE = configuredBackendBase();
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
-const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 5000;
-const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 50000;
+const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 600;
+const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 9000;
 const POLYMARKET_TRUTH_SOURCE = "chainlink_data_streams";
 
 function configuredInitialTab() {
@@ -817,8 +817,6 @@ function uPlotDataFromSamples(truthSamples, externalSamples) {
   const x = [];
   const chainlinkValues = [];
   const binanceValues = [];
-  let latestChainlinkValue = null;
-  let latestBinanceValue = null;
   let index = 0;
   while (index < events.length) {
     const elapsedSeconds = events[index].elapsedSeconds;
@@ -829,11 +827,9 @@ function uPlotDataFromSamples(truthSamples, externalSamples) {
       if (events[index].source === "binance") binanceValue = events[index].dollarMove;
       index += 1;
     }
-    if (chainlinkValue !== null) latestChainlinkValue = chainlinkValue;
-    if (binanceValue !== null) latestBinanceValue = binanceValue;
     x.push(elapsedSeconds);
-    chainlinkValues.push(latestChainlinkValue);
-    binanceValues.push(latestBinanceValue);
+    chainlinkValues.push(chainlinkValue);
+    binanceValues.push(binanceValue);
   }
   return [x, chainlinkValues, binanceValues];
 }
@@ -2210,15 +2206,16 @@ function externalLineRows(rows) {
   const bookTicks = ordered.filter(isExternalBookTickerPricePoint);
   const depthTicks = ordered.filter(isExternalDepthPricePoint);
   const trades = ordered.filter(isExternalTradePricePoint);
+  if (trades.length >= 3) return trades;
   if (bookTicks.length >= 3) return bookTicks;
   if (depthTicks.length >= 3) return depthTicks;
   return trades.length ? trades : ordered;
 }
 
 function externalLineLabel(rows) {
+  if ((rows || []).some(isExternalTradePricePoint)) return "Binance WSS trades";
   if ((rows || []).some(isExternalBookTickerPricePoint)) return "Binance WSS bookTicker";
   if ((rows || []).some(isExternalDepthPricePoint)) return "Binance WSS depth";
-  if ((rows || []).some(isExternalTradePricePoint)) return "Binance WSS trades";
   return "Binance WSS";
 }
 
@@ -2413,7 +2410,7 @@ function paperGraphSample(row, index, total, startPrice, source) {
   };
 }
 
-function graphBaselinePrice(rows, source, fallbackPrice = null) {
+function graphBaselineItem(rows, source, maxElapsedSeconds = 5) {
   const ordered = (rows || [])
     .map((row, index) => ({
       row,
@@ -2423,7 +2420,13 @@ function graphBaselinePrice(rows, source, fallbackPrice = null) {
     }))
     .filter((item) => item.price !== null && item.price > 0 && Number.isFinite(item.elapsedSeconds))
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds || left.index - right.index);
-  return ordered[0]?.price ?? metricNumber(fallbackPrice);
+  if (!ordered.length) return null;
+  const nearOpen = ordered.find((item) => item.elapsedSeconds <= maxElapsedSeconds);
+  return nearOpen || null;
+}
+
+function graphBaselinePrice(rows, source, fallbackPrice = null) {
+  return graphBaselineItem(rows, source)?.price ?? metricNumber(fallbackPrice);
 }
 
 function paperGraphSamples(rows, startPrice, source) {
@@ -2448,6 +2451,21 @@ function chainlinkStartAnchorSample(market, startMeta) {
     },
     index: -1,
     source: "chainlink",
+    elapsedSeconds: 0,
+    secondsLeft: 300,
+    dollarMove: 0,
+    btcPrice: price,
+  };
+}
+
+function sourceStartAnchorSample(rows, source, startPrice) {
+  const item = graphBaselineItem(rows, source);
+  const price = metricNumber(startPrice);
+  if (!item || price === null || price <= 0) return null;
+  return {
+    row: item.row,
+    index: -1,
+    source,
     elapsedSeconds: 0,
     secondsLeft: 300,
     dollarMove: 0,
@@ -4991,9 +5009,18 @@ function renderPaperDecisionGraph(options = {}) {
   }
   const externalCandidates = priceRows.filter((row) => isExternalPricePoint(row) && !isPolymarketTruthPoint(row));
   const externalRows = externalLineRows(externalCandidates);
-  const externalStartPrice = graphBaselinePrice(externalRows, "binance");
-  const rawExternalSamples = externalStartPrice === null ? [] : paperGraphSamples(externalRows, externalStartPrice, "binance")
-    .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
+  const fullWindowExternalRows = externalLineRows(
+    liveTickPointsForMarket(market)
+      .filter((row) => rowBelongsToMarketWindow(row, market))
+      .filter((row) => isExternalPricePoint(row) && !isPolymarketTruthPoint(row)),
+  );
+  const externalBaselineRows = fullWindowExternalRows.length ? fullWindowExternalRows : externalRows;
+  const externalStartPrice = graphBaselinePrice(externalBaselineRows, "binance");
+  const externalStartAnchor = sourceStartAnchorSample(externalBaselineRows, "binance", externalStartPrice);
+  const rawExternalSamples = externalStartPrice === null ? [] : [
+    ...(externalStartAnchor ? [externalStartAnchor] : []),
+    ...paperGraphSamples(externalRows, externalStartPrice, "binance"),
+  ].sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
   const startAnchorSample = chainlinkStartAnchorSample(market, startMeta);
   const rawTruthSamples = (startMeta ? [
     ...(startAnchorSample ? [startAnchorSample] : []),
