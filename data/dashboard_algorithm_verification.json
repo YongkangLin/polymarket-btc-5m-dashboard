@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-18T09:39:09.774579+00:00",
+  "generated_at": "2026-06-18T10:12:20.599111+00:00",
   "status": "passed",
   "feature_summary": {
     "markets": 2010,
@@ -42,11 +42,11 @@
     "table_gate": {
       "enabled": true,
       "min_seconds_left": 91,
-      "max_seconds_left": 150,
+      "max_seconds_left": 180,
       "min_abs_distance_bps": 0.0,
-      "max_abs_distance_bps": 8.0,
-      "min_ask": 0.65,
-      "max_ask": 0.9,
+      "max_abs_distance_bps": 15.0,
+      "min_ask": 0.55,
+      "max_ask": 0.75,
       "min_top5_capacity_dollars": 25.0,
       "min_signal_depth_imbalance": null,
       "min_trade_flow_edge_dollars": null,
@@ -56,9 +56,9 @@
       "max_complement_ask_sum": null
     },
     "maker_route": {
-      "mode": "join_best_bid",
-      "quote_horizon_seconds": 60,
-      "max_queue_ahead_notional": null
+      "mode": "improve_one_tick",
+      "quote_horizon_seconds": 30,
+      "max_queue_ahead_notional": 25.0
     },
     "quote_notional_dollars": 5.0,
     "enforce_expected_edge_gate": false
@@ -97,7 +97,7 @@
       "label": "Strict report and dashboard candidate are identical when strict is active",
       "actual": {
         "candidate": "docs/data/candidate_nearline_no_cancel_strategy.json",
-        "candidate_hash": "8cf750993f5de82f8b974f1620008bba791580ca8f56b01f440f3ca4d156beef",
+        "candidate_hash": "4c46700b6870e3b473d00748524b0ca8449f743b8ccabb9bcf63b40475493418",
         "algorithm_hash": "ea23daf22ba6be8bbbe91b3bade8a623aedb871f4128de4e5ce474973af64319"
       },
       "expected": {
@@ -178,8 +178,8 @@
     {
       "id": "workflow_signals_match_algorithm",
       "label": "Workflow signal count matches algorithm",
-      "actual": 1674,
-      "expected": 1674,
+      "actual": 497,
+      "expected": 497,
       "passed": true
     },
     {
@@ -187,28 +187,28 @@
       "label": "Workflow active summary matches dashboard candidate",
       "actual": {
         "clean_markets_scanned": 2010,
-        "quote_markets": 1674,
-        "quoted_markets": 1674,
-        "quote_market_rate": 0.832836,
-        "filled_markets": 1043,
-        "test_quote_markets": 539,
-        "test_filled_markets": 249,
-        "test_pnl_dollars": 75.779571,
-        "test_roi_on_planned_cost": 0.028119,
-        "test_roi_on_filled_cost": 0.061405,
+        "quote_markets": 497,
+        "quoted_markets": 497,
+        "quote_market_rate": 0.247264,
+        "filled_markets": 495,
+        "test_quote_markets": 127,
+        "test_filled_markets": 126,
+        "test_pnl_dollars": 89.928234,
+        "test_roi_on_planned_cost": 0.141619,
+        "test_roi_on_filled_cost": 0.143142,
         "test_positive_day_share": 1.0
       },
       "expected": {
         "clean_markets_scanned": 2010,
-        "quote_markets": 1674,
-        "quoted_markets": 1674,
-        "quote_market_rate": 0.8328358208955224,
-        "filled_markets": 1043,
-        "test_quote_markets": 539,
-        "test_filled_markets": 249,
-        "test_pnl_dollars": 75.77957050291784,
-        "test_roi_on_planned_cost": 0.02811857903633315,
-        "test_roi_on_filled_cost": 0.06140541172307444,
+        "quote_markets": 497,
+        "quoted_markets": 497,
+        "quote_market_rate": 0.2472636815920398,
+        "filled_markets": 495,
+        "test_quote_markets": 127,
+        "test_filled_markets": 126,
+        "test_pnl_dollars": 89.92823397069597,
+        "test_roi_on_planned_cost": 0.1416192660955842,
+        "test_roi_on_filled_cost": 0.14314219718342192,
         "test_positive_day_share": 1.0
       },
       "passed": true
@@ -216,8 +216,8 @@
     {
       "id": "workflow_win_rate_matches_algorithm",
       "label": "Workflow ROI/reference metric matches algorithm",
-      "actual": 0.014801,
-      "expected": 0.014801,
+      "actual": 0.052302,
+      "expected": 0.052302,
       "passed": true
     },
     {
@@ -226,13 +226,13 @@
       "actual": {
         "status": "paper_collecting",
         "maker_route_ready": false,
-        "selected_route_id": "maker_join_bid_h60",
+        "selected_route_id": "maker_improve_1c_h30_q25",
         "selected_route_type": "maker"
       },
       "expected": {
         "status": "paper_collecting",
         "maker_route_ready": false,
-        "selected_route_id": "maker_join_bid_h60",
+        "selected_route_id": "maker_improve_1c_h30_q25",
         "selected_route_type": "maker"
       },
       "passed": true
@@ -240,8 +240,8 @@
     {
       "id": "public_workflow_synced",
       "label": "Public dashboard workflow is synced",
-      "actual": "d753b97bea021190ba355e9e3ff27527237c6bb32698353c9948158ee67b79de",
-      "expected": "d753b97bea021190ba355e9e3ff27527237c6bb32698353c9948158ee67b79de",
+      "actual": "586c68f6a2f5b8794154e5c892bcc587e3ab0c5bcdb5d3c518f1c20f6bb5ed7a",
+      "expected": "586c68f6a2f5b8794154e5c892bcc587e3ab0c5bcdb5d3c518f1c20f6bb5ed7a",
       "passed": true
     },
     {
@@ -317,11 +317,11 @@
       "actual": {
         "enabled": true,
         "min_seconds_left": 91,
-        "max_seconds_left": 150,
+        "max_seconds_left": 180,
         "min_abs_distance_bps": 0.0,
-        "max_abs_distance_bps": 8.0,
-        "min_ask": 0.65,
-        "max_ask": 0.9,
+        "max_abs_distance_bps": 15.0,
+        "min_ask": 0.55,
+        "max_ask": 0.75,
         "min_top5_capacity_dollars": 25.0,
         "min_signal_depth_imbalance": null,
         "min_trade_flow_edge_dollars": null,
@@ -333,11 +333,11 @@
       "expected": {
         "enabled": true,
         "min_seconds_left": 91,
-        "max_seconds_left": 150,
+        "max_seconds_left": 180,
         "min_abs_distance_bps": 0.0,
-        "max_abs_distance_bps": 8.0,
-        "min_ask": 0.65,
-        "max_ask": 0.9,
+        "max_abs_distance_bps": 15.0,
+        "min_ask": 0.55,
+        "max_ask": 0.75,
         "min_top5_capacity_dollars": 25.0,
         "min_signal_depth_imbalance": null,
         "min_trade_flow_edge_dollars": null,
@@ -366,14 +366,14 @@
       "id": "engine_maker_route_matches_algorithm",
       "label": "Rust maker route matches selected maker policy",
       "actual": {
-        "mode": "join_best_bid",
-        "quote_horizon_seconds": 60,
-        "max_queue_ahead_notional": null
+        "mode": "improve_one_tick",
+        "quote_horizon_seconds": 30,
+        "max_queue_ahead_notional": 25.0
       },
       "expected": {
-        "mode": "join_best_bid",
-        "quote_horizon_seconds": 60,
-        "max_queue_ahead_notional": null
+        "mode": "improve_one_tick",
+        "quote_horizon_seconds": 30,
+        "max_queue_ahead_notional": 25.0
       },
       "passed": true
     },
