@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-06-18T11:26:02.539442+00:00",
-  "status": "passed",
+  "generated_at": "2026-06-18T11:30:27.551556+00:00",
+  "status": "failed",
   "feature_summary": {
     "markets": 2010,
     "rows": 605010,
@@ -61,7 +61,7 @@
       "max_queue_ahead_notional": 25.0
     },
     "quote_notional_dollars": 5.0,
-    "enforce_expected_edge_gate": false
+    "enforce_expected_edge_gate": true
   },
   "checks": [
     {
@@ -240,8 +240,8 @@
     {
       "id": "public_workflow_synced",
       "label": "Public dashboard workflow is synced",
-      "actual": "e94025b8748e973d646876f5406e4744ae0ae031ed5cf0de62ef22a7638c8b17",
-      "expected": "e94025b8748e973d646876f5406e4744ae0ae031ed5cf0de62ef22a7638c8b17",
+      "actual": "1ca9c39a5eac848d84ece319981d0a780b041ac5a075441b64a83146f29de1b2",
+      "expected": "1ca9c39a5eac848d84ece319981d0a780b041ac5a075441b64a83146f29de1b2",
       "passed": true
     },
     {
@@ -387,9 +387,9 @@
     {
       "id": "engine_expected_edge_gate_matches_algorithm",
       "label": "Rust expected-edge cancel gate matches selected fill policy",
-      "actual": false,
+      "actual": true,
       "expected": false,
-      "passed": true
+      "passed": false
     }
   ]
 }
