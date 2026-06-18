@@ -41,10 +41,16 @@ const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 1000;
 const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 5000;
 const POLYMARKET_TRUTH_SOURCE = "chainlink_data_streams";
 
+function configuredInitialTab() {
+  const params = new URLSearchParams(window.location.search || "");
+  const requested = (params.get("tab") || window.location.hash.replace(/^#/, "") || "").toLowerCase();
+  return ["backtest", "paper", "live"].includes(requested) ? requested : "backtest";
+}
+
 const state = {
   workflow: null,
   paperSqlSession: null,
-  activeTab: "backtest",
+  activeTab: configuredInitialTab(),
   marketFilter: "all",
   backtestMarket: "",
   paperGraph: PAPER_CURRENT_VALUE,
@@ -2062,42 +2068,9 @@ function strategyCell(title, body) {
     </div>`;
 }
 
-function paperMissRoute() {
-  const routes = state.workflow?.paper_trade?.miss_diagnosis?.routes || [];
-  return routes.find((route) => route.key === "strict_active") || routes[0] || null;
-}
-
-function paperMissFiringText(route) {
-  if (!route) return "Collecting";
-  const inband = Number(route.inband_events || 0);
-  const quotes = Number(route.would_quote_events || 0);
-  if (!inband) return "Waiting";
-  return `${fmt.format(quotes)}/${fmt.format(inband)} in-window`;
-}
-
-function paperMissBlockerText(route) {
-  const blocker = (route?.top_blockers || []).find((row) => row.reason !== "outside_time_window")
-    || (route?.top_blockers || [])[0];
-  if (!blocker) return "Collecting";
-  return `${rejectReasonLabel(blocker.reason)} ${fmt.format(blocker.events || 0)}`;
-}
-
-function paperMissBestProbeText() {
-  const probe = state.workflow?.paper_trade?.miss_diagnosis?.best_probe;
-  if (!probe) return "Collecting";
-  const label = String(probe.label || probe.key || "Probe").replace(/^Probe:\s*/i, "");
-  return `${label}: ${paperMissFiringText(probe)}`;
-}
-
 function renderStrategyPanels() {
-  const paperSummary = state.workflow.paper_trade.summary || {};
   const activeSummary = state.workflow.active_backtest?.summary || {};
-  const missRoute = paperMissRoute();
   const policy = state.workflow.live_trade.execution_policy || {};
-  const routeLabel = paperSummary.maker_route_label || policy.selected_route_label || "Maker improve one tick for 5s";
-  const bookChecks = Number(paperSummary.external_book_checks || 0);
-  const flowChecks = Number(paperSummary.external_trade_flow_checks || 0);
-  const depthSupportText = bookChecks > 0 || flowChecks > 0 ? "BTC pressure checked" : "BTC pressure pending";
   const liveStatus = policy.maker_route_ready
     ? "Disabled until manual enable"
     : "Disabled";
@@ -5031,6 +5004,7 @@ async function refreshWorkflow() {
 
 function renderActiveTab() {
   document.querySelectorAll(".tab").forEach((button) => {
+    button.setAttribute("aria-selected", button.dataset.tab === state.activeTab ? "true" : "false");
     button.classList.toggle("is-active", button.dataset.tab === state.activeTab);
   });
   document.querySelectorAll(".panel").forEach((panel) => {
@@ -5063,6 +5037,10 @@ async function main() {
   document.querySelectorAll(".tab").forEach((button) => {
     button.addEventListener("click", () => {
       state.activeTab = button.dataset.tab;
+      const params = new URLSearchParams(window.location.search || "");
+      params.set("tab", state.activeTab);
+      const query = params.toString();
+      window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash || ""}`);
       renderActiveTab();
       if (state.activeTab === "paper" || state.activeTab === "live") {
         refreshLivePaperFeeds();
