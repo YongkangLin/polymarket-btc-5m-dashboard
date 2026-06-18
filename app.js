@@ -48,8 +48,8 @@ const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const BINANCE_DEPTH_TABLE_STALE_MS = 15000;
 const LOCAL_BACKEND_BASE = configuredBackendBase();
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
-const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 600;
-const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 3000;
+const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 1000;
+const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 12000;
 const POLYMARKET_TRUTH_SOURCE = "chainlink_data_streams";
 
 function configuredInitialTab() {
@@ -902,12 +902,13 @@ function updatePaperUPlot(chart, options) {
       ],
       series: [
         {},
-        { label: "Chainlink", stroke: "#148256", width: 2, points: { show: false } },
-        { label: "Binance", stroke: "#3c62d8", width: 2, dash: [8, 6], points: { show: false } },
+        { label: "Chainlink", stroke: "#148256", width: 2, spanGaps: true, points: { show: false } },
+        { label: "Binance", stroke: "#3c62d8", width: 2, dash: [8, 6], spanGaps: true, points: { show: false } },
       ],
     });
     const existing = state.paperUPlotCharts.get(chart.id || "paperChart");
-    if (!existing || existing.key !== key) {
+    const targetHasPlot = Boolean(target.querySelector(".uplot"));
+    if (!existing || existing.key !== key || !targetHasPlot) {
       if (existing?.plot) existing.plot.destroy();
       target.innerHTML = "";
       const plot = new window.uPlot(makeOptions(), data, target);
@@ -1512,7 +1513,7 @@ function preserveExistingOutcomeOdds(target, existing, incoming) {
   applyOutcomeOddsFromCandidates(target, [target, incoming, existing]);
 }
 
-function rememberLiveMarket(market) {
+function rememberLiveMarket(market, options = {}) {
   const key = paperGraphKey(market);
   if (!key) return market;
   const hadKey = state.livePersistedMarkets.has(key);
@@ -1525,7 +1526,11 @@ function rememberLiveMarket(market) {
     points: [],
     markers: market.markers || existing.markers || [],
   };
-  preserveExistingOutcomeOdds(stored, existing, market);
+  if (options.preserveOutcomeOdds === false) {
+    copyOutcomeOddsFields(stored, existing);
+  } else {
+    preserveExistingOutcomeOdds(stored, existing, market);
+  }
   if (shouldKeepExistingTruthPrice(existing, market)) preserveExistingTruthPrice(stored, existing);
   delete stored[["is", "synthetic", "live"].join("_")];
   state.livePersistedMarkets.set(key, stored);
@@ -1546,7 +1551,7 @@ function rememberLiveMarket(market) {
   return stored;
 }
 
-function rememberObservedPaperMarket(market, points = [], markers = []) {
+function rememberObservedPaperMarket(market, points = [], markers = [], options = {}) {
   const keys = paperStorageKeysForMarket(market);
   if (!keys.length) return;
   keys.forEach((key) => {
@@ -1558,8 +1563,12 @@ function rememberObservedPaperMarket(market, points = [], markers = []) {
       points: [],
       markers: [],
     };
-    preserveExistingOutcomeOdds(storedMarket, existingMarket, market);
-    applyOutcomeOddsFromCandidates(storedMarket, [market, existingMarket, ...points, ...markers]);
+    if (options.preserveOutcomeOdds === false) {
+      copyOutcomeOddsFields(storedMarket, existingMarket);
+    } else {
+      preserveExistingOutcomeOdds(storedMarket, existingMarket, market);
+      applyOutcomeOddsFromCandidates(storedMarket, [market, existingMarket, ...points, ...markers]);
+    }
     if (shouldKeepExistingTruthPrice(existingMarket, market)) preserveExistingTruthPrice(storedMarket, existingMarket);
     state.paperObservedMarkets.set(key, storedMarket);
     if (Array.isArray(points) && points.length) {
@@ -2399,6 +2408,29 @@ function paperGraphSamples(rows, startPrice, source) {
   return (rows || [])
     .map((row, index) => paperGraphSample(row, index, rows.length, startPrice, source))
     .filter(Boolean);
+}
+
+function chainlinkStartAnchorSample(market, startMeta) {
+  const windowStart = metricNumber(market?.window_start_unix);
+  const price = metricNumber(startMeta?.price);
+  if (windowStart === null || price === null || price <= 0) return null;
+  return {
+    row: {
+      point_id: `chainlink-start:${windowStart}`,
+      event_time_micro: windowStart * 1_000_000,
+      receive_time_micro: windowStart * 1_000_000,
+      btc_price: price,
+      btc_price_source: POLYMARKET_TRUTH_SOURCE,
+      backend_event_kind: "chainlink_start",
+      window_start_unix: windowStart,
+    },
+    index: -1,
+    source: "chainlink",
+    elapsedSeconds: 0,
+    secondsLeft: 300,
+    dollarMove: 0,
+    btcPrice: price,
+  };
 }
 
 function paperPointSecondsLeft(row, fallbackIndex = 0, total = 1) {
@@ -3732,6 +3764,17 @@ function rowHasOutcomeOdds(row) {
   return OUTCOME_ODDS_FIELDS.some((field) => row?.[field] !== null && row?.[field] !== undefined);
 }
 
+function isActionOnlyPaperOddsRow(row) {
+  const eventType = String(row?.event_type || "").toLowerCase();
+  if (eventType === "paper_evaluation" || eventType === "paper_settlement") return true;
+  if (eventType.startsWith("maker_paper_")) return true;
+  return String(row?.decision || "").toLowerCase() === "paper" && Boolean(eventType);
+}
+
+function currentMarketOddsRows(rows) {
+  return (rows || []).filter((row) => row && !isActionOnlyPaperOddsRow(row));
+}
+
 function outcomeDirectProbability(row, key) {
   return firstMetricNumber(
     row?.[`paper_${key}_probability`],
@@ -3793,17 +3836,18 @@ function cachedOutcomeOddsForMarket(market) {
 
 function rememberOutcomeOddsForWindow(anchor, candidates = []) {
   const rows = [anchor, ...(candidates || [])].filter(Boolean);
+  const oddsRows = currentMarketOddsRows(rows);
   const keys = [...new Set(rows.flatMap(outcomeOddsCacheKeys))];
   const key = rows.map(outcomeOddsWindowKey).find(Boolean) || keys[0];
   if (!key || !keys.length) return null;
-  const { up, down } = outcomeOddsFromCandidates(rows);
+  const { up, down } = outcomeOddsFromCandidates(oddsRows);
   if (up === null && down === null) return cachedOutcomeOddsForMarket(anchor) || null;
-  const timestamps = rows.map(outcomeOddsTimestampMicro).filter((value) => value !== null);
+  const timestamps = oddsRows.map(outcomeOddsTimestampMicro).filter((value) => value !== null);
   const incomingTime = timestamps.length ? Math.max(...timestamps) : 0;
   const existing = keys.map((cacheKey) => state.latestOutcomeOddsByWindow.get(cacheKey)).find(Boolean) || {};
   const existingTime = metricNumber(existing._odds_updated_micro) || 0;
   if (existingTime && incomingTime && incomingTime < existingTime) return existing;
-  const source = rows.find((row) => row?.probability_source || row?.market_probability_source || row?.market_odds_fetched_at);
+  const source = oddsRows.find((row) => row?.probability_source || row?.market_probability_source || row?.market_odds_fetched_at);
   const odds = {
     ...existing,
     window_start_unix: Number(key),
@@ -3918,7 +3962,10 @@ function paperPanelOutcomeCandidates(market, latestRaw, latestBookRaw) {
 function paperPanelOutcomeProbabilities(market, latestRaw, latestBookRaw) {
   if (!market) return { up: null, down: null };
   const candidates = paperPanelOutcomeCandidates(market, latestRaw, latestBookRaw);
-  const odds = preferBookOdds(outcomeBookOddsFromCandidates(candidates), outcomeOddsFromCandidates(candidates));
+  const oddsRows = currentMarketOddsRows(candidates);
+  const cached = cachedOutcomeOddsForMarket(market);
+  const odds = preferBookOdds(outcomeBookOddsFromCandidates(oddsRows), outcomeOddsFromCandidates(oddsRows));
+  if (odds.up === null && odds.down === null && cached) return outcomeOddsFromCandidates([cached]);
   if (odds.up !== null || odds.down !== null) applyOutcomeOddsFromCandidates(market, candidates);
   return odds;
 }
@@ -3949,7 +3996,7 @@ function outcomeOddsFromCandidates(candidates) {
 }
 
 function applyOutcomeOddsFromCandidates(target, candidates) {
-  const rows = [cachedOutcomeOddsForMarket(target), ...(candidates || [])].filter(Boolean);
+  const rows = currentMarketOddsRows([cachedOutcomeOddsForMarket(target), ...(candidates || [])].filter(Boolean));
   const { up, down } = outcomeOddsFromCandidates(rows);
   if (up !== null) {
     target.paper_up_probability = up;
@@ -3982,7 +4029,7 @@ function paperOutcomeProbabilities(market, latestRaw, latestBookRaw) {
   const candidates = paperOutcomeCandidates(market, latestRaw, latestBookRaw);
   const liveAnchor = isCurrentBtcWindowMarket(market) ? currentBackendLiveMarketShell() : null;
   const remembered = rememberOutcomeOddsForWindow(market, [liveAnchor, ...candidates]);
-  const rows = [market, remembered, liveAnchor, ...candidates].filter(Boolean);
+  const rows = currentMarketOddsRows([market, remembered, liveAnchor, ...candidates].filter(Boolean));
   const odds = preferBookOdds(outcomeBookOddsFromCandidates(rows), outcomeOddsFromCandidates(rows));
   if (odds.up !== null || odds.down !== null) applyOutcomeOddsFromCandidates(market, rows);
   return odds;
@@ -4876,7 +4923,11 @@ function renderPaperDecisionGraph(options = {}) {
   const externalStartPrice = graphBaselinePrice(externalRows, "binance");
   const rawExternalSamples = externalStartPrice === null ? [] : paperGraphSamples(externalRows, externalStartPrice, "binance")
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
-  const rawTruthSamples = (startMeta ? paperGraphSamples(truthRows, startMeta.price, "chainlink") : [])
+  const startAnchorSample = chainlinkStartAnchorSample(market, startMeta);
+  const rawTruthSamples = (startMeta ? [
+    ...(startAnchorSample ? [startAnchorSample] : []),
+    ...paperGraphSamples(truthRows, startMeta.price, "chainlink"),
+  ] : [])
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
   const latestElapsedSeed = newestElapsedSeconds(rawTruthSamples, rawExternalSamples);
   const truthSamples = selectedCurrent ? limitLiveSamplesForRender(rawTruthSamples, latestElapsedSeed) : rawTruthSamples;
@@ -5511,7 +5562,7 @@ function rememberBackendStreamMarket(market, options = {}) {
     is_current: market.is_current !== false,
     is_open: market.is_open !== false,
     status: "backend_live",
-  });
+  }, { preserveOutcomeOdds: options.preserveOutcomeOdds });
   const bookKey = [
     market.condition_id,
     market.up_book_snapshot_time_micro,
@@ -5678,9 +5729,12 @@ function handleBackendStreamMessage(payload) {
   }
   if (payload.type === "paper_event") {
     const point = payload.point;
-    const market = rememberBackendStreamMarket(payload.market || point, { addTruthPoint: false }) || point;
+    const market = rememberBackendStreamMarket(payload.market || point, {
+      addTruthPoint: false,
+      preserveOutcomeOdds: false,
+    }) || point;
     if (point && isPaperEventPoint(point)) {
-      rememberObservedPaperMarket(market, [point], [point]);
+      rememberObservedPaperMarket(market, [point], [point], { preserveOutcomeOdds: false });
     }
     state.backendStatus = {
       ...state.backendStatus,
