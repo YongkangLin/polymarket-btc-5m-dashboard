@@ -1522,12 +1522,12 @@ function truthRowFreshnessMs(row) {
 }
 
 function isFreshTruthRow(row) {
-  const eventMicro = normalizedTruthRowEventTimeMicro(row);
   const receiveMicro = normalizedTruthRowReceiveTimeMicro(row);
-  const eventAge = eventMicro === null ? null : Math.max(0, Date.now() - eventMicro / 1000);
   const receiveAge = receiveMicro === null ? null : Math.max(0, Date.now() - receiveMicro / 1000);
-  if (eventAge !== null && eventAge > POLYMARKET_TRUTH_EVENT_STALE_MS) return false;
-  return receiveAge === null || receiveAge <= POLYMARKET_TRUTH_CURRENT_STALE_MS;
+  if (receiveAge !== null) return receiveAge <= POLYMARKET_TRUTH_CURRENT_STALE_MS;
+  const eventMicro = normalizedTruthRowEventTimeMicro(row);
+  const eventAge = eventMicro === null ? null : Math.max(0, Date.now() - eventMicro / 1000);
+  return eventAge === null || eventAge <= POLYMARKET_TRUTH_EVENT_STALE_MS;
 }
 
 function truthSampleWindowStart(sample) {
@@ -3206,7 +3206,7 @@ function outcomeProbabilityFromRow(row, key) {
   const opposite = key === "up" ? "down" : "up";
   const oppositeBookMid = outcomeBookProbability(row, opposite);
   if (oppositeBookMid !== null) return Math.max(0, Math.min(1, 1 - oppositeBookMid));
-  return metricNumber(row?.[`direction_${key}_probability`]);
+  return null;
 }
 
 function outcomeOddsWindowKey(row) {
@@ -3447,11 +3447,11 @@ function renderPaperOddsStrip(market, latestRaw, latestBookRaw, odds = null) {
   return `
     <div class="paper-odds-strip" role="status" aria-label="Current Polymarket odds">
       <div>
-        <span>Up</span>
+        <span>Polymarket Up</span>
         <strong class="move-up">${escapeHtml(formatOutcomePercent(resolved.up))}</strong>
       </div>
       <div>
-        <span>Down</span>
+        <span>Polymarket Down</span>
         <strong class="move-down">${escapeHtml(formatOutcomePercent(resolved.down))}</strong>
       </div>
     </div>`;
@@ -4247,10 +4247,11 @@ function renderPaperDecisionGraph(options = {}) {
   const renderedTruthHeadPoint = latestRenderedLinePoint(truthLinePoints);
   const renderedHeadPoint = renderedTruthHeadPoint;
   const headSample = selectedCurrent
-    ? (renderedHeadPoint?.sample || displayedTruthSample || latest)
+    ? (renderedHeadPoint?.sample || displayedTruthSample || latestTruth)
     : latest;
-  const headX = renderedHeadPoint?.x ?? xForElapsed(headSample.elapsedSeconds);
-  const headY = renderedHeadPoint?.y ?? yForDollarMove(headSample.dollarMove);
+  const hasTruthHead = Boolean(headSample);
+  const headX = hasTruthHead ? (renderedHeadPoint?.x ?? xForElapsed(headSample.elapsedSeconds)) : null;
+  const headY = hasTruthHead ? (renderedHeadPoint?.y ?? yForDollarMove(headSample.dollarMove)) : null;
   const rule = activeRule();
   const bandRect = (startElapsed, endElapsed, className) => {
     const left = Math.max(xDomain.min, Math.min(startElapsed, endElapsed));
@@ -4357,7 +4358,7 @@ function renderPaperDecisionGraph(options = {}) {
   const chainlinkStartDot = anchorDot(truthLinePoints, "chainlink-anchor", `${truthLabel} open anchor`);
   const externalStartDot = anchorDot(externalLinePoints, "external-anchor", `${externalLabel} open anchor`);
 
-  const latestRaw = headSample.row;
+  const latestRaw = headSample?.row || marketTruthPoint || market || {};
   const latestBookRaw = latestBookRowForMarket(market, rawPoints) || latestRaw;
   const latestQuote = [...paperMarkersFor(market)].reverse().find((row) => ["quote", "fill"].includes(paperMarkerType(row)));
   const settlement = [...paperMarkersFor(market)].reverse().find((row) => paperMarkerType(row) === "settlement");
@@ -4368,7 +4369,7 @@ function renderPaperDecisionGraph(options = {}) {
   const resultText = settlement
     ? `${paperDecisionText(settlement)} | ${pnl === null ? "--" : formatSignedMoney(pnl)}`
     : (market.winner ? `${market.winner} won | ${pnl === null ? "--" : formatSignedMoney(pnl)}` : "--");
-  const latestTradeTime = latestRaw.trade_time_micro
+  const latestTradeTime = latestRaw?.trade_time_micro
     ? formatMicroTimestamp(latestRaw.trade_time_micro)
     : (latestRaw.time_unix ? formatMicroTimestamp(Number(latestRaw.time_unix) * 1_000_000) : "--");
   const fairProbability = metricNumber(latestRaw.fair_probability);
@@ -4458,11 +4459,11 @@ function renderPaperDecisionGraph(options = {}) {
         </div>`).join("")}</div>`
     : "";
   const latestTitle = [
-    `latest ${Math.round(headSample.elapsedSeconds)}s in`,
-    headSample.source === "chainlink" ? truthLabel : externalLabel,
-    `BTC ${formatBookMoney(headSample.btcPrice)}`,
-    formatDollarMove(headSample.dollarMove),
-    headSample.source === "chainlink" && latestRaw.receive_time_micro
+    hasTruthHead ? `latest ${Math.round(headSample.elapsedSeconds)}s in` : "waiting for Chainlink",
+    hasTruthHead ? truthLabel : "Chainlink Data Streams",
+    hasTruthHead ? `BTC ${formatBookMoney(headSample.btcPrice)}` : "BTC waiting",
+    hasTruthHead ? formatDollarMove(headSample.dollarMove) : "move waiting",
+    hasTruthHead && headSample.source === "chainlink" && latestRaw.receive_time_micro
       ? `event ${latestTradeTime}, received ${formatMicroTimestamp(latestRaw.receive_time_micro)}`
       : latestTradeTime,
     paperDecisionText(latestRaw),
@@ -4492,10 +4493,10 @@ function renderPaperDecisionGraph(options = {}) {
       ${truthLegend}
       ${externalLegend}
       ${eventDots}
-      <line class="paper-latest-line" x1="${headX}" y1="${plot.top}" x2="${headX}" y2="${plotBottom}"></line>
-      <circle class="dot latest ${selectedCurrent ? "live-now" : ""}" cx="${headX}" cy="${headY}" r="6">
+      ${hasTruthHead ? `<line class="paper-latest-line" x1="${headX}" y1="${plot.top}" x2="${headX}" y2="${plotBottom}"></line>` : ""}
+      ${hasTruthHead ? `<circle class="dot latest ${selectedCurrent ? "live-now" : ""}" cx="${headX}" cy="${headY}" r="6">
         <title>${escapeHtml(latestTitle)}</title>
-      </circle>
+      </circle>` : ""}
       ${infoRows}
     </svg>
     ${oddsStrip}
