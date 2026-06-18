@@ -109,10 +109,10 @@ function isCompactPaperChart() {
 function configuredBackendBase() {
   const params = new URLSearchParams(window.location.search || "");
   const host = window.location.hostname;
-  const explicit = window.POLYMARKET_BACKEND_BASE
-    || params.get("backend");
-  if (explicit) return String(explicit).replace(/\/+$/, "");
+  if (window.POLYMARKET_BACKEND_BASE) return String(window.POLYMARKET_BACKEND_BASE).replace(/\/+$/, "");
   if (host === "yongkanglin.github.io") return PUBLIC_BACKEND_BASE;
+  const explicit = params.get("backend");
+  if (explicit) return String(explicit).replace(/\/+$/, "");
   const saved = window.localStorage?.getItem("POLYMARKET_BACKEND_BASE");
   if (saved) return String(saved).replace(/\/+$/, "");
   const protocol = window.location.protocol === "https:" ? "https:" : "http:";
