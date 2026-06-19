@@ -33,8 +33,8 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v12",
   "polymarketPaperLiveTicks.v13",
 ];
-const LIVE_PAPER_X_WINDOW_SECONDS = 75;
-const LIVE_PAPER_X_LEAD_SECONDS = 8;
+const LIVE_PAPER_X_WINDOW_SECONDS = 30;
+const LIVE_PAPER_X_LEAD_SECONDS = 4;
 const LIVE_PAPER_Y_MIN_RADIUS = 8;
 const LIVE_PAPER_Y_EXPANSION_PAD = 1.24;
 const LIVE_PAPER_Y_BUCKET = 4;
@@ -44,7 +44,7 @@ const LIVE_BINANCE_RENDER_BUCKET_SECONDS = null;
 const LIVE_STEP_EPS_SECONDS = 0.0005;
 const LIVE_CHAINLINK_MAX_LINE_GAP_SECONDS = 10;
 const LIVE_BINANCE_MAX_LINE_GAP_SECONDS = 5;
-const LIVE_PAPER_RENDER_TAIL_SECONDS = 82;
+const LIVE_PAPER_RENDER_TAIL_SECONDS = 36;
 const LIVE_RENDER_MAX_SOURCE_ROWS_PER_LINE = 20000;
 const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
@@ -1005,7 +1005,7 @@ function updatePaperUPlot(chart, options) {
       series: [
         {},
         { label: "Chainlink", stroke: "#148256", width: 2, spanGaps: false, points: { show: false } },
-        { label: "Binance", stroke: "#3c62d8", width: 2, dash: [8, 6], spanGaps: false, points: { show: false } },
+        { label: "Binance", stroke: "#3c62d8", width: 2, spanGaps: false, points: { show: false } },
       ],
     });
     const existing = state.paperUPlotCharts.get(chart.id || "paperChart");

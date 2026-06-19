@@ -469,7 +469,6 @@ svg {
 
 .line-external {
   stroke: var(--blue);
-  stroke-dasharray: 7 5;
   stroke-width: 2.8;
   opacity: 1;
 }
