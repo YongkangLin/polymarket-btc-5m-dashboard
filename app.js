@@ -1022,17 +1022,25 @@ function ensureTradeSessionPanelMounted(chart, aux) {
   syncPaperCollapseStates(aux);
 }
 
+function tradeChartExternalAux(chart) {
+  if (!chart || (chart.id !== "paperChart" && chart.id !== "liveChart")) return null;
+  return byId(`${chart.id}Aux`);
+}
+
 function setPaperChartContent(chart, visualHtml, auxHtml = "") {
   if (!chart) return;
   const normalizedAuxHtml = ensureTradeSessionAuxHtml(chart, auxHtml);
+  const externalAux = tradeChartExternalAux(chart);
   if (!chart._paperSplitContent) {
-    chart.innerHTML = '<div class="paper-chart-visual"></div><div class="paper-chart-aux"></div>';
+    chart.innerHTML = externalAux
+      ? '<div class="paper-chart-visual"></div>'
+      : '<div class="paper-chart-visual"></div><div class="paper-chart-aux"></div>';
     chart._paperSplitContent = true;
     chart._paperVisualHtml = "";
     chart._paperAuxHtml = "";
   }
   const visual = chart.querySelector(".paper-chart-visual");
-  const aux = chart.querySelector(".paper-chart-aux");
+  const aux = externalAux || chart.querySelector(".paper-chart-aux");
   if (visual && chart._paperVisualHtml !== visualHtml) {
     visual.innerHTML = visualHtml;
     chart._paperVisualHtml = visualHtml;

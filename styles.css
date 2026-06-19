@@ -737,6 +737,10 @@ svg {
   overflow-x: auto;
 }
 
+.panel > .paper-chart-aux {
+  padding: 0 16px 16px;
+}
+
 .paper-session-history,
 .paper-action-log {
   min-width: 820px;
