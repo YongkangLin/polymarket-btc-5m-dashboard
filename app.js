@@ -4784,12 +4784,12 @@ function renderPaperSessionHistory(session) {
       </tr>`;
   }).join("") : `
       <tr class="paper-session-row is-empty">
-        <td colspan="5">No closed buys yet. This session history stays visible even when the bot has not filled a position.</td>
+        <td colspan="5">No closed buys yet. Historical session P&L is empty until the bot fills and holds a position to close.</td>
       </tr>`;
   return renderCollapsiblePanel(
     "session_pnl",
     "paper-session-history",
-    "Session P&L History",
+    "Historical Session P&L",
     `${chronologicalRows.length} closed | ${marketsSeen}/${marketLimit} markets`,
     `
       <table>
