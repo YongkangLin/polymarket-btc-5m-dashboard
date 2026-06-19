@@ -1214,16 +1214,17 @@ function liveChartDataSignature(truthSamples, externalSamples) {
 }
 
 function renderPaperChartHeader(market, options = {}) {
-  const lineKey = (label, className) => `
+  const lineKey = (label, className, role) => `
     <span class="paper-line-key">
       <span class="paper-line-swatch ${escapeHtml(className)}"></span>
-      <span>${escapeHtml(label)}</span>
+      <span class="paper-line-label">${escapeHtml(label)}</span>
+      ${role ? `<span class="paper-line-role">${escapeHtml(role)}</span>` : ""}
     </span>`;
   return `
     <div class="paper-live-chart-head">
       <div class="paper-line-legend-html" aria-label="Chart lines">
-        ${options.showTruth === false ? "" : lineKey(options.truthLabel || "Chainlink Data Streams", "is-chainlink")}
-        ${options.showExternal === false ? "" : lineKey(options.externalLabel || "Binance", "is-binance")}
+        ${options.showTruth === false ? "" : lineKey(options.truthLabel || "Chainlink", "is-chainlink", options.truthRole || "truth")}
+        ${options.showExternal === false ? "" : lineKey(options.externalLabel || "Binance", "is-binance", options.externalRole || "signal")}
       </div>
       <div class="paper-market-countdown" aria-label="Time left">
         <span>Time left</span>

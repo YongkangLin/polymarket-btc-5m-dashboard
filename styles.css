@@ -335,6 +335,14 @@ select {
   text-transform: uppercase;
 }
 
+.paper-line-label {
+  color: var(--ink);
+}
+
+.paper-line-role {
+  color: var(--muted);
+}
+
 .paper-line-swatch {
   width: 24px;
   height: 3px;
