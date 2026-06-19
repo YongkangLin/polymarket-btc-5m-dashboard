@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-19T19:32:30.348302+00:00",
+  "generated_at": "2026-06-19T20:28:33.675481+00:00",
   "status": "passed",
   "feature_summary": {
     "markets": 2260,
@@ -98,7 +98,7 @@
       "actual": {
         "candidate": "docs/data/candidate_consistency_t91_150_h5_challenger_strategy.json",
         "candidate_hash": "f8038c6abf4cde2f3fd8ecded7ea36de701a6d0bf64033a41920ae123abcc7a6",
-        "algorithm_hash": "f8038c6abf4cde2f3fd8ecded7ea36de701a6d0bf64033a41920ae123abcc7a6"
+        "algorithm_hash": "ea23daf22ba6be8bbbe91b3bade8a623aedb871f4128de4e5ce474973af64319"
       },
       "expected": {
         "strict_candidate": "docs/data/candidate_strict_directional_maker_strategy.json",
@@ -240,8 +240,8 @@
     {
       "id": "public_workflow_synced",
       "label": "Public dashboard workflow is synced",
-      "actual": "6bd67d6c54edd7a5d60ddba8c55865a14522149999590e27ae6bb0d2f4066998",
-      "expected": "6bd67d6c54edd7a5d60ddba8c55865a14522149999590e27ae6bb0d2f4066998",
+      "actual": "6ed995638662920475e20a2f3cdffda8ae61862f54c787d99dce685517bb6f86",
+      "expected": "6ed995638662920475e20a2f3cdffda8ae61862f54c787d99dce685517bb6f86",
       "passed": true
     },
     {
