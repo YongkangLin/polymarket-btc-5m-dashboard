@@ -6546,10 +6546,12 @@ function ensureLiveTickStream() {
 }
 
 function refreshLivePaperFeeds() {
+  ensureTradeSessionPanelsMounted();
   ensureLiveTickStream();
   ensureLiveChartClock();
   if (state.activeTab === "paper" && (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) renderPaperChart();
   if (state.activeTab === "live" && (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) renderLiveChart();
+  ensureTradeSessionPanelsMounted();
 }
 
 async function refreshWorkflow() {
