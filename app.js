@@ -1683,7 +1683,18 @@ const PERSISTED_ROW_FIELDS = new Set([
 ]);
 
 function copyOutcomeOddsFields(target, source) {
+  if (!rowHasDisplayPolymarketBook(source)) return target;
   OUTCOME_ODDS_FIELDS.forEach((field) => {
+    if (source && Object.prototype.hasOwnProperty.call(source, field) && source[field] !== undefined) {
+      target[field] = source[field];
+    }
+  });
+  return target;
+}
+
+function copyLocalOutcomeBookFields(target, source) {
+  if (!rowHasDisplayPolymarketBook(source)) return target;
+  [...OUTCOME_ODDS_FIELDS, ...POLYMARKET_BOOK_FIELDS].forEach((field) => {
     if (source && Object.prototype.hasOwnProperty.call(source, field) && source[field] !== undefined) {
       target[field] = source[field];
     }
@@ -1897,10 +1908,11 @@ function preserveExistingOutcomeOdds(target, existing, incoming) {
   const cached = cachedOutcomeOddsForMarket(target)
     || cachedOutcomeOddsForMarket(incoming)
     || cachedOutcomeOddsForMarket(existing);
+  removeOutcomeAndBookFields(target);
   copyOutcomeOddsFields(target, cached);
   copyOutcomeOddsFields(target, existing);
   copyOutcomeOddsFields(target, incoming);
-  applyOutcomeOddsFromCandidates(target, [target, incoming, existing, cached]);
+  applyOutcomeOddsFromCandidates(target, [incoming, existing, cached]);
 }
 
 function rememberLiveMarket(market, options = {}) {
@@ -2088,7 +2100,7 @@ function currentRowsEntries(map, maxRows) {
 
 function currentOutcomeOddsEntries() {
   return [...state.latestOutcomeOddsByWindow.entries()]
-    .filter(([key, odds]) => Number(key) === currentWindowStartUnixNow() && currentWindowRow(odds, key))
+    .filter(([key, odds]) => Number(key) === currentWindowStartUnixNow() && currentWindowRow(odds, key) && rowHasDisplayPolymarketBook(odds))
     .map(([key, odds]) => [key, compactPersistedRow(odds)]);
 }
 
@@ -2109,7 +2121,9 @@ function loadPersistedPaperTicks() {
     state.paperObservedMarkets = new Map(payload.observed_markets || []);
     state.paperObservedPointsByMarket = new Map(payload.observed_points || []);
     state.paperObservedMarkersByMarket = new Map(payload.observed_markers || []);
-    state.latestOutcomeOddsByWindow = new Map(payload.outcome_odds || []);
+    state.latestOutcomeOddsByWindow = new Map(
+      (payload.outcome_odds || []).filter((entry) => Array.isArray(entry) && rowHasDisplayPolymarketBook(entry[1])),
+    );
     state.liveBtcTicksByMarket = new Map(payload.live_ticks || []);
     state.liveBtcTickKeysByMarket = new Map(
       [...state.liveBtcTicksByMarket.entries()].map(([key, rows]) => [key, new Set((rows || []).map(liveBtcPointKey))]),
@@ -4468,14 +4482,15 @@ function cachedOutcomeOddsForMarket(market) {
   const keys = outcomeOddsCacheKeys(market);
   for (const key of keys) {
     const odds = state.latestOutcomeOddsByWindow.get(key);
-    if (odds) return odds;
+    if (odds && rowHasDisplayPolymarketBook(odds)) return odds;
+    if (odds) state.latestOutcomeOddsByWindow.delete(key);
   }
   return null;
 }
 
 function rememberOutcomeOddsForWindow(anchor, candidates = []) {
   const rows = [anchor, ...(candidates || [])].filter(Boolean);
-  const oddsRows = currentMarketOddsRows(rows);
+  const oddsRows = displayPolymarketBookRows(rows);
   const keys = [...new Set(rows.flatMap(outcomeOddsCacheKeys))];
   const key = rows.map(outcomeOddsWindowKey).find(Boolean) || keys[0];
   if (!key || !keys.length) return null;
@@ -4483,10 +4498,10 @@ function rememberOutcomeOddsForWindow(anchor, candidates = []) {
   if (up === null && down === null) return cachedOutcomeOddsForMarket(anchor) || null;
   const timestamps = oddsRows.map(outcomeOddsTimestampMicro).filter((value) => value !== null);
   const incomingTime = timestamps.length ? Math.max(...timestamps) : 0;
-  const existing = keys.map((cacheKey) => state.latestOutcomeOddsByWindow.get(cacheKey)).find(Boolean) || {};
+  const existing = keys.map((cacheKey) => state.latestOutcomeOddsByWindow.get(cacheKey)).find(rowHasDisplayPolymarketBook) || {};
   const existingTime = metricNumber(existing._odds_updated_micro) || 0;
   if (existingTime && incomingTime && incomingTime < existingTime) return existing;
-  const source = oddsRows.find((row) => row?.probability_source || row?.market_probability_source || row?.market_odds_fetched_at);
+  const source = oddsRows[0] ? { ...oddsRows[0] } : null;
   const odds = {
     ...existing,
     window_start_unix: Number(key),
@@ -4495,6 +4510,7 @@ function rememberOutcomeOddsForWindow(anchor, candidates = []) {
     market_key: `btc-updown-5m-${key}`,
     _odds_updated_micro: incomingTime || existingTime || Date.now() * 1000,
   };
+  copyLocalOutcomeBookFields(odds, source);
   if (up !== null) {
     odds.paper_up_probability = up;
     odds.market_up_probability = up;
@@ -4651,8 +4667,12 @@ function outcomeOddsFromCandidates(candidates) {
 }
 
 function applyOutcomeOddsFromCandidates(target, candidates) {
-  const rows = currentMarketOddsRows([cachedOutcomeOddsForMarket(target), ...(candidates || [])].filter(Boolean));
+  const rows = displayPolymarketBookRows([cachedOutcomeOddsForMarket(target), ...(candidates || [])].filter(Boolean));
   const { up, down } = outcomeOddsFromCandidates(rows);
+  const source = rows[0] ? { ...rows[0] } : null;
+  removeOutcomeAndBookFields(target);
+  if (!source || (up === null && down === null)) return target;
+  copyLocalOutcomeBookFields(target, source);
   if (up !== null) {
     target.paper_up_probability = up;
     target.market_up_probability = up;
@@ -4663,12 +4683,12 @@ function applyOutcomeOddsFromCandidates(target, candidates) {
     target.market_down_probability = down;
     target.down_probability = down;
   }
-  const source = rows.find((row) => row?.probability_source || row?.market_probability_source);
   if (source) {
     target.probability_source = source.probability_source || target.probability_source;
     target.market_probability_source = source.market_probability_source || source.probability_source || target.market_probability_source;
   }
   rememberOutcomeOddsForWindow(target, rows);
+  return target;
 }
 
 function paperOutcomeProbability(side, market, latestRaw, latestBookRaw) {
