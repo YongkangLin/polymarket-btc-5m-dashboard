@@ -876,17 +876,18 @@ function renderPaperEmptyAuxHtml({ chartId, selectedCurrent, market, isLiveView 
 }
 
 function renderCollapsiblePanel(panelId, className, title, meta, bodyHtml, open = true) {
-  const isOpen = open && !state.paperCollapsedPanels.has(panelId);
+  const lockedOpen = panelId === "session_pnl";
+  const isOpen = lockedOpen || (open && !state.paperCollapsedPanels.has(panelId));
   return `
-    <section class="${escapeHtml(className)} paper-collapsible" data-paper-panel="${escapeHtml(panelId)}">
-      <button class="paper-book-heading paper-collapse-button" type="button" data-paper-toggle="${escapeHtml(panelId)}" aria-expanded="${isOpen ? "true" : "false"}">
+    <section class="${escapeHtml(className)} paper-collapsible" data-paper-panel="${escapeHtml(panelId)}" ${lockedOpen ? 'data-paper-locked-open="true"' : ""}>
+      <button class="paper-book-heading paper-collapse-button" type="button" data-paper-toggle="${escapeHtml(panelId)}" ${lockedOpen ? 'data-paper-locked-open="true" aria-disabled="true"' : ""} aria-expanded="${isOpen ? "true" : "false"}">
         <span>${escapeHtml(title)}</span>
         <span class="paper-heading-meta">
           ${meta ? `<span>${escapeHtml(meta)}</span>` : ""}
-          <span class="paper-collapse-state" aria-hidden="true">
+          ${lockedOpen ? "" : `<span class="paper-collapse-state" aria-hidden="true">
             <span class="is-open">Hide</span>
             <span class="is-closed">Show</span>
-          </span>
+          </span>`}
         </span>
       </button>
       <div class="paper-collapsible-body" ${isOpen ? "" : "hidden"}>
@@ -898,7 +899,9 @@ function renderCollapsiblePanel(panelId, className, title, meta, bodyHtml, open 
 function syncPaperPanelCollapseState(section) {
   const panelId = section?.dataset?.paperPanel;
   if (!panelId) return;
-  const isOpen = !state.paperCollapsedPanels.has(panelId);
+  const lockedOpen = section.dataset.paperLockedOpen === "true";
+  if (lockedOpen) state.paperCollapsedPanels.delete(panelId);
+  const isOpen = lockedOpen || !state.paperCollapsedPanels.has(panelId);
   const button = section.querySelector("[data-paper-toggle]");
   const body = section.querySelector(".paper-collapsible-body");
   if (button) button.setAttribute("aria-expanded", isOpen ? "true" : "false");
@@ -6475,6 +6478,11 @@ async function main() {
   const togglePaperPanel = (button) => {
     const panelId = button?.dataset?.paperToggle;
     if (!panelId) return;
+    if (button.dataset.paperLockedOpen === "true") {
+      state.paperCollapsedPanels.delete(panelId);
+      syncPaperCollapseStates(document);
+      return;
+    }
     if (state.paperCollapsedPanels.has(panelId)) {
       state.paperCollapsedPanels.delete(panelId);
     } else {
