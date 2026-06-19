@@ -1111,6 +1111,7 @@ function setPaperChartContent(chart, visualHtml, auxHtml = "") {
     chart._paperAuxHtml = normalizedAuxHtml;
   }
   ensureTradeSessionPanelMounted(chart, aux);
+  refreshPaperCountdownLabels();
 }
 
 function canUseUPlot() {
@@ -1214,6 +1215,8 @@ function liveChartDataSignature(truthSamples, externalSamples) {
 }
 
 function renderPaperChartHeader(market, options = {}) {
+  const windowStart = marketWindowStartUnix(market);
+  const windowEnd = marketWindowEndUnix(market);
   const lineKey = (label, className, role) => `
     <span class="paper-line-key">
       <span class="paper-line-swatch ${escapeHtml(className)}"></span>
@@ -1223,12 +1226,12 @@ function renderPaperChartHeader(market, options = {}) {
   return `
     <div class="paper-live-chart-head">
       <div class="paper-line-legend-html" aria-label="Chart lines">
-        ${options.showTruth === false ? "" : lineKey(options.truthLabel || "Chainlink", "is-chainlink", options.truthRole || "truth")}
+        ${options.showTruth === false ? "" : lineKey(options.truthLabel || "Chainlink Data Streams", "is-chainlink", options.truthRole || "truth")}
         ${options.showExternal === false ? "" : lineKey(options.externalLabel || "Binance", "is-binance", options.externalRole || "signal")}
       </div>
-      <div class="paper-market-countdown" aria-label="Time left">
+      <div class="paper-market-countdown" aria-label="Time left" data-paper-countdown-start="${escapeHtml(windowStart ?? "")}" data-paper-countdown-end="${escapeHtml(windowEnd ?? "")}">
         <span>Time left</span>
-        <strong>${escapeHtml(paperCountdownText(market))}</strong>
+        <strong data-paper-countdown-value>--</strong>
       </div>
     </div>`;
 }
@@ -1925,6 +1928,16 @@ function marketSecondsLeftNow(market) {
   return Math.max(0, Math.round(end - Date.now() / 1000));
 }
 
+function countdownTextFromWindow(start, end) {
+  const windowStart = metricNumber(start);
+  const windowEnd = metricNumber(end);
+  if (windowStart === null || windowEnd === null) return "--";
+  const now = Date.now() / 1000;
+  if (now < windowStart) return "Waiting";
+  if (now >= windowEnd) return "0:00";
+  return formatCountdownSeconds(windowEnd - now);
+}
+
 function formatCountdownSeconds(value) {
   const seconds = metricNumber(value);
   if (seconds === null) return "--";
@@ -1935,10 +1948,19 @@ function formatCountdownSeconds(value) {
 }
 
 function paperCountdownText(market) {
-  const clockState = marketClockState(market);
-  if (clockState === "future") return "Waiting";
-  if (clockState === "closed") return "0:00";
-  return formatCountdownSeconds(marketSecondsLeftNow(market));
+  return countdownTextFromWindow(marketWindowStartUnix(market), marketWindowEndUnix(market));
+}
+
+function refreshPaperCountdownLabels() {
+  document.querySelectorAll("[data-paper-countdown-end]").forEach((node) => {
+    const textNode = node.querySelector("[data-paper-countdown-value]");
+    if (!textNode) return;
+    const nextText = countdownTextFromWindow(
+      node.getAttribute("data-paper-countdown-start"),
+      node.getAttribute("data-paper-countdown-end"),
+    );
+    if (textNode.textContent !== nextText) textNode.textContent = nextText;
+  });
 }
 
 function preserveExistingOutcomeOdds(target, existing, incoming) {
@@ -6392,6 +6414,7 @@ function ensureLiveChartClock() {
       clearLiveChartClock();
       return;
     }
+    refreshPaperCountdownLabels();
     scheduleLiveTickRender();
   }, LIVE_CHART_CLOCK_MS);
 }
