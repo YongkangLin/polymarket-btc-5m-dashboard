@@ -1168,6 +1168,7 @@ svg {
     color: var(--muted);
   }
 
+  .paper-session-history,
   .paper-action-log,
   .paper-book-table {
     min-width: 0;
@@ -1179,6 +1180,7 @@ svg {
     gap: 4px;
   }
 
+  .paper-session-history table,
   .paper-action-log table,
   .paper-book-table table {
     min-width: 520px;

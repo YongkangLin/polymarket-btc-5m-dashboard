@@ -4714,6 +4714,8 @@ function latestSessionMetric(market, rawPoints, session, keys) {
 function renderPaperSessionHistory(session) {
   const history = paperSessionHistoryRows(session);
   const startingCapital = metricNumber(session?.starting_capital ?? session?.paper_session_starting_capital) ?? 100;
+  const marketsSeen = metricNumber(session?.market_count) ?? 0;
+  const marketLimit = metricNumber(session?.market_limit) ?? 36;
   let runningCapital = startingCapital;
   const chronologicalRows = history.map((row) => {
     const pnl = metricNumber(row.pnl_dollars);
@@ -4739,13 +4741,13 @@ function renderPaperSessionHistory(session) {
       </tr>`;
   }).join("") : `
       <tr class="paper-session-row is-empty">
-        <td colspan="5">No closed markets yet. Session P&amp;L will appear here after a held position resolves.</td>
+        <td colspan="5">No closed buys yet. This session history stays visible even when the bot has not filled a position.</td>
       </tr>`;
   return renderCollapsiblePanel(
     "session_pnl",
     "paper-session-history",
     "Session P&L History",
-    `${metricNumber(session?.market_count) ?? 0}/${metricNumber(session?.market_limit) ?? 36} markets`,
+    `${chronologicalRows.length} closed | ${marketsSeen}/${marketLimit} markets`,
     `
       <table>
         <thead>
