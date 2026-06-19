@@ -2577,6 +2577,36 @@ function outcomeSideBookSeen(row, side) {
   return sideField(row, side, "bid") !== null || sideField(row, side, "ask") !== null;
 }
 
+function rowHasOutcomeBookQuote(row) {
+  return outcomeSideBookSeen(row, "up") || outcomeSideBookSeen(row, "down");
+}
+
+function rowHasDisplayPolymarketBook(row) {
+  if (!row || isActionOnlyPaperOddsRow(row) || !rowHasOutcomeBookQuote(row)) return false;
+  if (
+    row.polymarket_book_source
+    || row.pm_book_condition_id
+    || row.up_book_snapshot_time_micro
+    || row.down_book_snapshot_time_micro
+    || row.books
+  ) return true;
+  const source = String(row.probability_source || row.market_probability_source || "").toLowerCase();
+  return source.includes("polymarket") || source.includes("clob");
+}
+
+function displayBookTimestampMicro(row) {
+  return metricNumber(row?.up_book_snapshot_time_micro)
+    ?? metricNumber(row?.down_book_snapshot_time_micro)
+    ?? outcomeOddsTimestampMicro(row)
+    ?? 0;
+}
+
+function displayPolymarketBookRows(candidates) {
+  return (candidates || [])
+    .filter(rowHasDisplayPolymarketBook)
+    .sort((left, right) => displayBookTimestampMicro(right) - displayBookTimestampMicro(left));
+}
+
 function clampOutcomeProbability(value) {
   const number = metricNumber(value);
   return number === null ? null : Math.max(0, Math.min(1, number));
@@ -2588,13 +2618,14 @@ function isResolvedBookPrice(value) {
 }
 
 function outcomeDisplayBookOddsFromCandidates(candidates) {
-  const rows = outcomeRowsNewestFirst(candidates);
-  let up = rows.map((row) => outcomeDisplayBookProbability(row, "up")).find((value) => value !== null) ?? null;
-  let down = rows.map((row) => outcomeDisplayBookProbability(row, "down")).find((value) => value !== null) ?? null;
+  const rows = displayPolymarketBookRows(candidates);
+  const row = rows[0] || null;
+  let up = row ? outcomeDisplayBookProbability(row, "up") : null;
+  let down = row ? outcomeDisplayBookProbability(row, "down") : null;
   if (up === null && down !== null) up = clampOutcomeProbability(1 - down);
   if (down === null && up !== null) down = clampOutcomeProbability(1 - up);
-  const upBookSeen = rows.some((row) => outcomeSideBookSeen(row, "up"));
-  const downBookSeen = rows.some((row) => outcomeSideBookSeen(row, "down"));
+  const upBookSeen = row ? outcomeSideBookSeen(row, "up") : false;
+  const downBookSeen = row ? outcomeSideBookSeen(row, "down") : false;
   return {
     up,
     down,
@@ -4578,9 +4609,14 @@ function paperPanelOutcomeProbabilities(market, latestRaw, latestBookRaw) {
 
 function paperPanelDisplayOutcomeProbabilities(market, latestRaw, latestBookRaw) {
   if (!market) return { up: null, down: null, upNoSellers: false, downNoSellers: false, askBookObserved: false };
-  const candidates = paperPanelOutcomeCandidates(market, latestRaw, latestBookRaw);
-  const oddsRows = currentMarketOddsRows(candidates);
-  const bookOdds = outcomeDisplayBookOddsFromCandidates(oddsRows);
+  const candidates = [
+    latestBookRaw,
+    latestRaw,
+    market,
+    ...paperPointsFor(market).slice(-80).reverse(),
+    ...liveTickPointsForMarket(market).slice(-80).reverse(),
+  ].filter(Boolean);
+  const bookOdds = outcomeDisplayBookOddsFromCandidates(candidates);
   if (bookOdds.askBookObserved) return bookOdds;
   return { up: null, down: null, upNoSellers: false, downNoSellers: false, askBookObserved: false };
 }
@@ -6090,9 +6126,17 @@ function liveBtcPointKey(point) {
 
 function enrichPointWithMarketOutcomeOdds(point, market) {
   if (!point || !market) return point;
+  if (isPolymarketTruthPoint(point) || isBinanceLivePoint(point)) return point;
   copyOutcomeOddsFields(point, market);
   applyOutcomeOddsFromCandidates(point, [market, point]);
   return point;
+}
+
+function removeOutcomeAndBookFields(target) {
+  [...OUTCOME_ODDS_FIELDS, ...POLYMARKET_BOOK_FIELDS].forEach((field) => {
+    delete target[field];
+  });
+  return target;
 }
 
 function liveTickKeySetForMarket(key, points) {
@@ -6142,7 +6186,6 @@ function appendLiveBtcPoints(market, incomingPoints) {
   rememberLiveMarket(market);
   let auxChanged = false;
   pointsToAppend.forEach((point) => {
-    enrichPointWithMarketOutcomeOdds(point, market);
     const price = metricNumber(point.btc_price);
     if (price !== null && startPrice !== null && startPrice > 0) {
       const distanceBps = Math.log(price / startPrice) * 10000;
@@ -6339,7 +6382,7 @@ function chainlinkPointFromMarket(market) {
     ?? metricNumber(market.time_unix === undefined ? null : Number(market.time_unix) * 1_000_000)
     ?? Date.now() * 1000;
   const receiveMicro = metricNumber(market.latest_chainlink_receive_time_micro) ?? eventMicro;
-  return {
+  return removeOutcomeAndBookFields({
     ...market,
     decision: "chainlink_tick",
     event_time_micro: eventMicro,
@@ -6356,7 +6399,7 @@ function chainlinkPointFromMarket(market) {
     reason: chainlinkReasonFromMarket(market),
     backend_event_kind: "chainlink",
     point_id: `backend:chainlink-current:${windowStart}:${eventMicro}:${price}`,
-  };
+  });
 }
 
 function chainlinkReasonFromMarket(market) {
@@ -6367,7 +6410,10 @@ function chainlinkReasonFromMarket(market) {
 
 function rememberBackendStreamPoints(market, allPoints) {
   const points = Array.isArray(allPoints)
-    ? allPoints.map((point) => enrichPointWithMarketOutcomeOdds(point, market))
+    ? allPoints.map((point) => {
+        if (isPolymarketTruthPoint(point) || isBinanceLivePoint(point)) return point;
+        return enrichPointWithMarketOutcomeOdds(point, market);
+      })
     : [];
   const truthPoints = points.filter(isPolymarketTruthPoint);
   const externalPoints = points.filter(isBinanceLivePoint);
