@@ -2590,15 +2590,12 @@ function isLivePriceTransportRow(row) {
 function rowHasDisplayPolymarketBook(row) {
   if (!row || isActionOnlyPaperOddsRow(row) || !rowHasOutcomeBookQuote(row)) return false;
   if (isLivePriceTransportRow(row)) return false;
-  if (
-    row.polymarket_book_source
-    || row.pm_book_condition_id
-    || row.up_book_snapshot_time_micro
-    || row.down_book_snapshot_time_micro
-    || row.books
-  ) return true;
-  const source = String(row.probability_source || row.market_probability_source || "").toLowerCase();
-  return source.includes("polymarket") || source.includes("clob");
+  const source = [
+    row.polymarket_book_source,
+    row.books?.Up?.source,
+    row.books?.Down?.source,
+  ].filter(Boolean).join(" ").toLowerCase();
+  return source.includes("local_postgres_polymarket_order_books");
 }
 
 function displayBookTimestampMicro(row) {
