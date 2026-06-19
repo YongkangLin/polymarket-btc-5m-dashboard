@@ -2647,11 +2647,11 @@ function backendBaseUrl() {
 
 function activePaperEdgeId() {
   return configuredPaperEdgeId()
+    || state.workflow?.paper_trade?.edge_id
+    || state.workflow?.active_backtest_key
     || state.workflow?.paper_trade?.recommended_dashboard_edge_id
     || state.workflow?.paper_trade?.paper_health?.recommended_dashboard_edge_id
     || ACTIVE_PAPER_EDGE_ID
-    || state.workflow?.paper_trade?.edge_id
-    || state.workflow?.active_backtest_key
     || ACTIVE_BACKTEST_KEY;
 }
 

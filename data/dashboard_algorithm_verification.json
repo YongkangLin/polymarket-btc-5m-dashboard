@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-19T09:20:55.641331+00:00",
+  "generated_at": "2026-06-19T12:44:09.477862+00:00",
   "status": "passed",
   "feature_summary": {
     "markets": 2167,
@@ -98,7 +98,7 @@
       "actual": {
         "candidate": "docs/data/candidate_nearline_no_cancel_strategy.json",
         "candidate_hash": "18476d2894e090ddf463b1843d5fcf4656f9cd0b4fbf21445d90431d8021040e",
-        "algorithm_hash": "ea23daf22ba6be8bbbe91b3bade8a623aedb871f4128de4e5ce474973af64319"
+        "algorithm_hash": "18476d2894e090ddf463b1843d5fcf4656f9cd0b4fbf21445d90431d8021040e"
       },
       "expected": {
         "strict_candidate": "docs/data/candidate_strict_directional_maker_strategy.json",
@@ -240,8 +240,8 @@
     {
       "id": "public_workflow_synced",
       "label": "Public dashboard workflow is synced",
-      "actual": "9019baaecdefa1d2da9c20cb3a9c8dcaf0585c5ec341ef72e6809ab4376e5b41",
-      "expected": "9019baaecdefa1d2da9c20cb3a9c8dcaf0585c5ec341ef72e6809ab4376e5b41",
+      "actual": "88098f94cfb6b03b92f8fd8ce0095adbbe3236dabd06d7fdef37128803d02610",
+      "expected": "88098f94cfb6b03b92f8fd8ce0095adbbe3236dabd06d7fdef37128803d02610",
       "passed": true
     },
     {
