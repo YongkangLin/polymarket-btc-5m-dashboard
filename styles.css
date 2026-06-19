@@ -306,6 +306,73 @@ select {
   padding: 9px 11px;
 }
 
+.paper-live-chart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+
+.paper-line-legend-html {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+}
+
+.paper-line-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.paper-line-swatch {
+  width: 24px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--green);
+  flex: 0 0 auto;
+}
+
+.paper-line-swatch.is-binance {
+  background: var(--blue);
+}
+
+.paper-market-countdown {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.paper-market-countdown span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.paper-market-countdown strong {
+  color: var(--ink);
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .strategy-strip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1115,6 +1182,17 @@ svg {
   .paper-live-fast {
     display: block;
     min-width: 0;
+  }
+
+  .paper-live-chart-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .paper-market-countdown {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .paper-live-uplot {

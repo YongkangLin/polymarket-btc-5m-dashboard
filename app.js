@@ -56,7 +56,8 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v2-two-normalized-lines";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v2-two-normalized-lines-labeled";
+const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const BINANCE_DEPTH_TABLE_STALE_MS = 15000;
@@ -1212,6 +1213,25 @@ function liveChartDataSignature(truthSamples, externalSamples) {
   return `${liveSeriesSignature(truthSamples)}::${liveSeriesSignature(externalSamples)}`;
 }
 
+function renderPaperChartHeader(market, options = {}) {
+  const lineKey = (label, className) => `
+    <span class="paper-line-key">
+      <span class="paper-line-swatch ${escapeHtml(className)}"></span>
+      <span>${escapeHtml(label)}</span>
+    </span>`;
+  return `
+    <div class="paper-live-chart-head">
+      <div class="paper-line-legend-html" aria-label="Chart lines">
+        ${options.showTruth === false ? "" : lineKey(options.truthLabel || "Chainlink Data Streams", "is-chainlink")}
+        ${options.showExternal === false ? "" : lineKey(options.externalLabel || "Binance", "is-binance")}
+      </div>
+      <div class="paper-market-countdown" aria-label="Time left">
+        <span>Time left</span>
+        <strong>${escapeHtml(paperCountdownText(market))}</strong>
+      </div>
+    </div>`;
+}
+
 function renderPaperLiveSideHtml(marketMetrics, accountMetrics, positionRows) {
   const metricRows = (rows) => rows.map((row) => `
     <div class="paper-live-side-row">
@@ -1464,7 +1484,7 @@ function currentBackendLiveMarketShell() {
     points: [],
     markers: [],
   };
-  applyOutcomeOddsFromCandidates(shell, [cachedOutcomeOddsForMarket(shell), ...sameWindowOutcomeOddsRows(shell)]);
+  applyOutcomeOddsFromCandidates(shell, [...sameWindowOutcomeOddsRows(shell), cachedOutcomeOddsForMarket(shell)]);
   return shell;
 }
 
@@ -1902,6 +1922,22 @@ function marketSecondsLeftNow(market) {
   const end = metricNumber(market?.window_end_unix);
   if (end === null) return null;
   return Math.max(0, Math.round(end - Date.now() / 1000));
+}
+
+function formatCountdownSeconds(value) {
+  const seconds = metricNumber(value);
+  if (seconds === null) return "--";
+  const clamped = Math.max(0, Math.round(seconds));
+  const minutes = Math.floor(clamped / 60);
+  const remaining = String(clamped % 60).padStart(2, "0");
+  return `${minutes}:${remaining}`;
+}
+
+function paperCountdownText(market) {
+  const clockState = marketClockState(market);
+  if (clockState === "future") return "Waiting";
+  if (clockState === "closed") return "0:00";
+  return formatCountdownSeconds(marketSecondsLeftNow(market));
 }
 
 function preserveExistingOutcomeOdds(target, existing, incoming) {
@@ -2582,8 +2618,8 @@ function outcomeBookOddsFromCandidates(candidates) {
   const rows = outcomeRowsNewestFirst(candidates);
   let up = rows.map((row) => outcomeDisplayBookProbability(row, "up")).find((value) => value !== null) ?? null;
   let down = rows.map((row) => outcomeDisplayBookProbability(row, "down")).find((value) => value !== null) ?? null;
-  if (up === null && down !== null) up = Math.max(0, Math.min(1, 1 - down));
-  if (down === null && up !== null) down = Math.max(0, Math.min(1, 1 - up));
+  if (up === null && down !== null) up = complementDisplayProbability(down);
+  if (down === null && up !== null) down = complementDisplayProbability(up);
   return { up, down };
 }
 
@@ -2630,6 +2666,13 @@ function clampOutcomeProbability(value) {
   return number === null ? null : Math.max(0, Math.min(1, number));
 }
 
+function complementDisplayProbability(value) {
+  const number = clampOutcomeProbability(value);
+  if (number === null) return null;
+  if (number <= DISPLAY_CERTAIN_OPPOSITE_PRICE) return 1;
+  return clampOutcomeProbability(1 - number);
+}
+
 function isResolvedBookPrice(value) {
   const number = metricNumber(value);
   return number !== null && (number <= 0.02 || number >= 0.98);
@@ -2640,8 +2683,8 @@ function outcomeDisplayBookOddsFromCandidates(candidates) {
   const row = rows[0] || null;
   let up = row ? outcomeDisplayBookProbability(row, "up") : null;
   let down = row ? outcomeDisplayBookProbability(row, "down") : null;
-  if (up === null && down !== null) up = clampOutcomeProbability(1 - down);
-  if (down === null && up !== null) down = clampOutcomeProbability(1 - up);
+  if (up === null && down !== null) up = complementDisplayProbability(down);
+  if (down === null && up !== null) down = complementDisplayProbability(up);
   const upBookSeen = row ? outcomeSideBookSeen(row, "up") : false;
   const downBookSeen = row ? outcomeSideBookSeen(row, "down") : false;
   return {
@@ -4494,7 +4537,7 @@ function rememberOutcomeOddsForWindow(anchor, candidates = []) {
   const keys = [...new Set(rows.flatMap(outcomeOddsCacheKeys))];
   const key = rows.map(outcomeOddsWindowKey).find(Boolean) || keys[0];
   if (!key || !keys.length) return null;
-  const { up, down } = outcomeOddsFromCandidates(oddsRows);
+  const { up, down } = outcomeDisplayBookOddsFromCandidates(oddsRows);
   if (up === null && down === null) return cachedOutcomeOddsForMarket(anchor) || null;
   const timestamps = oddsRows.map(outcomeOddsTimestampMicro).filter((value) => value !== null);
   const incomingTime = timestamps.length ? Math.max(...timestamps) : 0;
@@ -4661,14 +4704,14 @@ function outcomeOddsFromCandidates(candidates) {
   const rows = outcomeRowsNewestFirst(candidates);
   let up = bestExplicitOutcomeProbability("up", rows);
   let down = bestExplicitOutcomeProbability("down", rows);
-  if (up === null && down !== null) up = Math.max(0, Math.min(1, 1 - down));
-  if (down === null && up !== null) down = Math.max(0, Math.min(1, 1 - up));
+  if (up === null && down !== null) up = complementDisplayProbability(down);
+  if (down === null && up !== null) down = complementDisplayProbability(up);
   return { up, down };
 }
 
 function applyOutcomeOddsFromCandidates(target, candidates) {
-  const rows = displayPolymarketBookRows([cachedOutcomeOddsForMarket(target), ...(candidates || [])].filter(Boolean));
-  const { up, down } = outcomeOddsFromCandidates(rows);
+  const rows = displayPolymarketBookRows([...(candidates || []), cachedOutcomeOddsForMarket(target)].filter(Boolean));
+  const { up, down } = outcomeDisplayBookOddsFromCandidates(rows);
   const source = rows[0] ? { ...rows[0] } : null;
   removeOutcomeAndBookFields(target);
   if (!source || (up === null && down === null)) return target;
@@ -5093,14 +5136,14 @@ function outcomeBookProbability(row, side) {
 
 function outcomeDisplayBookProbability(row, side) {
   const ask = sideField(row, side, "ask");
-  if (ask !== null) return ask;
+  if (ask !== null) return clampOutcomeProbability(ask);
   const bid = sideField(row, side, "bid");
   const opposite = oppositeSideKey(side);
   const oppositeAsk = sideField(row, opposite, "ask");
   const oppositeBid = sideField(row, opposite, "bid");
-  if (oppositeAsk !== null) return clampOutcomeProbability(1 - oppositeAsk);
-  if (oppositeBid !== null) return clampOutcomeProbability(1 - oppositeBid);
+  if (oppositeAsk !== null) return complementDisplayProbability(oppositeAsk);
   if (bid !== null && isResolvedBookPrice(bid)) return clampOutcomeProbability(bid);
+  if (oppositeBid !== null && isResolvedBookPrice(oppositeBid)) return complementDisplayProbability(oppositeBid);
   return null;
 }
 
@@ -5649,6 +5692,7 @@ function renderPaperDecisionGraph(options = {}) {
   if (!market || !rawPoints.length) {
     if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) {
       const loadingExtras = [
+        renderPaperChartHeader(market, { truthLabel: "Chainlink Data Streams", externalLabel: "Binance" }),
         renderPaperOddsStrip(market, null, null),
         emptyAuxHtml,
       ].join("");
@@ -5711,6 +5755,7 @@ function renderPaperDecisionGraph(options = {}) {
   if (!allSamples.length) {
     const hasPrices = priceRows.some((row) => metricNumber(row?.btc_price) !== null);
     const waitingExtras = [
+      renderPaperChartHeader(market, { truthLabel: "Chainlink Data Streams", externalLabel: "Binance" }),
       renderPaperOddsStrip(market, null, null),
       emptyAuxHtml,
     ].join("");
@@ -5877,6 +5922,12 @@ function renderPaperDecisionGraph(options = {}) {
   const externalLegend = externalLinePoints.length
     ? `<text class="legend external" x="${externalLegendX}" y="${plot.top + 20}">${escapeHtml(externalLabel)}</text>`
     : "";
+  const chartHeaderHtml = renderPaperChartHeader(market, {
+    truthLabel,
+    externalLabel,
+    showTruth: Boolean(truthLinePoints.length),
+    showExternal: Boolean(externalLinePoints.length),
+  });
   const anchorDot = (points, className, label) => {
     const point = points[0];
     if (!point) return "";
@@ -6017,6 +6068,7 @@ function renderPaperDecisionGraph(options = {}) {
   let visualHtml = "";
   if (useUPlot) {
     visualHtml = `${liveNotice}
+      ${chartHeaderHtml}
       <div class="paper-live-fast" role="img" aria-label="${escapeHtml(chartAriaLabel)}">
         <div class="paper-live-uplot"></div>
         <div class="paper-live-side-slot"></div>
@@ -6024,6 +6076,7 @@ function renderPaperDecisionGraph(options = {}) {
       <div class="paper-live-status-slot"></div>`;
   } else {
     visualHtml = `${liveNotice}
+      ${chartHeaderHtml}
       <svg class="paper-live-svg" viewBox="0 0 ${view.width} ${view.height}" role="img" aria-label="${chartAriaLabel}">
         <title>${escapeHtml(`${paperMarketLabel(market)} | ${latestTitle}`)}</title>
         <rect class="plot" x="${plot.left}" y="${plot.top}" width="${plotWidth}" height="${plot.height}"></rect>
