@@ -3,7 +3,7 @@ const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD
 const moneyCents = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const ACTIVE_BACKTEST_KEY = "strict_directional_maker";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
-const ACTIVE_PAPER_EDGE_ID = "nearline_queue_probe";
+const ACTIVE_PAPER_EDGE_ID = "high_coverage_h5_challenger";
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_REFRESH_MS = 30000;
 const LIVE_TICK_RENDER_THROTTLE_MS = 16;
@@ -160,7 +160,7 @@ function configuredPaperEdgeId() {
   if (window.POLYMARKET_PAPER_EDGE_ID) return String(window.POLYMARKET_PAPER_EDGE_ID);
   const saved = window.localStorage?.getItem(LOCAL_PAPER_EDGE_KEY);
   if (saved) return String(saved);
-  return ACTIVE_PAPER_EDGE_ID;
+  return "";
 }
 
 function loadJson(path) {
@@ -2557,6 +2557,9 @@ function backendBaseUrl() {
 
 function activePaperEdgeId() {
   return configuredPaperEdgeId()
+    || state.workflow?.paper_trade?.recommended_dashboard_edge_id
+    || state.workflow?.paper_trade?.paper_health?.recommended_dashboard_edge_id
+    || ACTIVE_PAPER_EDGE_ID
     || state.workflow?.paper_trade?.edge_id
     || state.workflow?.active_backtest_key
     || ACTIVE_BACKTEST_KEY;
@@ -3064,7 +3067,20 @@ function routePromotionDecisionText(value) {
 function paperRouteGateCells() {
   const routePromotion = state.workflow.paper_trade?.route_promotion || {};
   const decision = routePromotion.decision || {};
-  if (!decision.decision && !routePromotion.typed_paper) return [];
+  const paperHealth = state.workflow.paper_trade?.paper_health || {};
+  const recommendedEdge = state.workflow.paper_trade?.recommended_dashboard_edge_id
+    || paperHealth.recommended_dashboard_edge_id
+    || activePaperEdgeId();
+  const healthEdge = (paperHealth.edges || []).find((edge) => edge.edge_id === recommendedEdge) || {};
+  const healthCells = recommendedEdge ? [
+    strategyCell("Paper Edge", recommendedEdge),
+    strategyCell(
+      "Paper Result",
+      `${fmt.format(healthEdge.maker_fills || 0)} fills / ${fmt.format(healthEdge.maker_settlements || 0)} settled | ${formatSignedMoney(healthEdge.realized_pnl)} | ROI ${formatPercent(healthEdge.roi_on_filled_cost)}`,
+    ),
+  ] : [];
+  if (paperHealth.recommended_dashboard_edge_id) return healthCells;
+  if (!decision.decision && !routePromotion.typed_paper) return healthCells;
   const activeSummary = routePromotion.typed_paper?.active?.summary || {};
   const thresholds = routePromotion.thresholds || {};
   const fills = metricNumber(activeSummary.fills) ?? 0;
@@ -3075,6 +3091,7 @@ function paperRouteGateCells() {
   const minSettlements = metricNumber(thresholds.min_typed_paper_settlements) ?? minFills;
   const minRoi = metricNumber(thresholds.min_typed_paper_roi_on_filled_cost) ?? 0.03;
   return [
+    ...healthCells,
     strategyCell("Route Gate", routePromotionDecisionText(decision.decision)),
     strategyCell(
       "Typed Paper",

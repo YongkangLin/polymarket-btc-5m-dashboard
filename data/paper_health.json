@@ -1,0 +1,280 @@
+{
+  "backend": {
+    "feeds": [
+      {
+        "event_age_seconds": 0.019942,
+        "healthy": true,
+        "last_error": null,
+        "ok": true,
+        "source": "binance:btcusdt@bookTicker"
+      },
+      {
+        "event_age_seconds": 0.02111,
+        "healthy": true,
+        "last_error": null,
+        "ok": true,
+        "source": "binance:btcusdt@depth20@100ms"
+      },
+      {
+        "event_age_seconds": 0.020762,
+        "healthy": true,
+        "last_error": null,
+        "ok": true,
+        "source": "binance:btcusdt@trade"
+      },
+      {
+        "event_age_seconds": 0.477482,
+        "healthy": true,
+        "last_error": null,
+        "ok": true,
+        "source": "chainlink_data_streams:ingest"
+      }
+    ],
+    "last_error": null,
+    "ok": true,
+    "url": "http://127.0.0.1:8788/health"
+  },
+  "database": {
+    "last_error": null,
+    "ok": true,
+    "url": "docker exec polymarket-updown-postgres"
+  },
+  "edges": [
+    {
+      "btc_price_venues": [],
+      "current_capital": 100.66985074626865,
+      "edge_id": "high_coverage_h5_challenger",
+      "events": 4,
+      "filled_cost": 1.36,
+      "gross_fill_cost": 1.36,
+      "hypothetical_signal_settlements": 0,
+      "last_event": "2026-06-19T06:36:54+00:00",
+      "last_event_age_seconds": 5.962428,
+      "latest": {
+        "btc_price_venue": null,
+        "decision": "open",
+        "event_type": "typed_sql_ledger",
+        "external_book_support": null,
+        "fair_edge": null,
+        "fair_probability": null,
+        "reason": null,
+        "seconds_left": null,
+        "slug": null
+      },
+      "maker_fills": 1,
+      "maker_quotes": 7,
+      "maker_settlements": 1,
+      "markets": 4,
+      "ok": true,
+      "paper_signals": 7,
+      "pnl_dollars": 0.6698507462686567,
+      "realized_pnl": 0.6698507462686567,
+      "roi_on_filled_cost": 0.4925373134328358,
+      "session_id": "rust_high_coverage_h5_challenger_tail__paper_session_0002_1781845200",
+      "session_status": "open",
+      "source": "typed_sql_ledger",
+      "top_reasons": [],
+      "truth_missing_events": 0
+    },
+    {
+      "btc_price_venues": [],
+      "current_capital": 100,
+      "edge_id": "high_coverage_queuecap_challenger",
+      "events": 20,
+      "filled_cost": null,
+      "gross_fill_cost": 0,
+      "hypothetical_signal_settlements": 0,
+      "last_event": "2026-06-19T06:36:56.063509+00:00",
+      "last_event_age_seconds": 3.898919,
+      "latest": {
+        "btc_price_venue": null,
+        "decision": "open",
+        "event_type": "typed_sql_ledger",
+        "external_book_support": null,
+        "fair_edge": null,
+        "fair_probability": null,
+        "reason": null,
+        "seconds_left": null,
+        "slug": null
+      },
+      "maker_fills": 0,
+      "maker_quotes": 0,
+      "maker_settlements": 0,
+      "markets": 20,
+      "ok": true,
+      "paper_signals": 0,
+      "pnl_dollars": null,
+      "realized_pnl": 0,
+      "roi_on_filled_cost": null,
+      "session_id": "rust_high_coverage_queuecap_challenger_tail__paper_session_0002_1781845200",
+      "session_status": "open",
+      "source": "typed_sql_ledger",
+      "top_reasons": [],
+      "truth_missing_events": 0
+    },
+    {
+      "btc_price_venues": [],
+      "current_capital": 100,
+      "edge_id": "coverage_fair_edge_challenger",
+      "events": 20,
+      "filled_cost": null,
+      "gross_fill_cost": 0,
+      "hypothetical_signal_settlements": 0,
+      "last_event": "2026-06-19T06:36:56.063459+00:00",
+      "last_event_age_seconds": 3.898969,
+      "latest": {
+        "btc_price_venue": null,
+        "decision": "open",
+        "event_type": "typed_sql_ledger",
+        "external_book_support": null,
+        "fair_edge": null,
+        "fair_probability": null,
+        "reason": null,
+        "seconds_left": null,
+        "slug": null
+      },
+      "maker_fills": 0,
+      "maker_quotes": 2,
+      "maker_settlements": 0,
+      "markets": 20,
+      "ok": true,
+      "paper_signals": 2,
+      "pnl_dollars": null,
+      "realized_pnl": 0,
+      "roi_on_filled_cost": null,
+      "session_id": "rust_coverage_fair_edge_challenger_tail__paper_session_0002_1781845200",
+      "session_status": "open",
+      "source": "typed_sql_ledger",
+      "top_reasons": [],
+      "truth_missing_events": 0
+    },
+    {
+      "btc_price_venues": [],
+      "current_capital": 100,
+      "edge_id": "strict_directional_maker_from_nearline",
+      "events": 20,
+      "filled_cost": null,
+      "gross_fill_cost": 0,
+      "hypothetical_signal_settlements": 0,
+      "last_event": "2026-06-19T06:36:56.220496+00:00",
+      "last_event_age_seconds": 3.741932,
+      "latest": {
+        "btc_price_venue": null,
+        "decision": "open",
+        "event_type": "typed_sql_ledger",
+        "external_book_support": null,
+        "fair_edge": null,
+        "fair_probability": null,
+        "reason": null,
+        "seconds_left": null,
+        "slug": null
+      },
+      "maker_fills": 0,
+      "maker_quotes": 8,
+      "maker_settlements": 0,
+      "markets": 20,
+      "ok": true,
+      "paper_signals": 8,
+      "pnl_dollars": null,
+      "realized_pnl": 0,
+      "roi_on_filled_cost": null,
+      "session_id": "rust_strict_directional_from_nearline_tail__paper_session_0002_1781845200",
+      "session_status": "open",
+      "source": "typed_sql_ledger",
+      "top_reasons": [],
+      "truth_missing_events": 0
+    },
+    {
+      "btc_price_venues": [
+        {
+          "events": 862,
+          "venue": "chainlink_data_streams"
+        },
+        {
+          "events": 70,
+          "venue": "missing"
+        }
+      ],
+      "current_capital": 100.66985074626865,
+      "edge_id": "nearline_queue_probe",
+      "events": 20,
+      "filled_cost": 1.36,
+      "gross_fill_cost": 1.36,
+      "hypothetical_signal_settlements": 0,
+      "last_event": "2026-06-19T06:36:54+00:00",
+      "last_event_age_seconds": 5.962428,
+      "latest": {
+        "btc_price_venue": "chainlink_data_streams",
+        "decision": "no_signal",
+        "event_type": "paper_evaluation",
+        "external_book_support": null,
+        "fair_edge": null,
+        "fair_probability": null,
+        "reason": "outside_time_window",
+        "seconds_left": "186",
+        "slug": "btc-updown-5m-1781850900"
+      },
+      "maker_fills": 1,
+      "maker_quotes": 41,
+      "maker_settlements": 1,
+      "markets": 20,
+      "ok": true,
+      "paper_signals": 41,
+      "pnl_dollars": 0.6698507462686567,
+      "realized_pnl": 0.6698507462686567,
+      "roi_on_filled_cost": 0.4925373134328358,
+      "session_id": "rust_nearline_queue_probe_tail__paper_session_0002_1781845200",
+      "session_status": "open",
+      "source": "typed_sql_ledger",
+      "top_reasons": [
+        {
+          "events": 661,
+          "markets": 10,
+          "reason": "outside_time_window"
+        },
+        {
+          "events": 88,
+          "markets": 7,
+          "reason": "ask_outside_selected_table"
+        },
+        {
+          "events": 70,
+          "markets": 7,
+          "reason": "chainlink_data_streams_truth_missing"
+        },
+        {
+          "events": 40,
+          "markets": 4,
+          "reason": "already_signaled_market_side"
+        },
+        {
+          "events": 33,
+          "markets": 8,
+          "reason": "final_no_trade_window"
+        }
+      ],
+      "truth_missing_events": 70
+    }
+  ],
+  "generated_at": "2026-06-19T06:36:59.962428+00:00",
+  "lookback_minutes": 120.0,
+  "note": "No live orders are enabled by this report. Zero paper setups is a gate status, not a health failure.",
+  "ok": true,
+  "preferred_dashboard_edge_id": "high_coverage_h5_challenger",
+  "recommendation_reason": "preferred_fresh_challenger",
+  "recommended_dashboard_edge_id": "high_coverage_h5_challenger",
+  "route_promotion": {
+    "decision": "shadow_challenger",
+    "generated_at": "2026-06-18T00:07:29.071050+00:00",
+    "promotion_ready": false,
+    "reasons": [
+      "Active paper near-line no-cancel route passes historical maker gates.",
+      "Strict route passes historical gates, so it is worth shadowing as a reference route.",
+      "Live challenger evidence is too small for promotion: 2 would-quote events across 2 markets.",
+      "The higher-coverage scout is not eligible for routing yet: held-out ROI is 2.27% or another historical gate failed.",
+      "The Binance-pressure probe has route evidence (held-out ROI 3.80%), but it cannot become active until historical Binance depth is complete."
+    ],
+    "recommendation": "Keep the active paper near-line no-cancel route and run the strict route as a shadow/reference route."
+  },
+  "warnings": []
+}
