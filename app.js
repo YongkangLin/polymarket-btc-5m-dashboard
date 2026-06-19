@@ -1684,7 +1684,9 @@ const PERSISTED_ROW_FIELDS = new Set([
 
 function copyOutcomeOddsFields(target, source) {
   OUTCOME_ODDS_FIELDS.forEach((field) => {
-    if (source?.[field] !== null && source?.[field] !== undefined) target[field] = source[field];
+    if (source && Object.prototype.hasOwnProperty.call(source, field) && source[field] !== undefined) {
+      target[field] = source[field];
+    }
   });
   return target;
 }
@@ -2589,8 +2591,8 @@ function outcomeDisplayBookOddsFromCandidates(candidates) {
   const rows = outcomeRowsNewestFirst(candidates);
   let up = rows.map((row) => outcomeDisplayBookProbability(row, "up")).find((value) => value !== null) ?? null;
   let down = rows.map((row) => outcomeDisplayBookProbability(row, "down")).find((value) => value !== null) ?? null;
-  if (up === null && isResolvedBookPrice(down)) up = clampOutcomeProbability(1 - down);
-  if (down === null && isResolvedBookPrice(up)) down = clampOutcomeProbability(1 - up);
+  if (up === null && down !== null) up = clampOutcomeProbability(1 - down);
+  if (down === null && up !== null) down = clampOutcomeProbability(1 - up);
   const upBookSeen = rows.some((row) => outcomeSideBookSeen(row, "up"));
   const downBookSeen = rows.some((row) => outcomeSideBookSeen(row, "down"));
   return {
@@ -4580,12 +4582,7 @@ function paperPanelDisplayOutcomeProbabilities(market, latestRaw, latestBookRaw)
   const oddsRows = currentMarketOddsRows(candidates);
   const bookOdds = outcomeDisplayBookOddsFromCandidates(oddsRows);
   if (bookOdds.askBookObserved) return bookOdds;
-  return {
-    ...paperPanelOutcomeProbabilities(market, latestRaw, latestBookRaw),
-    upNoSellers: false,
-    downNoSellers: false,
-    askBookObserved: false,
-  };
+  return { up: null, down: null, upNoSellers: false, downNoSellers: false, askBookObserved: false };
 }
 
 function bestOutcomeProbability(side, candidates) {
@@ -4660,9 +4657,7 @@ function paperOutcomeProbabilities(market, latestRaw, latestBookRaw) {
 function renderPaperOddsStrip(market, latestRaw, latestBookRaw, odds = null) {
   if (!market) return "";
   const displayOdds = odds || paperPanelDisplayOutcomeProbabilities(market, latestRaw, latestBookRaw);
-  const resolved = displayOdds.askBookObserved
-    ? displayOdds
-    : stickyOutcomeOddsForMarket(market, displayOdds);
+  const resolved = displayOdds;
   return `
     <div class="paper-odds-strip" role="status" aria-label="Current Polymarket odds">
       <div>
@@ -5043,8 +5038,8 @@ function outcomeDisplayBookProbability(row, side) {
   const opposite = oppositeSideKey(side);
   const oppositeAsk = sideField(row, opposite, "ask");
   const oppositeBid = sideField(row, opposite, "bid");
-  if (isResolvedBookPrice(oppositeAsk)) return clampOutcomeProbability(1 - oppositeAsk);
-  if (isResolvedBookPrice(oppositeBid)) return clampOutcomeProbability(1 - oppositeBid);
+  if (oppositeAsk !== null) return clampOutcomeProbability(1 - oppositeAsk);
+  if (oppositeBid !== null) return clampOutcomeProbability(1 - oppositeBid);
   if (bid !== null && isResolvedBookPrice(bid)) return clampOutcomeProbability(bid);
   return null;
 }
