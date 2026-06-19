@@ -852,7 +852,7 @@ function renderPaperAuxHtml({ chartId, selectedCurrent, market, rawPoints, lates
   const cached = cacheable ? state.paperAuxRenderCache.get(cacheKey) : null;
   if (cached && now - cached.renderedAt < LIVE_AUX_RENDER_THROTTLE_MS) return cached.html;
   const html = [
-    isLiveView ? "" : renderPaperSessionHistory(resolvedSession),
+    renderPaperSessionHistory(resolvedSession),
     renderPaperActionLog(market, rawPoints),
     renderPolymarketBookTable(market, rawPoints),
     renderOrderBookTable(market, rawPoints, latestBookRaw || latestRaw || null, latestQuote || null),
@@ -870,7 +870,7 @@ function renderPaperEmptyAuxHtml({ chartId, selectedCurrent, market, isLiveView 
     latestRaw: null,
     latestBookRaw: null,
     latestQuote: null,
-    session: paperSession(),
+    session: tradeViewSession(isLiveView),
     isLiveView,
   });
 }
@@ -4465,6 +4465,20 @@ function paperSession() {
   return state.paperSqlSession || state.workflow?.paper_trade?.session || {};
 }
 
+function liveSession() {
+  return state.workflow?.live_trade?.session || {
+    mode: "live",
+    enabled: false,
+    market_limit: 36,
+    pnl_history: [],
+    positions: [],
+  };
+}
+
+function tradeViewSession(isLiveView) {
+  return isLiveView ? liveSession() : paperSession();
+}
+
 function paperSessionHistoryRows(session) {
   const history = Array.isArray(session?.pnl_history) ? session.pnl_history : [];
   const limit = Math.max(1, Math.min(metricNumber(session?.market_limit) ?? 36, 200));
@@ -5569,7 +5583,7 @@ function renderPaperDecisionGraph(options = {}) {
   const outcomeOdds = paperPanelOutcomeProbabilities(market, latestRaw, latestBookRaw);
   const upProbability = outcomeOdds.up;
   const downProbability = outcomeOdds.down;
-  const session = paperSession();
+  const session = tradeViewSession(isLiveView);
   const currentPositions = isLiveView ? [] : paperPositionsForMarket(market, rawPoints);
   const positionRows = isLiveView
     ? [{ label: "No live positions", value: "Live disabled", detail: "Manual enable required", tone: "move-flat" }]
