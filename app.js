@@ -61,6 +61,33 @@ const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
 const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 80;
 const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 320;
 const POLYMARKET_TRUTH_SOURCE = "chainlink_data_streams";
+const DEFAULT_PAPER_SESSION = Object.freeze({
+  mode: "paper",
+  starting_capital: 100,
+  current_capital: 100,
+  total_pnl_dollars: 0,
+  realized_pnl_dollars: 0,
+  available_capital: 100,
+  committed_capital: 0,
+  market_count: 0,
+  market_limit: 36,
+  positions: [],
+  pnl_history: [],
+});
+const DEFAULT_LIVE_SESSION = Object.freeze({
+  mode: "live",
+  enabled: false,
+  starting_capital: null,
+  current_capital: null,
+  total_pnl_dollars: null,
+  realized_pnl_dollars: null,
+  available_capital: null,
+  committed_capital: null,
+  market_count: 0,
+  market_limit: 36,
+  positions: [],
+  pnl_history: [],
+});
 
 function configuredInitialTab() {
   const params = new URLSearchParams(window.location.search || "");
@@ -979,11 +1006,19 @@ function ensureTradeSessionAuxHtml(chart, auxHtml = "") {
 
 function ensureTradeSessionPanelMounted(chart, aux) {
   if (!chart || !aux || (chart.id !== "paperChart" && chart.id !== "liveChart")) return;
-  if (aux.querySelector('[data-paper-panel="session_pnl"]')) {
+  const sessionHtml = renderPaperSessionHistory(tradeViewSession(chart.id === "liveChart"));
+  const existing = aux.querySelector('[data-paper-panel="session_pnl"]');
+  if (existing) {
+    const template = document.createElement("div");
+    template.innerHTML = sessionHtml;
+    const next = template.firstElementChild;
+    if (next && existing.outerHTML !== next.outerHTML) {
+      existing.replaceWith(next);
+    }
     syncPaperCollapseStates(aux);
     return;
   }
-  aux.insertAdjacentHTML("afterbegin", renderPaperSessionHistory(tradeViewSession(chart.id === "liveChart")));
+  aux.insertAdjacentHTML("afterbegin", sessionHtml);
   syncPaperCollapseStates(aux);
 }
 
@@ -4535,18 +4570,43 @@ function stickyOutcomeOddsForMarket(market, odds) {
   return resolved;
 }
 
+function normalizeTradeSession(session, defaults) {
+  const source = session && typeof session === "object" ? session : {};
+  const positions = Array.isArray(source.positions)
+    ? source.positions
+    : Object.values(source.positions || {});
+  return {
+    ...defaults,
+    ...source,
+    starting_capital: metricNumber(source.starting_capital ?? source.paper_session_starting_capital) ?? defaults.starting_capital,
+    current_capital: metricNumber(source.current_capital ?? source.paper_session_current_capital) ?? defaults.current_capital,
+    total_pnl_dollars: metricNumber(
+      source.total_pnl_dollars
+        ?? source.realized_pnl_dollars
+        ?? source.paper_session_total_pnl_dollars
+        ?? source.paper_session_total_pnl,
+    ) ?? defaults.total_pnl_dollars,
+    realized_pnl_dollars: metricNumber(
+      source.realized_pnl_dollars
+        ?? source.total_pnl_dollars
+        ?? source.paper_session_total_pnl_dollars
+        ?? source.paper_session_total_pnl,
+    ) ?? defaults.realized_pnl_dollars,
+    available_capital: metricNumber(source.available_capital ?? source.paper_session_available_capital) ?? defaults.available_capital,
+    committed_capital: metricNumber(source.committed_capital ?? source.paper_session_committed_capital) ?? defaults.committed_capital,
+    market_count: metricNumber(source.market_count ?? source.paper_session_market_count) ?? defaults.market_count,
+    market_limit: metricNumber(source.market_limit ?? source.paper_session_market_limit) ?? defaults.market_limit,
+    positions,
+    pnl_history: Array.isArray(source.pnl_history) ? source.pnl_history : [],
+  };
+}
+
 function paperSession() {
-  return state.paperSqlSession || state.workflow?.paper_trade?.session || {};
+  return normalizeTradeSession(state.paperSqlSession || state.workflow?.paper_trade?.session, DEFAULT_PAPER_SESSION);
 }
 
 function liveSession() {
-  return state.workflow?.live_trade?.session || {
-    mode: "live",
-    enabled: false,
-    market_limit: 36,
-    pnl_history: [],
-    positions: [],
-  };
+  return normalizeTradeSession(state.workflow?.live_trade?.session, DEFAULT_LIVE_SESSION);
 }
 
 function tradeViewSession(isLiveView) {
