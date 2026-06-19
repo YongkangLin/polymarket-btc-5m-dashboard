@@ -17,10 +17,10 @@ const DEFAULT_BACKEND_BASE = "http://127.0.0.1:8788";
 const LIVE_TICK_RENDER_MAX_POINTS = 2400;
 const LIVE_AUX_RENDER_THROTTLE_MS = 500;
 const LIVE_TICK_PERSIST_MS = 7500;
-const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 6000;
-const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 500;
+const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 4500;
+const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 120;
 const LIVE_TICK_PERSIST_POINTS_PER_MARKET = 3500;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v17";
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v18";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
   "polymarketPaperLiveTicks.v3",
@@ -37,6 +37,7 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v14",
   "polymarketPaperLiveTicks.v15",
   "polymarketPaperLiveTicks.v16",
+  "polymarketPaperLiveTicks.v17",
 ];
 const LIVE_PAPER_X_WINDOW_SECONDS = 15;
 const LIVE_PAPER_X_LEAD_SECONDS = 2;
@@ -61,8 +62,8 @@ const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const BINANCE_DEPTH_TABLE_STALE_MS = 15000;
 const LOCAL_BACKEND_BASE = configuredBackendBase();
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
-const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 1000;
-const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 5000;
+const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 300;
+const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 4000;
 const BACKEND_WS_SNAPSHOT_SECONDS = 15;
 const POLYMARKET_TRUTH_SOURCE = "chainlink_data_streams";
 const DEFAULT_PAPER_SESSION = Object.freeze({
@@ -6090,9 +6091,29 @@ function liveTickKeySetForMarket(key, points) {
 }
 
 function trimLiveBtcPointsForKey(key, points) {
+  if (!Array.isArray(points) || !points.length) return [];
   const maxRows = LIVE_TICK_STORE_MAX_POINTS_PER_MARKET + LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET;
-  if (points.length <= maxRows) return points;
-  const trimmed = balancedLiveTickRows(points, maxRows);
+  let latestMicro = null;
+  points.forEach((point) => {
+    const timestamp = pointTimestampMicro(point);
+    if (timestamp !== null && (latestMicro === null || timestamp > latestMicro)) latestMicro = timestamp;
+  });
+  let recentPoints = points;
+  if (latestMicro !== null) {
+    const cutoffMicro = latestMicro - (LIVE_PAPER_RENDER_TAIL_SECONDS * 1_000_000);
+    const visible = [];
+    let carry = null;
+    points.forEach((point) => {
+      const timestamp = pointTimestampMicro(point);
+      if (timestamp === null || timestamp >= cutoffMicro) {
+        visible.push(point);
+      } else {
+        carry = point;
+      }
+    });
+    recentPoints = carry ? [carry, ...visible] : visible;
+  }
+  const trimmed = recentPoints.length > maxRows ? balancedLiveTickRows(recentPoints, maxRows) : recentPoints;
   state.liveBtcTickKeysByMarket.set(key, new Set(trimmed.map(liveBtcPointKey)));
   return trimmed;
 }
