@@ -5043,11 +5043,9 @@ function outcomeDisplayBookProbability(row, side) {
   const opposite = oppositeSideKey(side);
   const oppositeAsk = sideField(row, opposite, "ask");
   const oppositeBid = sideField(row, opposite, "bid");
-  if (bid !== null && (isResolvedBookPrice(bid) || isResolvedBookPrice(oppositeAsk) || isResolvedBookPrice(oppositeBid))) {
-    return clampOutcomeProbability(bid);
-  }
   if (isResolvedBookPrice(oppositeAsk)) return clampOutcomeProbability(1 - oppositeAsk);
   if (isResolvedBookPrice(oppositeBid)) return clampOutcomeProbability(1 - oppositeBid);
+  if (bid !== null && isResolvedBookPrice(bid)) return clampOutcomeProbability(bid);
   return null;
 }
 
