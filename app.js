@@ -49,6 +49,7 @@ const LIVE_RENDER_MAX_SOURCE_ROWS_PER_LINE = 20000;
 const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
+const LIVE_AUX_VERSION_THROTTLE_MS = 750;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const BINANCE_DEPTH_TABLE_STALE_MS = 15000;
@@ -104,6 +105,7 @@ const state = {
   paperAuxRenderCache: new Map(),
   paperCollapsedPanels: new Set(),
   paperAuxVersion: 0,
+  paperAuxVersionBumpedAt: 0,
   paperAuxBookKey: "",
   paperUPlotCharts: new Map(),
   liveGate: "paper_to_live",
@@ -119,6 +121,14 @@ let liveChartClockTimer = null;
 
 function byId(id) {
   return document.getElementById(id);
+}
+
+function bumpPaperAuxVersion(force = false) {
+  const now = Date.now();
+  if (!force && now - state.paperAuxVersionBumpedAt < LIVE_AUX_VERSION_THROTTLE_MS) return false;
+  state.paperAuxVersion += 1;
+  state.paperAuxVersionBumpedAt = now;
+  return true;
 }
 
 function isCompactPaperChart() {
@@ -790,7 +800,7 @@ function latestPolymarketDepthTimeMicro(snapshot) {
   );
 }
 
-function paperAuxCacheKey(chartId, market, isLiveView, rawPoints = [], latestRaw = null, latestBookRaw = null) {
+function paperAuxCacheKey(chartId, market, isLiveView) {
   const latestMarker = [...paperMarkersFor(market)].pop();
   return [
     chartId || "paperChart",
@@ -798,15 +808,13 @@ function paperAuxCacheKey(chartId, market, isLiveView, rawPoints = [], latestRaw
     paperMarketWindowKey(market),
     paperGraphKey(market) || "current",
     state.paperAuxVersion,
-    rowFreshnessKey(latestRaw),
-    rowFreshnessKey(latestBookRaw),
     rowFreshnessKey(latestMarker),
   ].join(":");
 }
 
 function renderPaperAuxHtml({ chartId, selectedCurrent, market, rawPoints, latestRaw, latestBookRaw, latestQuote, session, isLiveView }) {
   const cacheable = Boolean(selectedCurrent && market);
-  const cacheKey = cacheable ? paperAuxCacheKey(chartId, market, isLiveView, rawPoints, latestRaw, latestBookRaw) : "";
+  const cacheKey = cacheable ? paperAuxCacheKey(chartId, market, isLiveView) : "";
   const now = Date.now();
   const cached = cacheable ? state.paperAuxRenderCache.get(cacheKey) : null;
   if (cached && now - cached.renderedAt < LIVE_AUX_RENDER_THROTTLE_MS) return cached.html;
@@ -840,6 +848,78 @@ function renderCollapsiblePanel(panelId, className, title, meta, bodyHtml, open 
     </section>`;
 }
 
+function syncPaperPanelCollapseState(section) {
+  const panelId = section?.dataset?.paperPanel;
+  if (!panelId) return;
+  const isOpen = !state.paperCollapsedPanels.has(panelId);
+  const button = section.querySelector("[data-paper-toggle]");
+  const body = section.querySelector(".paper-collapsible-body");
+  if (button) button.setAttribute("aria-expanded", isOpen ? "true" : "false");
+  if (body) body.hidden = !isOpen;
+}
+
+function syncPaperCollapseStates(root = document) {
+  root.querySelectorAll?.(".paper-collapsible[data-paper-panel]").forEach(syncPaperPanelCollapseState);
+}
+
+function patchPaperAuxContent(aux, auxHtml) {
+  const template = document.createElement("div");
+  template.innerHTML = auxHtml;
+  const nextSections = [...template.children].filter((child) => child.matches?.(".paper-collapsible[data-paper-panel]"));
+  if (!nextSections.length) {
+    aux.innerHTML = auxHtml;
+    syncPaperCollapseStates(aux);
+    return;
+  }
+  const existingByPanel = new Map(
+    [...aux.querySelectorAll(".paper-collapsible[data-paper-panel]")]
+      .map((section) => [section.dataset.paperPanel, section]),
+  );
+  const seen = new Set();
+  nextSections.forEach((nextSection) => {
+    const panelId = nextSection.dataset.paperPanel;
+    if (!panelId) return;
+    seen.add(panelId);
+    const existing = existingByPanel.get(panelId);
+    if (!existing) {
+      aux.appendChild(nextSection);
+      syncPaperPanelCollapseState(nextSection);
+      return;
+    }
+    existing.className = nextSection.className;
+    const existingButton = existing.querySelector("[data-paper-toggle]");
+    const nextButton = nextSection.querySelector("[data-paper-toggle]");
+    if (existingButton && nextButton) {
+      const existingTitle = existingButton.children[0];
+      const nextTitle = nextButton.children[0];
+      if (existingTitle && nextTitle && existingTitle.textContent !== nextTitle.textContent) {
+        existingTitle.textContent = nextTitle.textContent;
+      }
+      const existingMeta = existingButton.querySelector(".paper-heading-meta > span:first-child");
+      const nextMeta = nextButton.querySelector(".paper-heading-meta > span:first-child");
+      if (existingMeta && nextMeta && existingMeta.textContent !== nextMeta.textContent) {
+        existingMeta.textContent = nextMeta.textContent;
+      }
+    }
+    const existingBody = existing.querySelector(".paper-collapsible-body");
+    const nextBody = nextSection.querySelector(".paper-collapsible-body");
+    if (existingBody && nextBody && existingBody._paperBodyHtml !== nextBody.innerHTML) {
+      existingBody.innerHTML = nextBody.innerHTML;
+      existingBody._paperBodyHtml = nextBody.innerHTML;
+    }
+    syncPaperPanelCollapseState(existing);
+  });
+  [...aux.querySelectorAll(".paper-collapsible[data-paper-panel]")].forEach((section) => {
+    if (!seen.has(section.dataset.paperPanel)) section.remove();
+  });
+  nextSections.forEach((nextSection) => {
+    const panelId = nextSection.dataset.paperPanel;
+    const section = [...aux.querySelectorAll(".paper-collapsible[data-paper-panel]")]
+      .find((candidate) => candidate.dataset.paperPanel === panelId);
+    if (section) aux.appendChild(section);
+  });
+}
+
 function setPaperChartContent(chart, visualHtml, auxHtml = "") {
   if (!chart) return;
   if (!chart._paperSplitContent) {
@@ -855,7 +935,7 @@ function setPaperChartContent(chart, visualHtml, auxHtml = "") {
     chart._paperVisualHtml = visualHtml;
   }
   if (aux && chart._paperAuxHtml !== auxHtml) {
-    aux.innerHTML = auxHtml;
+    patchPaperAuxContent(aux, auxHtml);
     chart._paperAuxHtml = auxHtml;
   }
 }
@@ -988,55 +1068,6 @@ function renderPaperLiveSideHtml(marketMetrics, accountMetrics, positionRows) {
     </aside>`;
 }
 
-function liveOverlayPath(samples, xDomain, yDomain, width, height) {
-  const plotLeft = 64;
-  const plotTop = 8;
-  const plotRight = 10;
-  const plotBottom = 34;
-  const plotWidth = Math.max(1, width - plotLeft - plotRight);
-  const plotHeight = Math.max(1, height - plotTop - plotBottom);
-  const xSpan = Math.max(0.001, Number(xDomain.max) - Number(xDomain.min));
-  const ySpan = Math.max(0.001, Number(yDomain.max) - Number(yDomain.min));
-  const xForElapsed = (elapsedSeconds) => (
-    plotLeft + ((Number(elapsedSeconds) - Number(xDomain.min)) / xSpan) * plotWidth
-  );
-  const yForDollarMove = (dollarMove) => (
-    plotTop + ((Number(yDomain.max) - Number(dollarMove)) / ySpan) * plotHeight
-  );
-  let open = false;
-  const commands = [];
-  steppedPlotEvents(samples, "binance").forEach((point) => {
-    if (!Number.isFinite(point?.elapsedSeconds) || !Number.isFinite(point?.dollarMove)) {
-      open = false;
-      return;
-    }
-    const x = Math.max(plotLeft, Math.min(plotLeft + plotWidth, xForElapsed(point.elapsedSeconds)));
-    const y = Math.max(plotTop, Math.min(plotTop + plotHeight, yForDollarMove(point.dollarMove)));
-    commands.push(`${open ? "L" : "M"}${x.toFixed(2)},${y.toFixed(2)}`);
-    open = true;
-  });
-  return commands.join(" ");
-}
-
-function updatePaperBinanceOverlay(target, options, width, height) {
-  let overlay = target.querySelector(".paper-binance-overlay");
-  if (!overlay) {
-    overlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    overlay.setAttribute("class", "paper-binance-overlay");
-    overlay.setAttribute("aria-hidden", "true");
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    overlay.appendChild(path);
-    target.appendChild(overlay);
-  }
-  overlay.setAttribute("viewBox", `0 0 ${width} ${height}`);
-  overlay.setAttribute("width", String(width));
-  overlay.setAttribute("height", String(height));
-  const path = overlay.querySelector("path");
-  const d = liveOverlayPath(options.externalSamples || [], options.xDomain, options.dollarDomain, width, height);
-  if (path) path.setAttribute("d", d);
-  overlay.style.display = d ? "block" : "none";
-}
-
 function updatePaperUPlot(chart, options) {
   try {
     if (!canUseUPlot() || !chart) return false;
@@ -1075,7 +1106,7 @@ function updatePaperUPlot(chart, options) {
       series: [
         {},
         { label: "Chainlink", stroke: "#148256", width: 2, spanGaps: false, points: { show: false } },
-        { label: "Binance", stroke: "#005bff", width: 5, spanGaps: false, points: { show: false } },
+        { label: "Binance", stroke: "#005bff", width: 2, spanGaps: false, points: { show: false } },
       ],
     });
     const existing = state.paperUPlotCharts.get(chart.id || "paperChart");
@@ -1086,7 +1117,6 @@ function updatePaperUPlot(chart, options) {
       const data = uPlotDataFromSamples(options.truthSamples, options.externalSamples);
       const plot = new window.uPlot(makeOptions(), data, target);
       state.paperUPlotCharts.set(chart.id || "paperChart", { key, plot, dataSignature, width, height });
-      updatePaperBinanceOverlay(target, options, width, height);
       return true;
     }
     if (existing.width !== width || existing.height !== height) {
@@ -1101,7 +1131,6 @@ function updatePaperUPlot(chart, options) {
     }
     existing.plot.setScale("x", { min: options.xDomain.min, max: options.xDomain.max });
     existing.plot.setScale("y", { min: options.dollarDomain.min, max: options.dollarDomain.max });
-    updatePaperBinanceOverlay(target, options, width, height);
     return true;
   } catch (error) {
     console.warn("uPlot live chart update failed", error);
@@ -1771,7 +1800,7 @@ function rememberObservedPaperMarket(market, points = [], markers = [], options 
         key,
         mergePaperChartRows(existingMarkers, markers).slice(-2000),
       );
-      state.paperAuxVersion += 1;
+      bumpPaperAuxVersion(true);
     }
   });
   state.paperSelectSignature = "";
@@ -5806,7 +5835,7 @@ function appendLiveBtcPoints(market, incomingPoints) {
     state.liveBtcTicksByMarket.set(key, points);
   });
   if (auxChanged) {
-    state.paperAuxVersion += 1;
+    bumpPaperAuxVersion();
   }
   if (pointsToAppend.some(shouldPersistLivePoint)) schedulePaperTickPersist();
 }
@@ -5958,7 +5987,7 @@ function rememberBackendStreamMarket(market, options = {}) {
   ].filter(Boolean).join(":");
   if (bookKey && bookKey !== state.paperAuxBookKey) {
     state.paperAuxBookKey = bookKey;
-    state.paperAuxVersion += 1;
+    bumpPaperAuxVersion();
   }
   if (options.recomputeDistances === true) recomputeLiveTickDistances(stored);
   if (addTruthPoint) {
@@ -6360,8 +6389,8 @@ async function main() {
     } else {
       state.paperCollapsedPanels.add(panelId);
     }
-    state.paperAuxVersion += 1;
-    renderActiveTab();
+    syncPaperCollapseStates(document);
+    bumpPaperAuxVersion(true);
   };
   document.addEventListener("pointerdown", (event) => {
     const button = event.target?.closest?.("[data-paper-toggle]");

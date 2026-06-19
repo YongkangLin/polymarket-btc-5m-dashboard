@@ -215,22 +215,6 @@ select {
   width: 100%;
 }
 
-.paper-binance-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.paper-binance-overlay path {
-  fill: none;
-  stroke: #005bff;
-  stroke-width: 5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
 .paper-live-side-html {
   display: grid;
   gap: 10px;
@@ -486,7 +470,7 @@ svg {
 
 .line-external {
   stroke: #005bff;
-  stroke-width: 5;
+  stroke-width: 2.8;
   opacity: 1;
 }
 
