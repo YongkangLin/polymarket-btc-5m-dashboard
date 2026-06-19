@@ -17,10 +17,10 @@ const DEFAULT_BACKEND_BASE = "http://127.0.0.1:8788";
 const LIVE_TICK_RENDER_MAX_POINTS = 2400;
 const LIVE_AUX_RENDER_THROTTLE_MS = 500;
 const LIVE_TICK_PERSIST_MS = 7500;
-const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 24000;
-const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 1000;
-const LIVE_TICK_PERSIST_POINTS_PER_MARKET = 8000;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v15";
+const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 6000;
+const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 500;
+const LIVE_TICK_PERSIST_POINTS_PER_MARKET = 3500;
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v17";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
   "polymarketPaperLiveTicks.v3",
@@ -35,9 +35,11 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v12",
   "polymarketPaperLiveTicks.v13",
   "polymarketPaperLiveTicks.v14",
+  "polymarketPaperLiveTicks.v15",
+  "polymarketPaperLiveTicks.v16",
 ];
-const LIVE_PAPER_X_WINDOW_SECONDS = 30;
-const LIVE_PAPER_X_LEAD_SECONDS = 4;
+const LIVE_PAPER_X_WINDOW_SECONDS = 15;
+const LIVE_PAPER_X_LEAD_SECONDS = 2;
 const LIVE_PAPER_Y_MIN_RADIUS = 8;
 const LIVE_PAPER_Y_EXPANSION_PAD = 1.24;
 const LIVE_PAPER_Y_BUCKET = 4;
@@ -47,7 +49,7 @@ const LIVE_BINANCE_RENDER_BUCKET_SECONDS = null;
 const LIVE_STEP_EPS_SECONDS = 0.0005;
 const LIVE_CHAINLINK_MAX_LINE_GAP_SECONDS = 10;
 const LIVE_BINANCE_MAX_LINE_GAP_SECONDS = 5;
-const LIVE_PAPER_RENDER_TAIL_SECONDS = 36;
+const LIVE_PAPER_RENDER_TAIL_SECONDS = 15;
 const LIVE_RENDER_MAX_SOURCE_ROWS_PER_LINE = 20000;
 const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
@@ -59,8 +61,9 @@ const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const BINANCE_DEPTH_TABLE_STALE_MS = 15000;
 const LOCAL_BACKEND_BASE = configuredBackendBase();
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
-const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 5000;
-const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 20000;
+const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 1000;
+const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 5000;
+const BACKEND_WS_SNAPSHOT_SECONDS = 15;
 const POLYMARKET_TRUTH_SOURCE = "chainlink_data_streams";
 const DEFAULT_PAPER_SESSION = Object.freeze({
   mode: "paper",
@@ -2716,6 +2719,7 @@ function backendWebSocketUrl() {
     symbol: "BTCUSDT",
     chainlink_snapshot_limit: String(BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT),
     binance_snapshot_limit: String(BACKEND_WS_BINANCE_SNAPSHOT_LIMIT),
+    snapshot_seconds: String(BACKEND_WS_SNAPSHOT_SECONDS),
     paper_edge_id: activePaperEdgeId(),
     paper_history_limit: "36",
     paper_snapshot_seconds: "5",
