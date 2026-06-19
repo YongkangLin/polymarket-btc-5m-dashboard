@@ -2,28 +2,28 @@
   "backend": {
     "feeds": [
       {
-        "event_age_seconds": 0.013495,
+        "event_age_seconds": 0.001042,
         "healthy": true,
         "last_error": null,
         "ok": true,
         "source": "binance:btcusdt@bookTicker"
       },
       {
-        "event_age_seconds": 0.051989,
+        "event_age_seconds": 0.074783,
         "healthy": true,
         "last_error": null,
         "ok": true,
         "source": "binance:btcusdt@depth20@100ms"
       },
       {
-        "event_age_seconds": 0.013529,
+        "event_age_seconds": 0.49263,
         "healthy": true,
         "last_error": null,
         "ok": true,
         "source": "binance:btcusdt@trade"
       },
       {
-        "event_age_seconds": 1.301643,
+        "event_age_seconds": 0.240211,
         "healthy": true,
         "last_error": null,
         "ok": true,
@@ -46,12 +46,12 @@
         "complete_sessions": 0,
         "fill_events": 1,
         "gross_fill_cost": 1.36,
-        "last_event": "2026-06-19T06:56:52+00:00",
-        "last_event_age_seconds": 5.01129,
+        "last_event": "2026-06-19T07:27:13+00:00",
+        "last_event_age_seconds": 2.47201,
         "maker_fills": 1,
-        "maker_quotes": 11,
+        "maker_quotes": 19,
         "maker_settlements": 1,
-        "markets": 8,
+        "markets": 14,
         "realized_pnl": 0.6698507462686567,
         "roi_on_fill_cost": 0.4925373134328358,
         "sessions": 1,
@@ -62,13 +62,13 @@
       "complete_sessions": 0,
       "current_capital": 100.66985074626865,
       "edge_id": "high_coverage_h5_challenger",
-      "events": 8,
+      "events": 14,
       "filled_cost": 1.36,
       "fills": 1,
       "gross_fill_cost": 1.36,
       "hypothetical_signal_settlements": 0,
-      "last_event": "2026-06-19T06:56:52+00:00",
-      "last_event_age_seconds": 5.01129,
+      "last_event": "2026-06-19T07:27:13+00:00",
+      "last_event_age_seconds": 2.47201,
       "latest": {
         "btc_price_venue": null,
         "decision": "open",
@@ -81,13 +81,13 @@
         "slug": null
       },
       "maker_fills": 1,
-      "maker_quotes": 11,
+      "maker_quotes": 19,
       "maker_settlements": 1,
-      "markets": 8,
-      "markets_seen": 8,
+      "markets": 14,
+      "markets_seen": 14,
       "ok": true,
-      "orders_placed": 11,
-      "paper_signals": 11,
+      "orders_placed": 19,
+      "paper_signals": 19,
       "pnl_dollars": 0.6698507462686567,
       "realized_pnl": 0.6698507462686567,
       "roi_on_filled_cost": 0.4925373134328358,
@@ -96,8 +96,120 @@
       "sessions": 1,
       "settlements": 1,
       "source": "typed_sql_ledger",
-      "top_reasons": [],
-      "truth_missing_events": 0
+      "top_reasons": [
+        {
+          "decision": "cancel",
+          "events": 2164,
+          "last_event": "2026-06-19T07:25:57+00:00",
+          "markets": 14,
+          "max_seconds_left": 300.0,
+          "min_seconds_left": 11.0,
+          "reason": "outside_table_time_window",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 824,
+          "last_event": "2026-06-19T07:27:14+00:00",
+          "markets": 13,
+          "max_seconds_left": 240.0,
+          "min_seconds_left": 121.0,
+          "reason": "side_not_dominant",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 406,
+          "last_event": "2026-06-19T07:27:14+00:00",
+          "markets": 11,
+          "max_seconds_left": 240.0,
+          "min_seconds_left": 121.0,
+          "reason": "edge_below_threshold",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 391,
+          "last_event": "2026-06-19T07:26:59+00:00",
+          "markets": 12,
+          "max_seconds_left": 240.0,
+          "min_seconds_left": 121.0,
+          "reason": "ask_outside_selected_table",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 164,
+          "last_event": "2026-06-19T07:24:58+00:00",
+          "markets": 13,
+          "max_seconds_left": 10.0,
+          "min_seconds_left": 1.0,
+          "reason": "final_no_trade_window",
+          "source": "strategy_decisions"
+        }
+      ],
+      "truth_missing_events": 0,
+      "typed_decision_reasons": [
+        {
+          "decision": "cancel",
+          "events": 2164,
+          "last_event": "2026-06-19T07:25:57+00:00",
+          "markets": 14,
+          "max_seconds_left": 300.0,
+          "min_seconds_left": 11.0,
+          "reason": "outside_table_time_window",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 824,
+          "last_event": "2026-06-19T07:27:14+00:00",
+          "markets": 13,
+          "max_seconds_left": 240.0,
+          "min_seconds_left": 121.0,
+          "reason": "side_not_dominant",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 406,
+          "last_event": "2026-06-19T07:27:14+00:00",
+          "markets": 11,
+          "max_seconds_left": 240.0,
+          "min_seconds_left": 121.0,
+          "reason": "edge_below_threshold",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 391,
+          "last_event": "2026-06-19T07:26:59+00:00",
+          "markets": 12,
+          "max_seconds_left": 240.0,
+          "min_seconds_left": 121.0,
+          "reason": "ask_outside_selected_table",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 164,
+          "last_event": "2026-06-19T07:24:58+00:00",
+          "markets": 13,
+          "max_seconds_left": 10.0,
+          "min_seconds_left": 1.0,
+          "reason": "final_no_trade_window",
+          "source": "strategy_decisions"
+        }
+      ],
+      "typed_decisions": {
+        "cancels": 4045,
+        "decisions": 4064,
+        "last_event": "2026-06-19T07:27:13+00:00",
+        "markets": 14,
+        "place_market_rate": 0.42857142857142855,
+        "place_markets": 6,
+        "places": 19
+      }
     },
     {
       "all_sessions": {
@@ -105,12 +217,12 @@
         "complete_sessions": 0,
         "fill_events": 1,
         "gross_fill_cost": 2.89,
-        "last_event": "2026-06-19T06:56:52+00:00",
-        "last_event_age_seconds": 5.01129,
+        "last_event": "2026-06-19T07:27:13+00:00",
+        "last_event_age_seconds": 2.47201,
         "maker_fills": 1,
-        "maker_quotes": 4,
+        "maker_quotes": 5,
         "maker_settlements": 1,
-        "markets": 189,
+        "markets": 195,
         "realized_pnl": 2.364545454545454,
         "roi_on_fill_cost": 0.8181818181818179,
         "sessions": 10,
@@ -121,13 +233,13 @@
       "complete_sessions": 0,
       "current_capital": 100,
       "edge_id": "high_coverage_queuecap_challenger",
-      "events": 24,
+      "events": 30,
       "filled_cost": null,
       "fills": 1,
       "gross_fill_cost": 0,
       "hypothetical_signal_settlements": 0,
-      "last_event": "2026-06-19T06:56:55.643796+00:00",
-      "last_event_age_seconds": 1.367494,
+      "last_event": "2026-06-19T07:27:13.988022+00:00",
+      "last_event_age_seconds": 1.483988,
       "latest": {
         "btc_price_venue": null,
         "decision": "open",
@@ -140,13 +252,13 @@
         "slug": null
       },
       "maker_fills": 0,
-      "maker_quotes": 0,
+      "maker_quotes": 1,
       "maker_settlements": 0,
-      "markets": 24,
-      "markets_seen": 189,
+      "markets": 30,
+      "markets_seen": 195,
       "ok": true,
-      "orders_placed": 4,
-      "paper_signals": 0,
+      "orders_placed": 5,
+      "paper_signals": 1,
       "pnl_dollars": null,
       "realized_pnl": 0,
       "roi_on_filled_cost": null,
@@ -155,8 +267,120 @@
       "sessions": 10,
       "settlements": 1,
       "source": "typed_sql_ledger",
-      "top_reasons": [],
-      "truth_missing_events": 0
+      "top_reasons": [
+        {
+          "decision": "cancel",
+          "events": 4372,
+          "last_event": "2026-06-19T07:27:14+00:00",
+          "markets": 25,
+          "max_seconds_left": 300.0,
+          "min_seconds_left": 11.0,
+          "reason": "outside_table_time_window",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 511,
+          "last_event": "2026-06-19T07:23:27+00:00",
+          "markets": 22,
+          "max_seconds_left": 150.0,
+          "min_seconds_left": 91.0,
+          "reason": "side_not_dominant",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 307,
+          "last_event": "2026-06-19T07:23:27+00:00",
+          "markets": 20,
+          "max_seconds_left": 150.0,
+          "min_seconds_left": 91.0,
+          "reason": "ask_outside_selected_table",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 220,
+          "last_event": "2026-06-19T07:24:58+00:00",
+          "markets": 22,
+          "max_seconds_left": 10.0,
+          "min_seconds_left": 1.0,
+          "reason": "final_no_trade_window",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 135,
+          "last_event": "2026-06-19T07:18:16+00:00",
+          "markets": 15,
+          "max_seconds_left": 150.0,
+          "min_seconds_left": 93.0,
+          "reason": "maker_queue_ahead_too_large",
+          "source": "strategy_decisions"
+        }
+      ],
+      "truth_missing_events": 0,
+      "typed_decision_reasons": [
+        {
+          "decision": "cancel",
+          "events": 4372,
+          "last_event": "2026-06-19T07:27:14+00:00",
+          "markets": 25,
+          "max_seconds_left": 300.0,
+          "min_seconds_left": 11.0,
+          "reason": "outside_table_time_window",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 511,
+          "last_event": "2026-06-19T07:23:27+00:00",
+          "markets": 22,
+          "max_seconds_left": 150.0,
+          "min_seconds_left": 91.0,
+          "reason": "side_not_dominant",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 307,
+          "last_event": "2026-06-19T07:23:27+00:00",
+          "markets": 20,
+          "max_seconds_left": 150.0,
+          "min_seconds_left": 91.0,
+          "reason": "ask_outside_selected_table",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 220,
+          "last_event": "2026-06-19T07:24:58+00:00",
+          "markets": 22,
+          "max_seconds_left": 10.0,
+          "min_seconds_left": 1.0,
+          "reason": "final_no_trade_window",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 135,
+          "last_event": "2026-06-19T07:18:16+00:00",
+          "markets": 15,
+          "max_seconds_left": 150.0,
+          "min_seconds_left": 93.0,
+          "reason": "maker_queue_ahead_too_large",
+          "source": "strategy_decisions"
+        }
+      ],
+      "typed_decisions": {
+        "cancels": 5587,
+        "decisions": 5588,
+        "last_event": "2026-06-19T07:27:13+00:00",
+        "markets": 25,
+        "place_market_rate": 0.04,
+        "place_markets": 1,
+        "places": 1
+      }
     },
     {
       "all_sessions": {
@@ -164,12 +388,12 @@
         "complete_sessions": 0,
         "fill_events": 0,
         "gross_fill_cost": 0.0,
-        "last_event": "2026-06-19T06:56:52+00:00",
-        "last_event_age_seconds": 5.01129,
+        "last_event": "2026-06-19T07:27:13+00:00",
+        "last_event_age_seconds": 2.47201,
         "maker_fills": 0,
-        "maker_quotes": 39,
+        "maker_quotes": 41,
         "maker_settlements": 0,
-        "markets": 405,
+        "markets": 411,
         "realized_pnl": 0.0,
         "roi_on_fill_cost": null,
         "sessions": 12,
@@ -180,13 +404,13 @@
       "complete_sessions": 0,
       "current_capital": 100,
       "edge_id": "coverage_fair_edge_challenger",
-      "events": 24,
+      "events": 30,
       "filled_cost": null,
       "fills": 0,
       "gross_fill_cost": 0,
       "hypothetical_signal_settlements": 0,
-      "last_event": "2026-06-19T06:56:55.196179+00:00",
-      "last_event_age_seconds": 1.815111,
+      "last_event": "2026-06-19T07:27:13.956275+00:00",
+      "last_event_age_seconds": 1.515735,
       "latest": {
         "btc_price_venue": null,
         "decision": "open",
@@ -199,13 +423,13 @@
         "slug": null
       },
       "maker_fills": 0,
-      "maker_quotes": 3,
+      "maker_quotes": 5,
       "maker_settlements": 0,
-      "markets": 24,
-      "markets_seen": 405,
+      "markets": 30,
+      "markets_seen": 411,
       "ok": true,
-      "orders_placed": 39,
-      "paper_signals": 3,
+      "orders_placed": 41,
+      "paper_signals": 5,
       "pnl_dollars": null,
       "realized_pnl": 0,
       "roi_on_filled_cost": null,
@@ -214,8 +438,120 @@
       "sessions": 12,
       "settlements": 0,
       "source": "typed_sql_ledger",
-      "top_reasons": [],
-      "truth_missing_events": 0
+      "top_reasons": [
+        {
+          "decision": "cancel",
+          "events": 4352,
+          "last_event": "2026-06-19T07:27:14+00:00",
+          "markets": 25,
+          "max_seconds_left": 300.0,
+          "min_seconds_left": 11.0,
+          "reason": "outside_table_time_window",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 482,
+          "last_event": "2026-06-19T07:23:56+00:00",
+          "markets": 21,
+          "max_seconds_left": 120.0,
+          "min_seconds_left": 61.0,
+          "reason": "side_not_dominant",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 220,
+          "last_event": "2026-06-19T07:24:58+00:00",
+          "markets": 22,
+          "max_seconds_left": 10.0,
+          "min_seconds_left": 1.0,
+          "reason": "final_no_trade_window",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 216,
+          "last_event": "2026-06-19T07:23:23+00:00",
+          "markets": 17,
+          "max_seconds_left": 120.0,
+          "min_seconds_left": 61.0,
+          "reason": "ask_outside_selected_table",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 180,
+          "last_event": "2026-06-19T07:23:56+00:00",
+          "markets": 13,
+          "max_seconds_left": 119.0,
+          "min_seconds_left": 61.0,
+          "reason": "depth_imbalance_too_low",
+          "source": "strategy_decisions"
+        }
+      ],
+      "truth_missing_events": 0,
+      "typed_decision_reasons": [
+        {
+          "decision": "cancel",
+          "events": 4352,
+          "last_event": "2026-06-19T07:27:14+00:00",
+          "markets": 25,
+          "max_seconds_left": 300.0,
+          "min_seconds_left": 11.0,
+          "reason": "outside_table_time_window",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 482,
+          "last_event": "2026-06-19T07:23:56+00:00",
+          "markets": 21,
+          "max_seconds_left": 120.0,
+          "min_seconds_left": 61.0,
+          "reason": "side_not_dominant",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 220,
+          "last_event": "2026-06-19T07:24:58+00:00",
+          "markets": 22,
+          "max_seconds_left": 10.0,
+          "min_seconds_left": 1.0,
+          "reason": "final_no_trade_window",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 216,
+          "last_event": "2026-06-19T07:23:23+00:00",
+          "markets": 17,
+          "max_seconds_left": 120.0,
+          "min_seconds_left": 61.0,
+          "reason": "ask_outside_selected_table",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 180,
+          "last_event": "2026-06-19T07:23:56+00:00",
+          "markets": 13,
+          "max_seconds_left": 119.0,
+          "min_seconds_left": 61.0,
+          "reason": "depth_imbalance_too_low",
+          "source": "strategy_decisions"
+        }
+      ],
+      "typed_decisions": {
+        "cancels": 5584,
+        "decisions": 5588,
+        "last_event": "2026-06-19T07:27:13+00:00",
+        "markets": 25,
+        "place_market_rate": 0.16,
+        "place_markets": 4,
+        "places": 4
+      }
     },
     {
       "all_sessions": {
@@ -223,12 +559,12 @@
         "complete_sessions": 0,
         "fill_events": 0,
         "gross_fill_cost": 0.0,
-        "last_event": "2026-06-19T06:56:52+00:00",
-        "last_event_age_seconds": 5.01129,
+        "last_event": "2026-06-19T07:27:13+00:00",
+        "last_event_age_seconds": 2.47201,
         "maker_fills": 0,
-        "maker_quotes": 50,
+        "maker_quotes": 52,
         "maker_settlements": 0,
-        "markets": 405,
+        "markets": 411,
         "realized_pnl": 0.0,
         "roi_on_fill_cost": null,
         "sessions": 12,
@@ -239,13 +575,13 @@
       "complete_sessions": 0,
       "current_capital": 100,
       "edge_id": "strict_directional_maker_from_nearline",
-      "events": 24,
+      "events": 30,
       "filled_cost": null,
       "fills": 0,
       "gross_fill_cost": 0,
       "hypothetical_signal_settlements": 0,
-      "last_event": "2026-06-19T06:56:55.215840+00:00",
-      "last_event_age_seconds": 1.79545,
+      "last_event": "2026-06-19T07:27:13.986528+00:00",
+      "last_event_age_seconds": 1.485482,
       "latest": {
         "btc_price_venue": null,
         "decision": "open",
@@ -258,13 +594,13 @@
         "slug": null
       },
       "maker_fills": 0,
-      "maker_quotes": 8,
+      "maker_quotes": 10,
       "maker_settlements": 0,
-      "markets": 24,
-      "markets_seen": 405,
+      "markets": 30,
+      "markets_seen": 411,
       "ok": true,
-      "orders_placed": 50,
-      "paper_signals": 8,
+      "orders_placed": 52,
+      "paper_signals": 10,
       "pnl_dollars": null,
       "realized_pnl": 0,
       "roi_on_filled_cost": null,
@@ -273,47 +609,155 @@
       "sessions": 12,
       "settlements": 0,
       "source": "typed_sql_ledger",
-      "top_reasons": [],
-      "truth_missing_events": 0
+      "top_reasons": [
+        {
+          "decision": "cancel",
+          "events": 4372,
+          "last_event": "2026-06-19T07:27:14+00:00",
+          "markets": 25,
+          "max_seconds_left": 300.0,
+          "min_seconds_left": 11.0,
+          "reason": "outside_table_time_window",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 644,
+          "last_event": "2026-06-19T07:18:28+00:00",
+          "markets": 20,
+          "max_seconds_left": 150.0,
+          "min_seconds_left": 91.0,
+          "reason": "distance_too_small",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 220,
+          "last_event": "2026-06-19T07:24:58+00:00",
+          "markets": 22,
+          "max_seconds_left": 10.0,
+          "min_seconds_left": 1.0,
+          "reason": "final_no_trade_window",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 163,
+          "last_event": "2026-06-19T07:23:27+00:00",
+          "markets": 13,
+          "max_seconds_left": 149.0,
+          "min_seconds_left": 91.0,
+          "reason": "side_not_dominant",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 127,
+          "last_event": "2026-06-19T07:23:27+00:00",
+          "markets": 9,
+          "max_seconds_left": 149.0,
+          "min_seconds_left": 91.0,
+          "reason": "ask_outside_selected_table",
+          "source": "strategy_decisions"
+        }
+      ],
+      "truth_missing_events": 0,
+      "typed_decision_reasons": [
+        {
+          "decision": "cancel",
+          "events": 4372,
+          "last_event": "2026-06-19T07:27:14+00:00",
+          "markets": 25,
+          "max_seconds_left": 300.0,
+          "min_seconds_left": 11.0,
+          "reason": "outside_table_time_window",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 644,
+          "last_event": "2026-06-19T07:18:28+00:00",
+          "markets": 20,
+          "max_seconds_left": 150.0,
+          "min_seconds_left": 91.0,
+          "reason": "distance_too_small",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 220,
+          "last_event": "2026-06-19T07:24:58+00:00",
+          "markets": 22,
+          "max_seconds_left": 10.0,
+          "min_seconds_left": 1.0,
+          "reason": "final_no_trade_window",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 163,
+          "last_event": "2026-06-19T07:23:27+00:00",
+          "markets": 13,
+          "max_seconds_left": 149.0,
+          "min_seconds_left": 91.0,
+          "reason": "side_not_dominant",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 127,
+          "last_event": "2026-06-19T07:23:27+00:00",
+          "markets": 9,
+          "max_seconds_left": 149.0,
+          "min_seconds_left": 91.0,
+          "reason": "ask_outside_selected_table",
+          "source": "strategy_decisions"
+        }
+      ],
+      "typed_decisions": {
+        "cancels": 5570,
+        "decisions": 5588,
+        "last_event": "2026-06-19T07:27:13+00:00",
+        "markets": 25,
+        "place_market_rate": 0.12,
+        "place_markets": 3,
+        "places": 18
+      }
     },
     {
       "all_sessions": {
-        "avg_post_fill_edge": 0.015795026844499585,
+        "avg_post_fill_edge": 0.015479404417885196,
         "complete_sessions": 0,
-        "fill_events": 38,
-        "gross_fill_cost": 176.96,
-        "last_event": "2026-06-19T06:56:52+00:00",
-        "last_event_age_seconds": 5.01129,
-        "maker_fills": 38,
-        "maker_quotes": 325,
-        "maker_settlements": 37,
-        "markets": 546,
-        "realized_pnl": -39.37720975555389,
-        "roi_on_fill_cost": -0.22252039870905227,
+        "fill_events": 39,
+        "gross_fill_cost": 181.96,
+        "last_event": "2026-06-19T07:27:13+00:00",
+        "last_event_age_seconds": 2.47201,
+        "maker_fills": 39,
+        "maker_quotes": 349,
+        "maker_settlements": 38,
+        "markets": 556,
+        "realized_pnl": -37.43276531110945,
+        "roi_on_fill_cost": -0.20571974780781188,
         "sessions": 33,
         "source": "typed_sql_ledger_all_sessions",
         "toxic_fills": 12
       },
       "btc_price_venues": [
         {
-          "events": 938,
+          "events": 948,
           "venue": "chainlink_data_streams"
-        },
-        {
-          "events": 6,
-          "venue": "missing"
         }
       ],
       "complete_sessions": 0,
       "current_capital": 100.66985074626865,
       "edge_id": "nearline_queue_probe",
-      "events": 24,
+      "events": 30,
       "filled_cost": 1.36,
-      "fills": 38,
+      "fills": 39,
       "gross_fill_cost": 1.36,
       "hypothetical_signal_settlements": 0,
-      "last_event": "2026-06-19T06:56:52+00:00",
-      "last_event_age_seconds": 5.01129,
+      "last_event": "2026-06-19T07:27:13+00:00",
+      "last_event_age_seconds": 2.47201,
       "latest": {
         "btc_price_venue": "chainlink_data_streams",
         "decision": "no_signal",
@@ -322,56 +766,122 @@
         "fair_edge": null,
         "fair_probability": null,
         "reason": "outside_time_window",
-        "seconds_left": "188",
-        "slug": "btc-updown-5m-1781852100"
+        "seconds_left": "169",
+        "slug": "btc-updown-5m-1781853900"
       },
       "maker_fills": 1,
-      "maker_quotes": 41,
+      "maker_quotes": 61,
       "maker_settlements": 1,
-      "markets": 24,
-      "markets_seen": 546,
+      "markets": 30,
+      "markets_seen": 556,
       "ok": true,
-      "orders_placed": 325,
-      "paper_signals": 41,
+      "orders_placed": 349,
+      "paper_signals": 61,
       "pnl_dollars": 0.6698507462686567,
       "realized_pnl": 0.6698507462686567,
       "roi_on_filled_cost": 0.4925373134328358,
       "session_id": "rust_nearline_queue_probe_tail__paper_session_0002_1781845200",
       "session_status": "open",
       "sessions": 33,
-      "settlements": 37,
+      "settlements": 38,
       "source": "typed_sql_ledger",
       "top_reasons": [
         {
-          "events": 770,
-          "markets": 7,
-          "reason": "outside_time_window"
-        },
-        {
-          "events": 80,
-          "markets": 5,
-          "reason": "ask_outside_selected_table"
-        },
-        {
-          "events": 38,
+          "events": 760,
           "markets": 6,
-          "reason": "final_no_trade_window"
+          "reason": "outside_time_window",
+          "source": "paper_events"
         },
         {
-          "events": 17,
-          "markets": 1,
-          "reason": "already_signaled_market_side"
+          "events": 65,
+          "markets": 4,
+          "reason": "edge_below_threshold",
+          "source": "paper_events"
         },
         {
-          "events": 16,
+          "events": 62,
+          "markets": 3,
+          "reason": "ask_outside_selected_table",
+          "source": "paper_events"
+        },
+        {
+          "events": 29,
+          "markets": 5,
+          "reason": "final_no_trade_window",
+          "source": "paper_events"
+        },
+        {
+          "events": 27,
           "markets": 2,
-          "reason": "edge_below_threshold"
+          "reason": "already_signaled_market_side",
+          "source": "paper_events"
         }
       ],
-      "truth_missing_events": 6
+      "truth_missing_events": 0,
+      "typed_decision_reasons": [
+        {
+          "decision": "cancel",
+          "events": 4353,
+          "last_event": "2026-06-19T07:27:14+00:00",
+          "markets": 25,
+          "max_seconds_left": 300.0,
+          "min_seconds_left": 11.0,
+          "reason": "outside_table_time_window",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 407,
+          "last_event": "2026-06-19T07:23:27+00:00",
+          "markets": 22,
+          "max_seconds_left": 150.0,
+          "min_seconds_left": 91.0,
+          "reason": "side_not_dominant",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 220,
+          "last_event": "2026-06-19T07:24:58+00:00",
+          "markets": 22,
+          "max_seconds_left": 10.0,
+          "min_seconds_left": 1.0,
+          "reason": "final_no_trade_window",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 218,
+          "last_event": "2026-06-19T07:23:27+00:00",
+          "markets": 17,
+          "max_seconds_left": 149.0,
+          "min_seconds_left": 91.0,
+          "reason": "ask_outside_selected_table",
+          "source": "strategy_decisions"
+        },
+        {
+          "decision": "cancel",
+          "events": 129,
+          "last_event": "2026-06-19T07:18:28+00:00",
+          "markets": 14,
+          "max_seconds_left": 150.0,
+          "min_seconds_left": 91.0,
+          "reason": "edge_below_threshold",
+          "source": "strategy_decisions"
+        }
+      ],
+      "typed_decisions": {
+        "cancels": 5516,
+        "decisions": 5588,
+        "last_event": "2026-06-19T07:27:13+00:00",
+        "markets": 25,
+        "place_market_rate": 0.32,
+        "place_markets": 8,
+        "places": 72
+      }
     }
   ],
-  "generated_at": "2026-06-19T06:56:57.011290+00:00",
+  "generated_at": "2026-06-19T07:27:15.472010+00:00",
   "lookback_minutes": 120.0,
   "note": "No live orders are enabled by this report. Zero paper setups is a gate status, not a health failure.",
   "ok": true,

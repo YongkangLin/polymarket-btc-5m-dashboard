@@ -3125,6 +3125,20 @@ function paperRouteGateCells() {
       `${fmt.format(healthEdge.maker_fills || 0)} fills / ${fmt.format(healthEdge.maker_settlements || 0)} settled | ${formatSignedMoney(healthEdge.realized_pnl)} | ROI ${formatPercent(healthEdge.roi_on_filled_cost)}`,
     ),
   ] : [];
+  const typedDecisions = healthEdge.typed_decisions || {};
+  const placeRate = metricNumber(typedDecisions.place_market_rate);
+  if (recommendedEdge && typedDecisions.decisions !== undefined) {
+    healthCells.push(strategyCell(
+      "Paper Quotes",
+      `${fmt.format(typedDecisions.place_markets || 0)}/${fmt.format(typedDecisions.markets || 0)} markets | ${formatPercent(placeRate)}`,
+    ));
+  }
+  const blockers = (healthEdge.top_reasons || [])
+    .slice(0, 2)
+    .map((row) => `${humanReason(row.reason)} (${fmt.format(row.markets || 0)} markets)`);
+  if (recommendedEdge && blockers.length) {
+    healthCells.push(strategyCell("Main Blockers", blockers.join(" | ")));
+  }
   if (paperHealth.recommended_dashboard_edge_id) return healthCells;
   if (!decision.decision && !routePromotion.typed_paper) return healthCells;
   const activeSummary = routePromotion.typed_paper?.active?.summary || {};
