@@ -55,7 +55,7 @@ const LIVE_RENDER_MAX_SOURCE_ROWS_PER_LINE = 20000;
 const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
-const LIVE_AUX_VERSION_THROTTLE_MS = 750;
+const LIVE_AUX_VERSION_THROTTLE_MS = 100;
 const LIVE_CHART_SCHEMA_VERSION = "paper-live-v2-two-normalized-lines";
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -2575,10 +2575,22 @@ function outcomeSideBookSeen(row, side) {
   return sideField(row, side, "bid") !== null || sideField(row, side, "ask") !== null;
 }
 
+function clampOutcomeProbability(value) {
+  const number = metricNumber(value);
+  return number === null ? null : Math.max(0, Math.min(1, number));
+}
+
+function isResolvedBookPrice(value) {
+  const number = metricNumber(value);
+  return number !== null && (number <= 0.02 || number >= 0.98);
+}
+
 function outcomeDisplayBookOddsFromCandidates(candidates) {
   const rows = outcomeRowsNewestFirst(candidates);
-  const up = rows.map((row) => outcomeDisplayBookProbability(row, "up")).find((value) => value !== null) ?? null;
-  const down = rows.map((row) => outcomeDisplayBookProbability(row, "down")).find((value) => value !== null) ?? null;
+  let up = rows.map((row) => outcomeDisplayBookProbability(row, "up")).find((value) => value !== null) ?? null;
+  let down = rows.map((row) => outcomeDisplayBookProbability(row, "down")).find((value) => value !== null) ?? null;
+  if (up === null && isResolvedBookPrice(down)) up = clampOutcomeProbability(1 - down);
+  if (down === null && isResolvedBookPrice(up)) down = clampOutcomeProbability(1 - up);
   const upBookSeen = rows.some((row) => outcomeSideBookSeen(row, "up"));
   const downBookSeen = rows.some((row) => outcomeSideBookSeen(row, "down"));
   return {
@@ -5027,6 +5039,15 @@ function outcomeBookProbability(row, side) {
 function outcomeDisplayBookProbability(row, side) {
   const ask = sideField(row, side, "ask");
   if (ask !== null) return ask;
+  const bid = sideField(row, side, "bid");
+  const opposite = oppositeSideKey(side);
+  const oppositeAsk = sideField(row, opposite, "ask");
+  const oppositeBid = sideField(row, opposite, "bid");
+  if (bid !== null && (isResolvedBookPrice(bid) || isResolvedBookPrice(oppositeAsk) || isResolvedBookPrice(oppositeBid))) {
+    return clampOutcomeProbability(bid);
+  }
+  if (isResolvedBookPrice(oppositeAsk)) return clampOutcomeProbability(1 - oppositeAsk);
+  if (isResolvedBookPrice(oppositeBid)) return clampOutcomeProbability(1 - oppositeBid);
   return null;
 }
 
@@ -6457,7 +6478,11 @@ function handleBackendStreamMessage(payload) {
       lastStreamAt: new Date(),
       url: backendWebSocketUrl(),
     };
-    if (payload.type === "window") flushPaperTickPersist();
+    if (payload.type === "window") {
+      rememberOutcomeOddsForWindow(market, [payload.market, ...(payload.points || [])]);
+      bumpPaperAuxVersion(true);
+      flushPaperTickPersist();
+    }
     scheduleLiveTickRender();
     return;
   }

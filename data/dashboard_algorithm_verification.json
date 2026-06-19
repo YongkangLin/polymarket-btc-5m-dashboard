@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-19T12:44:09.477862+00:00",
+  "generated_at": "2026-06-19T17:01:44.644261+00:00",
   "status": "passed",
   "feature_summary": {
     "markets": 2167,
@@ -23,8 +23,8 @@
     "roi_after_slippage_haircut": null
   },
   "workflow_summary": {
-    "strategy": "nearline_queue_probe",
-    "status": "golden_strategy_contract",
+    "strategy": "high_coverage_h5_challenger",
+    "status": "needs_backtest_audit",
     "clean_markets": 2167,
     "decision_rows": 133346,
     "wallet_profile_strategies": [
@@ -34,19 +34,19 @@
     ]
   },
   "engine_summary": {
-    "config": "live-engine/config/btc_5m_nearline_queue_probe_shadow.json",
+    "config": "live-engine/config/btc_5m_high_coverage_h5_challenger_shadow.json",
     "mode": "shadow",
     "symbols": [
       "BTC"
     ],
     "table_gate": {
       "enabled": true,
-      "min_seconds_left": 91,
-      "max_seconds_left": 150,
+      "min_seconds_left": 121,
+      "max_seconds_left": 240,
       "min_abs_distance_bps": 0.0,
-      "max_abs_distance_bps": 10.0,
-      "min_ask": 0.65,
-      "max_ask": 0.9,
+      "max_abs_distance_bps": 12.0,
+      "min_ask": 0.55,
+      "max_ask": 0.75,
       "min_top5_capacity_dollars": 25.0,
       "min_signal_depth_imbalance": null,
       "min_trade_flow_edge_dollars": null,
@@ -96,9 +96,9 @@
       "id": "strict_report_candidate_synced",
       "label": "Strict report and dashboard candidate are identical when strict is active",
       "actual": {
-        "candidate": "docs/data/candidate_nearline_no_cancel_strategy.json",
-        "candidate_hash": "18476d2894e090ddf463b1843d5fcf4656f9cd0b4fbf21445d90431d8021040e",
-        "algorithm_hash": "18476d2894e090ddf463b1843d5fcf4656f9cd0b4fbf21445d90431d8021040e"
+        "candidate": "docs/data/candidate_high_coverage_h5_challenger_strategy.json",
+        "candidate_hash": "1457f54842c1b248aa5e5e52799ce1e86bb6fbaa2a1ea6bceb3e60dee2751415",
+        "algorithm_hash": "ea23daf22ba6be8bbbe91b3bade8a623aedb871f4128de4e5ce474973af64319"
       },
       "expected": {
         "strict_candidate": "docs/data/candidate_strict_directional_maker_strategy.json",
@@ -178,8 +178,8 @@
     {
       "id": "workflow_signals_match_algorithm",
       "label": "Workflow signal count matches algorithm",
-      "actual": 820,
-      "expected": 820,
+      "actual": 696,
+      "expected": 696,
       "passed": true
     },
     {
@@ -187,28 +187,28 @@
       "label": "Workflow active summary matches dashboard candidate",
       "actual": {
         "clean_markets_scanned": 2167,
-        "quote_markets": 820,
-        "quoted_markets": 820,
-        "quote_market_rate": 0.378403,
-        "filled_markets": 584,
-        "test_quote_markets": 259,
-        "test_filled_markets": 163,
-        "test_pnl_dollars": 66.1086,
-        "test_roi_on_planned_cost": 0.051049,
-        "test_roi_on_filled_cost": 0.082051,
+        "quote_markets": 696,
+        "quoted_markets": 696,
+        "quote_market_rate": 0.321181,
+        "filled_markets": 528,
+        "test_quote_markets": 246,
+        "test_filled_markets": 171,
+        "test_pnl_dollars": 64.8952,
+        "test_roi_on_planned_cost": 0.05276,
+        "test_roi_on_filled_cost": 0.076114,
         "test_positive_day_share": 0.8
       },
       "expected": {
         "clean_markets_scanned": 2167,
-        "quote_markets": 820,
-        "quoted_markets": 820,
-        "quote_market_rate": 0.3784033225657591,
-        "filled_markets": 584,
-        "test_quote_markets": 259,
-        "test_filled_markets": 163,
-        "test_pnl_dollars": 66.1086,
-        "test_roi_on_planned_cost": 0.051049111969111965,
-        "test_roi_on_filled_cost": 0.08205105418785733,
+        "quote_markets": 696,
+        "quoted_markets": 696,
+        "quote_market_rate": 0.32118135671435166,
+        "filled_markets": 528,
+        "test_quote_markets": 246,
+        "test_filled_markets": 171,
+        "test_pnl_dollars": 64.89519999999999,
+        "test_roi_on_planned_cost": 0.05276032520325202,
+        "test_roi_on_filled_cost": 0.0761144733755571,
         "test_positive_day_share": 0.8
       },
       "passed": true
@@ -216,8 +216,8 @@
     {
       "id": "workflow_win_rate_matches_algorithm",
       "label": "Workflow ROI/reference metric matches algorithm",
-      "actual": 0.033766,
-      "expected": 0.033766,
+      "actual": 0.026597,
+      "expected": 0.026597,
       "passed": true
     },
     {
@@ -240,8 +240,8 @@
     {
       "id": "public_workflow_synced",
       "label": "Public dashboard workflow is synced",
-      "actual": "88098f94cfb6b03b92f8fd8ce0095adbbe3236dabd06d7fdef37128803d02610",
-      "expected": "88098f94cfb6b03b92f8fd8ce0095adbbe3236dabd06d7fdef37128803d02610",
+      "actual": "9006b37fce24f6273390202e8fd42d234836e05593b93383dcd3da9aa62b0036",
+      "expected": "9006b37fce24f6273390202e8fd42d234836e05593b93383dcd3da9aa62b0036",
       "passed": true
     },
     {
@@ -316,12 +316,12 @@
       "label": "Rust table gate matches selected algorithm",
       "actual": {
         "enabled": true,
-        "min_seconds_left": 91,
-        "max_seconds_left": 150,
+        "min_seconds_left": 121,
+        "max_seconds_left": 240,
         "min_abs_distance_bps": 0.0,
-        "max_abs_distance_bps": 10.0,
-        "min_ask": 0.65,
-        "max_ask": 0.9,
+        "max_abs_distance_bps": 12.0,
+        "min_ask": 0.55,
+        "max_ask": 0.75,
         "min_top5_capacity_dollars": 25.0,
         "min_signal_depth_imbalance": null,
         "min_trade_flow_edge_dollars": null,
@@ -332,12 +332,12 @@
       },
       "expected": {
         "enabled": true,
-        "min_seconds_left": 91,
-        "max_seconds_left": 150,
+        "min_seconds_left": 121,
+        "max_seconds_left": 240,
         "min_abs_distance_bps": 0.0,
-        "max_abs_distance_bps": 10.0,
-        "min_ask": 0.65,
-        "max_ask": 0.9,
+        "max_abs_distance_bps": 12.0,
+        "min_ask": 0.55,
+        "max_ask": 0.75,
         "min_top5_capacity_dollars": 25.0,
         "min_signal_depth_imbalance": null,
         "min_trade_flow_edge_dollars": null,
