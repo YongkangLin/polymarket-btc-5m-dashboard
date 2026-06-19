@@ -2581,8 +2581,15 @@ function rowHasOutcomeBookQuote(row) {
   return outcomeSideBookSeen(row, "up") || outcomeSideBookSeen(row, "down");
 }
 
+function isLivePriceTransportRow(row) {
+  return ["chainlink", "trade", "depth", "book"].includes(row?.backend_event_kind)
+    || ["chainlink_tick", "live_tick", "live_book_tick"].includes(row?.decision)
+    || isBinanceLivePoint(row);
+}
+
 function rowHasDisplayPolymarketBook(row) {
   if (!row || isActionOnlyPaperOddsRow(row) || !rowHasOutcomeBookQuote(row)) return false;
+  if (isLivePriceTransportRow(row)) return false;
   if (
     row.polymarket_book_source
     || row.pm_book_condition_id
