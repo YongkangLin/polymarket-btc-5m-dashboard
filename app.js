@@ -102,6 +102,7 @@ const state = {
   },
   paperSelectSignature: "",
   paperAuxRenderCache: new Map(),
+  paperCollapsedPanels: new Set(),
   paperAuxVersion: 0,
   paperAuxBookKey: "",
   paperUPlotCharts: new Map(),
@@ -810,13 +811,33 @@ function renderPaperAuxHtml({ chartId, selectedCurrent, market, rawPoints, lates
   const cached = cacheable ? state.paperAuxRenderCache.get(cacheKey) : null;
   if (cached && now - cached.renderedAt < LIVE_AUX_RENDER_THROTTLE_MS) return cached.html;
   const html = [
+    isLiveView ? "" : renderPaperSessionHistory(session || paperSession()),
     renderPaperActionLog(market, rawPoints),
     renderPolymarketBookTable(market, rawPoints),
     renderOrderBookTable(market, rawPoints, latestBookRaw || latestRaw || null, latestQuote || null),
-    isLiveView ? "" : renderPaperSessionHistory(session || paperSession()),
   ].join("");
   if (cacheable) state.paperAuxRenderCache.set(cacheKey, { renderedAt: now, html });
   return html;
+}
+
+function renderCollapsiblePanel(panelId, className, title, meta, bodyHtml, open = true) {
+  const isOpen = open && !state.paperCollapsedPanels.has(panelId);
+  return `
+    <section class="${escapeHtml(className)} paper-collapsible" data-paper-panel="${escapeHtml(panelId)}">
+      <button class="paper-book-heading paper-collapse-button" type="button" data-paper-toggle="${escapeHtml(panelId)}" aria-expanded="${isOpen ? "true" : "false"}">
+        <span>${escapeHtml(title)}</span>
+        <span class="paper-heading-meta">
+          ${meta ? `<span>${escapeHtml(meta)}</span>` : ""}
+          <span class="paper-collapse-state" aria-hidden="true">
+            <span class="is-open">Hide</span>
+            <span class="is-closed">Show</span>
+          </span>
+        </span>
+      </button>
+      <div class="paper-collapsible-body" ${isOpen ? "" : "hidden"}>
+        ${bodyHtml}
+      </div>
+    </section>`;
 }
 
 function setPaperChartContent(chart, visualHtml, auxHtml = "") {
@@ -1741,6 +1762,34 @@ function currentWindowRow(row, fallbackKey = "") {
   return start !== null && start === currentWindowStartUnixNow();
 }
 
+function balancedLiveTickRows(rows, maxRows) {
+  const currentRows = (rows || []).filter((row) => currentWindowRow(row));
+  if (currentRows.length <= maxRows) return currentRows;
+  const first = currentRows[0];
+  const chainlinkRows = currentRows.filter(isChainlinkPriceRow);
+  const binanceRows = currentRows.filter(isBinanceLivePoint);
+  const otherRows = currentRows.filter((row) => !isChainlinkPriceRow(row) && !isBinanceLivePoint(row));
+  if (!chainlinkRows.length || !binanceRows.length) {
+    return [first, ...currentRows.slice(-(maxRows - 1))];
+  }
+  const binanceLimit = Math.max(1, Math.floor(maxRows * 0.55));
+  const chainlinkLimit = Math.max(1, Math.floor(maxRows * 0.35));
+  const otherLimit = Math.max(0, maxRows - binanceLimit - chainlinkLimit - 1);
+  const seen = new Set();
+  const selected = [];
+  [first, ...chainlinkRows.slice(-chainlinkLimit), ...binanceRows.slice(-binanceLimit), ...otherRows.slice(-otherLimit)]
+    .filter(Boolean)
+    .sort((left, right) => paperRowTimeMicro(left) - paperRowTimeMicro(right))
+    .forEach((row) => {
+      const key = liveBtcPointKey(row);
+      if (seen.has(key)) return;
+      seen.add(key);
+      selected.push(row);
+    });
+  while (selected.length > maxRows) selected.splice(1, 1);
+  return selected;
+}
+
 function rowBelongsToMarketWindow(row, market) {
   const marketStart = marketWindowStartUnix(market);
   const rowStart = marketWindowStartUnix(row);
@@ -1748,10 +1797,7 @@ function rowBelongsToMarketWindow(row, market) {
 }
 
 function compactPersistedRows(rows, maxRows) {
-  const currentRows = (rows || []).filter((row) => currentWindowRow(row));
-  const keepRows = currentRows.length <= maxRows
-    ? currentRows
-    : [currentRows[0], ...currentRows.slice(-(maxRows - 1))];
+  const keepRows = balancedLiveTickRows(rows, maxRows);
   let keepBookIndex = -1;
   keepRows.forEach((row, index) => {
     if (externalDepthSnapshotFromRow(row)) keepBookIndex = index;
@@ -2340,10 +2386,14 @@ function externalLineRows(rows) {
   const bookTicks = ordered.filter(isExternalBookTickerPricePoint);
   const depthTicks = ordered.filter(isExternalDepthPricePoint);
   const trades = ordered.filter(isExternalTradePricePoint);
-  if (bookTicks.length >= 3) return bookTicks;
-  if (depthTicks.length >= 3) return depthTicks;
-  if (trades.length >= 3) return trades;
-  return bookTicks.length ? bookTicks : (depthTicks.length ? depthTicks : (trades.length ? trades : ordered));
+  const candidates = [bookTicks, depthTicks, trades].filter((candidate) => candidate.length);
+  const viable = candidates.filter((candidate) => candidate.length >= 3);
+  if (!viable.length) return candidates[0] || ordered;
+  return viable.sort((left, right) => {
+    const leftTime = pointTimestampMicro(left[left.length - 1]) || 0;
+    const rightTime = pointTimestampMicro(right[right.length - 1]) || 0;
+    return rightTime - leftTime;
+  })[0];
 }
 
 function externalLineLabel(rows) {
@@ -4280,7 +4330,8 @@ function paperSession() {
 
 function paperSessionHistoryRows(session) {
   const history = Array.isArray(session?.pnl_history) ? session.pnl_history : [];
-  return history.slice(-12);
+  const limit = Math.max(1, Math.min(metricNumber(session?.market_limit) ?? 36, 200));
+  return history.slice(-limit);
 }
 
 function paperSessionRealizedPnl(session) {
@@ -4514,7 +4565,7 @@ function renderPaperSessionHistory(session) {
   if (!history.length) return "";
   const startingCapital = metricNumber(session?.starting_capital ?? session?.paper_session_starting_capital) ?? 100;
   let runningCapital = startingCapital;
-  const chronologicalRows = history.slice(-12).map((row) => {
+  const chronologicalRows = history.map((row) => {
     const pnl = metricNumber(row.pnl_dollars);
     runningCapital += pnl ?? 0;
     return { ...row, _displayCapitalAfter: runningCapital };
@@ -4537,12 +4588,12 @@ function renderPaperSessionHistory(session) {
         <td>${escapeHtml(moneyCents.format(metricNumber(row._displayCapitalAfter) ?? metricNumber(row.capital_after) ?? 0))}</td>
       </tr>`;
   }).join("");
-  return `
-    <div class="paper-session-history">
-      <div class="paper-book-heading">
-        <span>Session P&L History</span>
-        <span>${escapeHtml(`${metricNumber(session?.market_count) ?? 0}/${metricNumber(session?.market_limit) ?? 36} markets`)}</span>
-      </div>
+  return renderCollapsiblePanel(
+    "session_pnl",
+    "paper-session-history",
+    "Session P&L History",
+    `${metricNumber(session?.market_count) ?? 0}/${metricNumber(session?.market_limit) ?? 36} markets`,
+    `
       <table>
         <thead>
           <tr>
@@ -4555,7 +4606,9 @@ function renderPaperSessionHistory(session) {
         </thead>
         <tbody>${rows}</tbody>
       </table>
-    </div>`;
+    `,
+    true,
+  );
 }
 
 function outcomeBookProbability(row, side) {
@@ -4764,12 +4817,12 @@ function renderPolymarketBookTable(market, rawPoints) {
     <tr class="paper-book-row is-neutral">
       <td colspan="5">Waiting for Rust Polymarket book recorder.</td>
     </tr>`;
-  return `
-    <div class="paper-book-table">
-      <div class="paper-book-heading">
-        <span>Polymarket Up/Down Depth</span>
-        <span>${escapeHtml(sourceLabel)}</span>
-      </div>
+  return renderCollapsiblePanel(
+    "polymarket_depth",
+    "paper-book-table",
+    "Polymarket Up/Down Depth",
+    sourceLabel,
+    `
       <table>
         <thead>
           <tr>
@@ -4782,7 +4835,9 @@ function renderPolymarketBookTable(market, rawPoints) {
         </thead>
         <tbody>${body}</tbody>
       </table>
-    </div>`;
+    `,
+    true,
+  );
 }
 
 function orderBookTableRows(market, rawPoints, latestRaw, latestQuote, snapshot = null) {
@@ -4823,12 +4878,12 @@ function renderOrderBookTable(market, rawPoints, latestRaw, latestQuote) {
     <tr class="paper-book-row is-neutral">
       <td colspan="4">Waiting for Binance depth WS.</td>
     </tr>`;
-  return `
-    <div class="paper-book-table">
-      <div class="paper-book-heading">
-        <span>BTC Binance Depth</span>
-        <span>${escapeHtml(depthLabel)}</span>
-      </div>
+  return renderCollapsiblePanel(
+    "binance_depth",
+    "paper-book-table",
+    "BTC Binance Depth",
+    depthLabel,
+    `
       <table>
         <thead>
           <tr>
@@ -4840,7 +4895,9 @@ function renderOrderBookTable(market, rawPoints, latestRaw, latestQuote) {
         </thead>
         <tbody>${body}</tbody>
       </table>
-    </div>`;
+    `,
+    true,
+  );
 }
 
 function paperMarkerTitle(row) {
@@ -5077,12 +5134,12 @@ function renderPaperActionLog(market, rawPoints) {
         </tr>`;
     }).join("")
     : `<tr><td colspan="4">No performed actions yet.</td></tr>`;
-  return `
-    <div class="paper-action-log">
-      <div class="paper-book-heading">
-        <span>Algorithm Action Log</span>
-        <span>latest first</span>
-      </div>
+  return renderCollapsiblePanel(
+    "action_log",
+    "paper-action-log",
+    "Algorithm Action Log",
+    "latest first",
+    `
       <table>
         <thead>
           <tr>
@@ -5094,7 +5151,9 @@ function renderPaperActionLog(market, rawPoints) {
         </thead>
         <tbody>${body}</tbody>
       </table>
-    </div>`;
+    `,
+    true,
+  );
 }
 
 function renderPaperDecisionGraph(options = {}) {
@@ -5141,7 +5200,13 @@ function renderPaperDecisionGraph(options = {}) {
   if (marketTruthPoint && !truthRows.some((row) => row.point_id === marketTruthPoint.point_id || row.event_time_micro === marketTruthPoint.event_time_micro)) {
     truthRows = [...truthRows, marketTruthPoint];
   }
-  const externalCandidates = priceRows.filter((row) => isExternalPricePoint(row) && !isPolymarketTruthPoint(row));
+  const directExternalCandidates = liveTickPointsForMarket(market)
+    .filter((row) => rowBelongsToMarketWindow(row, market))
+    .filter((row) => isExternalPricePoint(row) && !isPolymarketTruthPoint(row));
+  const externalCandidates = mergePaperChartRows(
+    priceRows.filter((row) => isExternalPricePoint(row) && !isPolymarketTruthPoint(row)),
+    directExternalCandidates,
+  );
   const externalRows = externalLineRows(externalCandidates);
   const fullWindowExternalRows = externalLineRows(
     liveTickPointsForMarket(market)
@@ -5636,7 +5701,7 @@ function liveTickKeySetForMarket(key, points) {
 function trimLiveBtcPointsForKey(key, points) {
   const maxRows = LIVE_TICK_STORE_MAX_POINTS_PER_MARKET + LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET;
   if (points.length <= maxRows) return points;
-  const trimmed = points.slice(-maxRows);
+  const trimmed = balancedLiveTickRows(points, maxRows);
   state.liveBtcTickKeysByMarket.set(key, new Set(trimmed.map(liveBtcPointKey)));
   return trimmed;
 }
@@ -6220,6 +6285,19 @@ async function main() {
     state.marketFilter = event.target.value;
     renderBacktestSelects();
     renderBacktestChart();
+  });
+  document.addEventListener("click", (event) => {
+    const button = event.target?.closest?.("[data-paper-toggle]");
+    if (!button) return;
+    const panelId = button.dataset.paperToggle;
+    if (!panelId) return;
+    if (state.paperCollapsedPanels.has(panelId)) {
+      state.paperCollapsedPanels.delete(panelId);
+    } else {
+      state.paperCollapsedPanels.add(panelId);
+    }
+    state.paperAuxVersion += 1;
+    renderActiveTab();
   });
   window.setInterval(() => {
     if (state.activeTab === "paper" || state.activeTab === "live") {

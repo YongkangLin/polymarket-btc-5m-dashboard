@@ -742,8 +742,23 @@ svg {
   overflow-x: auto;
 }
 
+.paper-collapsible {
+  display: block;
+}
+
+.paper-collapse-button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+}
+
 .paper-book-heading {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
   padding: 14px 4px 10px;
@@ -752,10 +767,43 @@ svg {
   font-weight: 900;
 }
 
+.paper-heading-meta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+  text-align: right;
+}
+
 .paper-book-heading span:last-child {
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
+}
+
+.paper-collapse-state {
+  min-width: 38px;
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.paper-collapsible .is-closed {
+  display: none;
+}
+
+.paper-collapse-button[aria-expanded="false"] .is-open {
+  display: none;
+}
+
+.paper-collapse-button[aria-expanded="false"] .is-closed {
+  display: inline;
+}
+
+.paper-collapse-button[aria-expanded="false"] {
+  padding-bottom: 14px;
 }
 
 .paper-session-history table,
