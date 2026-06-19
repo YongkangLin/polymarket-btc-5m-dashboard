@@ -841,6 +841,20 @@ function renderPaperAuxHtml({ chartId, selectedCurrent, market, rawPoints, lates
   return html;
 }
 
+function renderPaperEmptyAuxHtml({ chartId, selectedCurrent, market, isLiveView }) {
+  return renderPaperAuxHtml({
+    chartId,
+    selectedCurrent,
+    market,
+    rawPoints: [],
+    latestRaw: null,
+    latestBookRaw: null,
+    latestQuote: null,
+    session: paperSession(),
+    isLiveView,
+  });
+}
+
 function renderCollapsiblePanel(panelId, className, title, meta, bodyHtml, open = true) {
   const isOpen = open && !state.paperCollapsedPanels.has(panelId);
   return `
@@ -5267,21 +5281,17 @@ function renderPaperDecisionGraph(options = {}) {
   const rawPoints = market ? paperChartPointsFor(market) : [];
   const chart = byId(options.chartId || "paperChart");
   const selectedCurrent = (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE && isCurrentPaperMarket(market);
+  const emptyAuxHtml = renderPaperEmptyAuxHtml({
+    chartId: chart?.id || options.chartId || "paperChart",
+    selectedCurrent,
+    market,
+    isLiveView,
+  });
   if (!market || !rawPoints.length) {
     if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) {
       const loadingExtras = [
         renderPaperOddsStrip(market, null, null),
-        renderPaperAuxHtml({
-          chartId: chart.id || options.chartId || "paperChart",
-          selectedCurrent,
-          market,
-          rawPoints,
-          latestRaw: null,
-          latestBookRaw: null,
-          latestQuote: null,
-          session: paperSession(),
-          isLiveView,
-        }),
+        emptyAuxHtml,
       ].join("");
       if (market && !verifiedPaperStartPrice(market)) {
         const startStatus = market.start_price_status || liveStartMetadata(market).start_price_status || "loading";
@@ -5294,7 +5304,7 @@ function renderPaperDecisionGraph(options = {}) {
       setPaperChartContent(chart, svgEmpty("Loading ticks."), loadingExtras);
       return;
     }
-    setPaperChartContent(chart, svgEmpty("No path."), "");
+    setPaperChartContent(chart, svgEmpty("No path."), emptyAuxHtml);
     return;
   }
 
@@ -5342,17 +5352,7 @@ function renderPaperDecisionGraph(options = {}) {
     const hasPrices = priceRows.some((row) => metricNumber(row?.btc_price) !== null);
     const waitingExtras = [
       renderPaperOddsStrip(market, null, null),
-      renderPaperAuxHtml({
-        chartId: chart.id || options.chartId || "paperChart",
-        selectedCurrent,
-        market,
-        rawPoints,
-        latestRaw: null,
-        latestBookRaw: null,
-        latestQuote: null,
-        session: paperSession(),
-        isLiveView,
-      }),
+      emptyAuxHtml,
     ].join("");
     setPaperChartContent(chart, svgEmpty(hasPrices && !startMeta ? "Waiting for Polymarket start." : "No usable points."), waitingExtras);
     return;
