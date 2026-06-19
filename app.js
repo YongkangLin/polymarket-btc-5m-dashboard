@@ -977,6 +977,16 @@ function ensureTradeSessionAuxHtml(chart, auxHtml = "") {
   return `${renderPaperSessionHistory(tradeViewSession(chart.id === "liveChart"))}${html}`;
 }
 
+function ensureTradeSessionPanelMounted(chart, aux) {
+  if (!chart || !aux || (chart.id !== "paperChart" && chart.id !== "liveChart")) return;
+  if (aux.querySelector('[data-paper-panel="session_pnl"]')) {
+    syncPaperCollapseStates(aux);
+    return;
+  }
+  aux.insertAdjacentHTML("afterbegin", renderPaperSessionHistory(tradeViewSession(chart.id === "liveChart")));
+  syncPaperCollapseStates(aux);
+}
+
 function setPaperChartContent(chart, visualHtml, auxHtml = "") {
   if (!chart) return;
   const normalizedAuxHtml = ensureTradeSessionAuxHtml(chart, auxHtml);
@@ -996,6 +1006,7 @@ function setPaperChartContent(chart, visualHtml, auxHtml = "") {
     patchPaperAuxContent(aux, normalizedAuxHtml);
     chart._paperAuxHtml = normalizedAuxHtml;
   }
+  ensureTradeSessionPanelMounted(chart, aux);
 }
 
 function canUseUPlot() {

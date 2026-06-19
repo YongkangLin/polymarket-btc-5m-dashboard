@@ -876,7 +876,8 @@ svg {
 .paper-session-row.is-empty td {
   color: var(--muted);
   font-weight: 800;
-  text-align: center;
+  text-align: left;
+  white-space: normal;
 }
 
 .paper-action-row.is-yes {
