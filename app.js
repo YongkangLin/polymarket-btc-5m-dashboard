@@ -879,7 +879,6 @@ function renderPaperAuxHtml({ chartId, selectedCurrent, market, rawPoints, lates
   const cached = cacheable ? state.paperAuxRenderCache.get(cacheKey) : null;
   if (cached && now - cached.renderedAt < LIVE_AUX_RENDER_THROTTLE_MS) return cached.html;
   const html = [
-    renderPaperSessionHistory(resolvedSession),
     renderPaperActionLog(market, rawPoints),
     renderPolymarketBookTable(market, rawPoints),
     renderOrderBookTable(market, rawPoints, latestBookRaw || latestRaw || null, latestQuote || null),
@@ -957,9 +956,20 @@ function chartForTradeSessionAux(aux) {
   return null;
 }
 
+function tradeSessionSlotForChart(chart) {
+  if (chart?.id === "paperChart") return byId("paperSessionPnlSlot");
+  if (chart?.id === "liveChart") return byId("liveSessionPnlSlot");
+  return null;
+}
+
+function tradeSessionSlotForAux(aux) {
+  return tradeSessionSlotForChart(chartForTradeSessionAux(aux));
+}
+
 function ensureTradeSessionAuxKeepsPanel(aux, auxHtml = "") {
   const html = String(auxHtml || "");
   if (!isTradeSessionAux(aux) || html.includes('data-paper-panel="session_pnl"')) return html;
+  if (tradeSessionSlotForAux(aux)) return html;
   return `${tradeSessionPanelHtmlForAux(aux)}${html}`;
 }
 
@@ -1030,6 +1040,7 @@ function ensureTradeSessionAuxHtml(chart, auxHtml = "") {
   const html = String(auxHtml || "");
   if (!chart || (chart.id !== "paperChart" && chart.id !== "liveChart")) return html;
   if (html.includes('data-paper-panel="session_pnl"')) return html;
+  if (tradeSessionSlotForChart(chart)) return html;
   return `${renderPaperSessionHistory(tradeViewSession(chart.id === "liveChart"))}${html}`;
 }
 
@@ -1038,7 +1049,10 @@ function ensureTradeSessionPanelMounted(chart, aux) {
   const sessionHtml = isTradeSessionAux(aux)
     ? tradeSessionPanelHtmlForAux(aux)
     : renderPaperSessionHistory(tradeViewSession(chart.id === "liveChart"));
-  const existing = aux.querySelector('[data-paper-panel="session_pnl"]');
+  const slot = tradeSessionSlotForChart(chart);
+  const target = slot || aux;
+  if (slot) aux.querySelector('[data-paper-panel="session_pnl"]')?.remove();
+  const existing = target.querySelector('[data-paper-panel="session_pnl"]');
   if (existing) {
     const template = document.createElement("div");
     template.innerHTML = sessionHtml;
@@ -1046,11 +1060,15 @@ function ensureTradeSessionPanelMounted(chart, aux) {
     if (next && existing.outerHTML !== next.outerHTML) {
       existing.replaceWith(next);
     }
-    syncPaperCollapseStates(aux);
+    syncPaperCollapseStates(target);
     return;
   }
-  aux.insertAdjacentHTML("afterbegin", sessionHtml);
-  syncPaperCollapseStates(aux);
+  if (slot) {
+    slot.innerHTML = sessionHtml;
+  } else {
+    aux.insertAdjacentHTML("afterbegin", sessionHtml);
+  }
+  syncPaperCollapseStates(target);
 }
 
 function ensureTradeSessionPanelsMounted() {

@@ -737,8 +737,13 @@ svg {
   overflow-x: auto;
 }
 
+.panel > .paper-session-slot,
 .panel > .paper-chart-aux {
   padding: 0 16px 16px;
+}
+
+.panel > .paper-session-slot {
+  padding-bottom: 0;
 }
 
 .paper-session-history,
@@ -747,6 +752,12 @@ svg {
   margin-top: 14px;
   border-top: 1px solid var(--line);
   overflow-x: auto;
+}
+
+.paper-session-slot .paper-session-history {
+  margin-top: 0;
+  border-top: 0;
+  border-bottom: 1px solid var(--line);
 }
 
 .paper-collapsible {

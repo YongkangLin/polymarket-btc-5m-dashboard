@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>BTC 5m Trading Workflow</title>
     <link rel="stylesheet" href="https://unpkg.com/uplot@1.6.32/dist/uPlot.min.css">
-    <link rel="stylesheet" href="styles.css?v=20260619-009">
+    <link rel="stylesheet" href="styles.css?v=20260619-010">
   </head>
   <body>
     <main class="shell">
@@ -44,8 +44,7 @@
           <div class="paper-meta" id="paperGraphMeta" role="status" aria-live="polite"></div>
         </div>
         <div class="strategy-strip" id="paperStrategy" hidden></div>
-        <div class="chart" id="paperChart"></div>
-        <div class="paper-chart-aux" id="paperChartAux" aria-label="Paper trade session details">
+        <div class="paper-session-slot" id="paperSessionPnlSlot" aria-label="Paper trade session P&amp;L">
           <section class="paper-session-history paper-collapsible" data-paper-panel="session_pnl">
             <button class="paper-book-heading paper-collapse-button" type="button" data-paper-toggle="session_pnl" aria-expanded="true">
               <span>Historical Session P&amp;L</span>
@@ -77,6 +76,8 @@
             </div>
           </section>
         </div>
+        <div class="chart" id="paperChart"></div>
+        <div class="paper-chart-aux" id="paperChartAux" aria-label="Paper trade session details"></div>
       </section>
 
       <section class="panel" id="livePanel" data-panel="live">
@@ -84,8 +85,7 @@
           <div class="paper-meta" id="liveGraphMeta" role="status" aria-live="polite"></div>
         </div>
         <div class="strategy-strip" id="liveStrategy"></div>
-        <div class="chart" id="liveChart"></div>
-        <div class="paper-chart-aux" id="liveChartAux" aria-label="Live trade session details">
+        <div class="paper-session-slot" id="liveSessionPnlSlot" aria-label="Live trade session P&amp;L">
           <section class="paper-session-history paper-collapsible" data-paper-panel="session_pnl">
             <button class="paper-book-heading paper-collapse-button" type="button" data-paper-toggle="session_pnl" aria-expanded="true">
               <span>Historical Session P&amp;L</span>
@@ -117,10 +117,12 @@
             </div>
           </section>
         </div>
+        <div class="chart" id="liveChart"></div>
+        <div class="paper-chart-aux" id="liveChartAux" aria-label="Live trade session details"></div>
       </section>
     </main>
 
     <script src="https://unpkg.com/uplot@1.6.32/dist/uPlot.iife.min.js"></script>
-    <script src="app.js?v=20260619-025"></script>
+    <script src="app.js?v=20260619-026"></script>
   </body>
 </html>
