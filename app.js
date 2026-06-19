@@ -1022,6 +1022,11 @@ function ensureTradeSessionPanelMounted(chart, aux) {
   syncPaperCollapseStates(aux);
 }
 
+function ensureTradeSessionPanelsMounted() {
+  ensureTradeSessionPanelMounted(byId("paperChart"), byId("paperChartAux"));
+  ensureTradeSessionPanelMounted(byId("liveChart"), byId("liveChartAux"));
+}
+
 function tradeChartExternalAux(chart) {
   if (!chart || (chart.id !== "paperChart" && chart.id !== "liveChart")) return null;
   return byId(`${chart.id}Aux`);
@@ -6534,6 +6539,7 @@ async function refreshWorkflow() {
 }
 
 function renderActiveTab() {
+  ensureTradeSessionPanelsMounted();
   document.querySelectorAll(".tab").forEach((button) => {
     button.setAttribute("aria-selected", button.dataset.tab === state.activeTab ? "true" : "false");
     button.classList.toggle("is-active", button.dataset.tab === state.activeTab);
@@ -6558,6 +6564,7 @@ async function main() {
   state.workflow = normalizeWorkflow(await loadJson("data/workflow.json"));
   renderStatus();
   renderStrategyPanels();
+  ensureTradeSessionPanelsMounted();
   renderBacktestSelects();
   renderActiveTab();
   refreshBackendPaperFeeds({ render: false });
