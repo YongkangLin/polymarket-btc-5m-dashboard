@@ -1045,13 +1045,14 @@ function ensureTradeSessionAuxHtml(chart, auxHtml = "") {
 }
 
 function ensureTradeSessionPanelMounted(chart, aux) {
-  if (!chart || !aux || (chart.id !== "paperChart" && chart.id !== "liveChart")) return;
+  if (!chart || (chart.id !== "paperChart" && chart.id !== "liveChart")) return;
   const sessionHtml = isTradeSessionAux(aux)
     ? tradeSessionPanelHtmlForAux(aux)
     : renderPaperSessionHistory(tradeViewSession(chart.id === "liveChart"));
   const slot = tradeSessionSlotForChart(chart);
+  if (!slot && !aux) return;
   const target = slot || aux;
-  if (slot) aux.querySelector('[data-paper-panel="session_pnl"]')?.remove();
+  if (slot && aux) aux.querySelector('[data-paper-panel="session_pnl"]')?.remove();
   const existing = target.querySelector('[data-paper-panel="session_pnl"]');
   if (existing) {
     const template = document.createElement("div");
@@ -2563,6 +2564,25 @@ function outcomeBookOddsFromCandidates(candidates) {
   if (up === null && down !== null) up = Math.max(0, Math.min(1, 1 - down));
   if (down === null && up !== null) down = Math.max(0, Math.min(1, 1 - up));
   return { up, down };
+}
+
+function outcomeSideBookSeen(row, side) {
+  return sideField(row, side, "bid") !== null || sideField(row, side, "ask") !== null;
+}
+
+function outcomeDisplayBookOddsFromCandidates(candidates) {
+  const rows = outcomeRowsNewestFirst(candidates);
+  const up = rows.map((row) => outcomeDisplayBookProbability(row, "up")).find((value) => value !== null) ?? null;
+  const down = rows.map((row) => outcomeDisplayBookProbability(row, "down")).find((value) => value !== null) ?? null;
+  const upBookSeen = rows.some((row) => outcomeSideBookSeen(row, "up"));
+  const downBookSeen = rows.some((row) => outcomeSideBookSeen(row, "down"));
+  return {
+    up,
+    down,
+    upNoSellers: up === null && upBookSeen,
+    downNoSellers: down === null && downBookSeen,
+    askBookObserved: up !== null || down !== null || upBookSeen || downBookSeen,
+  };
 }
 
 function preferBookOdds(bookOdds, fallbackOdds) {
@@ -4291,9 +4311,9 @@ function formatBookQty(value) {
   return number.toFixed(4);
 }
 
-function formatOutcomePercent(value) {
+function formatOutcomePercent(value, emptyText = "Waiting") {
   const number = metricNumber(value);
-  if (number === null) return "Waiting";
+  if (number === null) return emptyText;
   return `${Math.round(number * 100)}%`;
 }
 
@@ -4536,6 +4556,20 @@ function paperPanelOutcomeProbabilities(market, latestRaw, latestBookRaw) {
   return odds;
 }
 
+function paperPanelDisplayOutcomeProbabilities(market, latestRaw, latestBookRaw) {
+  if (!market) return { up: null, down: null, upNoSellers: false, downNoSellers: false, askBookObserved: false };
+  const candidates = paperPanelOutcomeCandidates(market, latestRaw, latestBookRaw);
+  const oddsRows = currentMarketOddsRows(candidates);
+  const bookOdds = outcomeDisplayBookOddsFromCandidates(oddsRows);
+  if (bookOdds.askBookObserved) return bookOdds;
+  return {
+    ...paperPanelOutcomeProbabilities(market, latestRaw, latestBookRaw),
+    upNoSellers: false,
+    downNoSellers: false,
+    askBookObserved: false,
+  };
+}
+
 function bestOutcomeProbability(side, candidates) {
   const key = sideKey(side);
   if (!key) return null;
@@ -4607,19 +4641,19 @@ function paperOutcomeProbabilities(market, latestRaw, latestBookRaw) {
 
 function renderPaperOddsStrip(market, latestRaw, latestBookRaw, odds = null) {
   if (!market) return "";
-  const resolved = stickyOutcomeOddsForMarket(
-    market,
-    odds || paperPanelOutcomeProbabilities(market, latestRaw, latestBookRaw),
-  );
+  const displayOdds = odds || paperPanelDisplayOutcomeProbabilities(market, latestRaw, latestBookRaw);
+  const resolved = displayOdds.askBookObserved
+    ? displayOdds
+    : stickyOutcomeOddsForMarket(market, displayOdds);
   return `
     <div class="paper-odds-strip" role="status" aria-label="Current Polymarket odds">
       <div>
         <span>UP</span>
-        <strong class="move-up">${escapeHtml(formatOutcomePercent(resolved.up))}</strong>
+        <strong class="move-up">${escapeHtml(formatOutcomePercent(resolved.up, resolved.upNoSellers ? "No sellers" : "Waiting"))}</strong>
       </div>
       <div>
         <span>DOWN</span>
-        <strong class="move-down">${escapeHtml(formatOutcomePercent(resolved.down))}</strong>
+        <strong class="move-down">${escapeHtml(formatOutcomePercent(resolved.down, resolved.downNoSellers ? "No sellers" : "Waiting"))}</strong>
       </div>
     </div>`;
 }
@@ -4987,7 +5021,7 @@ function outcomeBookProbability(row, side) {
 function outcomeDisplayBookProbability(row, side) {
   const ask = sideField(row, side, "ask");
   if (ask !== null) return ask;
-  return outcomeBookProbability(row, side);
+  return null;
 }
 
 function startMetadataFromSource(source, fallbackSource = "paper_market_start") {
@@ -5791,7 +5825,7 @@ function renderPaperDecisionGraph(options = {}) {
   const currentPrice = metricNumber(currentDisplaySample?.btcPrice);
   const priceDifference = currentPrice !== null && startPrice !== null ? currentPrice - startPrice : null;
   const moveClass = moveToneClass(priceDifference);
-  const outcomeOdds = paperPanelOutcomeProbabilities(market, latestRaw, latestBookRaw);
+  const outcomeOdds = paperPanelDisplayOutcomeProbabilities(market, latestRaw, latestBookRaw);
   const upProbability = outcomeOdds.up;
   const downProbability = outcomeOdds.down;
   const session = tradeViewSession(isLiveView);
