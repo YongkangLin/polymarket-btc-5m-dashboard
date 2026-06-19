@@ -3,6 +3,7 @@ const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD
 const moneyCents = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const ACTIVE_BACKTEST_KEY = "strict_directional_maker";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
+const ACTIVE_PAPER_EDGE_ID = "high_coverage_queuecap_challenger";
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_REFRESH_MS = 30000;
 const LIVE_TICK_RENDER_THROTTLE_MS = 16;
@@ -11,6 +12,7 @@ const LIVE_TICK_STALE_MS = 10000;
 const LIVE_TICK_RECONNECT_MS = 2000;
 const LIVE_SOCKET_CONNECT_TIMEOUT_MS = 3500;
 const LOCAL_BACKEND_BASE_KEY = "POLYMARKET_LOCAL_BACKEND_BASE";
+const LOCAL_PAPER_EDGE_KEY = "POLYMARKET_PAPER_EDGE_ID";
 const DEFAULT_BACKEND_BASE = "http://127.0.0.1:8788";
 const LIVE_TICK_RENDER_MAX_POINTS = 2400;
 const LIVE_AUX_RENDER_THROTTLE_MS = 500;
@@ -148,6 +150,16 @@ function configuredBackendBase() {
     return `${protocol}//${host}:8788`;
   }
   return DEFAULT_BACKEND_BASE;
+}
+
+function configuredPaperEdgeId() {
+  const params = new URLSearchParams(window.location.search || "");
+  const explicit = params.get("paper_edge_id") || params.get("edge_id");
+  if (explicit) return String(explicit);
+  if (window.POLYMARKET_PAPER_EDGE_ID) return String(window.POLYMARKET_PAPER_EDGE_ID);
+  const saved = window.localStorage?.getItem(LOCAL_PAPER_EDGE_KEY);
+  if (saved) return String(saved);
+  return ACTIVE_PAPER_EDGE_ID;
 }
 
 function loadJson(path) {
@@ -2481,20 +2493,15 @@ function externalLineRows(rows) {
   const bookTicks = ordered.filter(isExternalBookTickerPricePoint);
   const depthTicks = ordered.filter(isExternalDepthPricePoint);
   const trades = ordered.filter(isExternalTradePricePoint);
-  const candidates = [bookTicks, depthTicks, trades].filter((candidate) => candidate.length);
-  const viable = candidates.filter((candidate) => candidate.length >= 3);
-  if (!viable.length) return candidates[0] || ordered;
-  return viable.sort((left, right) => {
-    const leftTime = pointTimestampMicro(left[left.length - 1]) || 0;
-    const rightTime = pointTimestampMicro(right[right.length - 1]) || 0;
-    return rightTime - leftTime;
-  })[0];
+  const preferred = [depthTicks, bookTicks, trades].find((candidate) => candidate.length >= 3)
+    || [depthTicks, bookTicks, trades].find((candidate) => candidate.length);
+  return preferred || ordered;
 }
 
 function externalLineLabel(rows) {
-  if ((rows || []).some(isExternalTradePricePoint)) return "Binance WSS trades";
-  if ((rows || []).some(isExternalBookTickerPricePoint)) return "Binance WSS bookTicker";
   if ((rows || []).some(isExternalDepthPricePoint)) return "Binance WSS depth";
+  if ((rows || []).some(isExternalBookTickerPricePoint)) return "Binance WSS bookTicker";
+  if ((rows || []).some(isExternalTradePricePoint)) return "Binance WSS trades";
   return "Binance WSS";
 }
 
@@ -2503,7 +2510,8 @@ function backendBaseUrl() {
 }
 
 function activePaperEdgeId() {
-  return state.workflow?.paper_trade?.edge_id
+  return configuredPaperEdgeId()
+    || state.workflow?.paper_trade?.edge_id
     || state.workflow?.active_backtest_key
     || ACTIVE_BACKTEST_KEY;
 }
