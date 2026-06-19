@@ -813,7 +813,25 @@ function latestPolymarketDepthTimeMicro(snapshot) {
   );
 }
 
-function paperAuxCacheKey(chartId, market, isLiveView) {
+function paperSessionHistorySignature(session) {
+  const history = Array.isArray(session?.pnl_history) ? session.pnl_history : [];
+  const latestHistory = history[history.length - 1] || {};
+  return [
+    session?.session_id || session?.paper_session_id,
+    session?.market_count,
+    session?.market_limit,
+    session?.current_capital,
+    session?.total_pnl_dollars,
+    session?.realized_pnl_dollars,
+    session?.updated_at,
+    history.length,
+    latestHistory.market_key || latestHistory.slug,
+    latestHistory.pnl_dollars,
+    latestHistory.capital_after,
+  ].filter((value) => value !== undefined && value !== null).join("|");
+}
+
+function paperAuxCacheKey(chartId, market, isLiveView, session) {
   const latestMarker = [...paperMarkersFor(market)].pop();
   return [
     chartId || "paperChart",
@@ -822,17 +840,19 @@ function paperAuxCacheKey(chartId, market, isLiveView) {
     paperGraphKey(market) || "current",
     state.paperAuxVersion,
     rowFreshnessKey(latestMarker),
+    isLiveView ? "" : paperSessionHistorySignature(session),
   ].join(":");
 }
 
 function renderPaperAuxHtml({ chartId, selectedCurrent, market, rawPoints, latestRaw, latestBookRaw, latestQuote, session, isLiveView }) {
+  const resolvedSession = session || paperSession();
   const cacheable = Boolean(selectedCurrent && market);
-  const cacheKey = cacheable ? paperAuxCacheKey(chartId, market, isLiveView) : "";
+  const cacheKey = cacheable ? paperAuxCacheKey(chartId, market, isLiveView, resolvedSession) : "";
   const now = Date.now();
   const cached = cacheable ? state.paperAuxRenderCache.get(cacheKey) : null;
   if (cached && now - cached.renderedAt < LIVE_AUX_RENDER_THROTTLE_MS) return cached.html;
   const html = [
-    isLiveView ? "" : renderPaperSessionHistory(session || paperSession()),
+    isLiveView ? "" : renderPaperSessionHistory(resolvedSession),
     renderPaperActionLog(market, rawPoints),
     renderPolymarketBookTable(market, rawPoints),
     renderOrderBookTable(market, rawPoints, latestBookRaw || latestRaw || null, latestQuote || null),
