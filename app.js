@@ -3156,7 +3156,6 @@ function paperRouteGateCells() {
   if (recommendedEdge && blockers.length) {
     healthCells.push(strategyCell("Main Blockers", blockers.join(" | ")));
   }
-  if (paperHealth.recommended_dashboard_edge_id) return healthCells;
   if (!decision.decision && !routePromotion.typed_paper) return healthCells;
   const activeSummary = routePromotion.typed_paper?.active?.summary || {};
   const thresholds = routePromotion.thresholds || {};
