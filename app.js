@@ -943,13 +943,35 @@ function syncPaperCollapseStates(root = document) {
   root.querySelectorAll?.(".paper-collapsible[data-paper-panel]").forEach(syncPaperPanelCollapseState);
 }
 
+function isTradeSessionAux(aux) {
+  return aux?.id === "paperChartAux" || aux?.id === "liveChartAux";
+}
+
+function tradeSessionPanelHtmlForAux(aux) {
+  return renderPaperSessionHistory(tradeViewSession(aux?.id === "liveChartAux"));
+}
+
+function chartForTradeSessionAux(aux) {
+  if (aux?.id === "paperChartAux") return byId("paperChart");
+  if (aux?.id === "liveChartAux") return byId("liveChart");
+  return null;
+}
+
+function ensureTradeSessionAuxKeepsPanel(aux, auxHtml = "") {
+  const html = String(auxHtml || "");
+  if (!isTradeSessionAux(aux) || html.includes('data-paper-panel="session_pnl"')) return html;
+  return `${tradeSessionPanelHtmlForAux(aux)}${html}`;
+}
+
 function patchPaperAuxContent(aux, auxHtml) {
   const template = document.createElement("div");
-  template.innerHTML = auxHtml;
+  const safeAuxHtml = ensureTradeSessionAuxKeepsPanel(aux, auxHtml);
+  template.innerHTML = safeAuxHtml;
   const nextSections = [...template.children].filter((child) => child.matches?.(".paper-collapsible[data-paper-panel]"));
   if (!nextSections.length) {
-    aux.innerHTML = auxHtml;
+    aux.innerHTML = safeAuxHtml;
     syncPaperCollapseStates(aux);
+    ensureTradeSessionPanelMounted(chartForTradeSessionAux(aux), aux);
     return;
   }
   const existingByPanel = new Map(
@@ -993,6 +1015,9 @@ function patchPaperAuxContent(aux, auxHtml) {
   [...aux.querySelectorAll(".paper-collapsible[data-paper-panel]")].forEach((section) => {
     if (!seen.has(section.dataset.paperPanel) && !isLockedPaperPanelId(section.dataset.paperPanel)) section.remove();
   });
+  if (isTradeSessionAux(aux) && !aux.querySelector('[data-paper-panel="session_pnl"]')) {
+    aux.insertAdjacentHTML("afterbegin", tradeSessionPanelHtmlForAux(aux));
+  }
   nextSections.forEach((nextSection) => {
     const panelId = nextSection.dataset.paperPanel;
     const section = [...aux.querySelectorAll(".paper-collapsible[data-paper-panel]")]
@@ -1010,7 +1035,9 @@ function ensureTradeSessionAuxHtml(chart, auxHtml = "") {
 
 function ensureTradeSessionPanelMounted(chart, aux) {
   if (!chart || !aux || (chart.id !== "paperChart" && chart.id !== "liveChart")) return;
-  const sessionHtml = renderPaperSessionHistory(tradeViewSession(chart.id === "liveChart"));
+  const sessionHtml = isTradeSessionAux(aux)
+    ? tradeSessionPanelHtmlForAux(aux)
+    : renderPaperSessionHistory(tradeViewSession(chart.id === "liveChart"));
   const existing = aux.querySelector('[data-paper-panel="session_pnl"]');
   if (existing) {
     const template = document.createElement("div");
