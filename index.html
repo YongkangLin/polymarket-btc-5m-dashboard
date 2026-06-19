@@ -46,10 +46,16 @@
         <div class="strategy-strip" id="paperStrategy" hidden></div>
         <div class="chart" id="paperChart"></div>
         <div class="paper-chart-aux" id="paperChartAux" aria-label="Paper trade session details">
-          <section class="paper-session-history paper-collapsible" data-paper-panel="session_pnl" data-paper-locked-open="true">
-            <button class="paper-book-heading paper-collapse-button" type="button" data-paper-toggle="session_pnl" data-paper-locked-open="true" aria-disabled="true" aria-expanded="true">
+          <section class="paper-session-history paper-collapsible" data-paper-panel="session_pnl">
+            <button class="paper-book-heading paper-collapse-button" type="button" data-paper-toggle="session_pnl" aria-expanded="true">
               <span>Historical Session P&amp;L</span>
-              <span class="paper-heading-meta"><span>0 closed | 0/36 markets</span></span>
+              <span class="paper-heading-meta">
+                <span>0 closed | 0/36 markets</span>
+                <span class="paper-collapse-state" aria-hidden="true">
+                  <span class="is-open">Hide</span>
+                  <span class="is-closed">Show</span>
+                </span>
+              </span>
             </button>
             <div class="paper-collapsible-body">
               <table>
@@ -80,10 +86,16 @@
         <div class="strategy-strip" id="liveStrategy"></div>
         <div class="chart" id="liveChart"></div>
         <div class="paper-chart-aux" id="liveChartAux" aria-label="Live trade session details">
-          <section class="paper-session-history paper-collapsible" data-paper-panel="session_pnl" data-paper-locked-open="true">
-            <button class="paper-book-heading paper-collapse-button" type="button" data-paper-toggle="session_pnl" data-paper-locked-open="true" aria-disabled="true" aria-expanded="true">
+          <section class="paper-session-history paper-collapsible" data-paper-panel="session_pnl">
+            <button class="paper-book-heading paper-collapse-button" type="button" data-paper-toggle="session_pnl" aria-expanded="true">
               <span>Historical Session P&amp;L</span>
-              <span class="paper-heading-meta"><span>0 closed | 0/36 markets</span></span>
+              <span class="paper-heading-meta">
+                <span>0 closed | 0/36 markets</span>
+                <span class="paper-collapse-state" aria-hidden="true">
+                  <span class="is-open">Hide</span>
+                  <span class="is-closed">Show</span>
+                </span>
+              </span>
             </button>
             <div class="paper-collapsible-body">
               <table>
@@ -109,6 +121,6 @@
     </main>
 
     <script src="https://unpkg.com/uplot@1.6.32/dist/uPlot.iife.min.js"></script>
-    <script src="app.js?v=20260619-024"></script>
+    <script src="app.js?v=20260619-025"></script>
   </body>
 </html>

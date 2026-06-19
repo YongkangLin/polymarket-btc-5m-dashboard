@@ -903,7 +903,7 @@ function renderPaperEmptyAuxHtml({ chartId, selectedCurrent, market, isLiveView 
 }
 
 function isLockedPaperPanelId(panelId) {
-  return panelId === "session_pnl";
+  return false;
 }
 
 function renderCollapsiblePanel(panelId, className, title, meta, bodyHtml, open = true) {
