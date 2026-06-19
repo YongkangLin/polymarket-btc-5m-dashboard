@@ -465,12 +465,14 @@ svg {
 
 .line-chainlink {
   stroke: var(--green);
-  stroke-width: 2.8;
+  stroke-width: 2.4;
+  vector-effect: non-scaling-stroke;
 }
 
 .line-external {
   stroke: #005bff;
-  stroke-width: 2.8;
+  stroke-width: 2.4;
+  vector-effect: non-scaling-stroke;
   opacity: 1;
 }
 
