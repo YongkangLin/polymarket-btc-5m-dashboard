@@ -206,12 +206,29 @@ select {
 }
 
 .paper-live-uplot {
+  position: relative;
   min-width: 0;
   height: 392px;
 }
 
 .paper-live-uplot .u-wrap {
   width: 100%;
+}
+
+.paper-binance-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.paper-binance-overlay path {
+  fill: none;
+  stroke: #005bff;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .paper-live-side-html {
@@ -468,8 +485,8 @@ svg {
 }
 
 .line-external {
-  stroke: var(--blue);
-  stroke-width: 2.8;
+  stroke: #005bff;
+  stroke-width: 5;
   opacity: 1;
 }
 

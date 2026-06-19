@@ -988,6 +988,55 @@ function renderPaperLiveSideHtml(marketMetrics, accountMetrics, positionRows) {
     </aside>`;
 }
 
+function liveOverlayPath(samples, xDomain, yDomain, width, height) {
+  const plotLeft = 64;
+  const plotTop = 8;
+  const plotRight = 10;
+  const plotBottom = 34;
+  const plotWidth = Math.max(1, width - plotLeft - plotRight);
+  const plotHeight = Math.max(1, height - plotTop - plotBottom);
+  const xSpan = Math.max(0.001, Number(xDomain.max) - Number(xDomain.min));
+  const ySpan = Math.max(0.001, Number(yDomain.max) - Number(yDomain.min));
+  const xForElapsed = (elapsedSeconds) => (
+    plotLeft + ((Number(elapsedSeconds) - Number(xDomain.min)) / xSpan) * plotWidth
+  );
+  const yForDollarMove = (dollarMove) => (
+    plotTop + ((Number(yDomain.max) - Number(dollarMove)) / ySpan) * plotHeight
+  );
+  let open = false;
+  const commands = [];
+  steppedPlotEvents(samples, "binance").forEach((point) => {
+    if (!Number.isFinite(point?.elapsedSeconds) || !Number.isFinite(point?.dollarMove)) {
+      open = false;
+      return;
+    }
+    const x = Math.max(plotLeft, Math.min(plotLeft + plotWidth, xForElapsed(point.elapsedSeconds)));
+    const y = Math.max(plotTop, Math.min(plotTop + plotHeight, yForDollarMove(point.dollarMove)));
+    commands.push(`${open ? "L" : "M"}${x.toFixed(2)},${y.toFixed(2)}`);
+    open = true;
+  });
+  return commands.join(" ");
+}
+
+function updatePaperBinanceOverlay(target, options, width, height) {
+  let overlay = target.querySelector(".paper-binance-overlay");
+  if (!overlay) {
+    overlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    overlay.setAttribute("class", "paper-binance-overlay");
+    overlay.setAttribute("aria-hidden", "true");
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    overlay.appendChild(path);
+    target.appendChild(overlay);
+  }
+  overlay.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  overlay.setAttribute("width", String(width));
+  overlay.setAttribute("height", String(height));
+  const path = overlay.querySelector("path");
+  const d = liveOverlayPath(options.externalSamples || [], options.xDomain, options.dollarDomain, width, height);
+  if (path) path.setAttribute("d", d);
+  overlay.style.display = d ? "block" : "none";
+}
+
 function updatePaperUPlot(chart, options) {
   try {
     if (!canUseUPlot() || !chart) return false;
@@ -1026,7 +1075,7 @@ function updatePaperUPlot(chart, options) {
       series: [
         {},
         { label: "Chainlink", stroke: "#148256", width: 2, spanGaps: false, points: { show: false } },
-        { label: "Binance", stroke: "#3c62d8", width: 2, spanGaps: false, points: { show: false } },
+        { label: "Binance", stroke: "#005bff", width: 5, spanGaps: false, points: { show: false } },
       ],
     });
     const existing = state.paperUPlotCharts.get(chart.id || "paperChart");
@@ -1037,6 +1086,7 @@ function updatePaperUPlot(chart, options) {
       const data = uPlotDataFromSamples(options.truthSamples, options.externalSamples);
       const plot = new window.uPlot(makeOptions(), data, target);
       state.paperUPlotCharts.set(chart.id || "paperChart", { key, plot, dataSignature, width, height });
+      updatePaperBinanceOverlay(target, options, width, height);
       return true;
     }
     if (existing.width !== width || existing.height !== height) {
@@ -1051,6 +1101,7 @@ function updatePaperUPlot(chart, options) {
     }
     existing.plot.setScale("x", { min: options.xDomain.min, max: options.xDomain.max });
     existing.plot.setScale("y", { min: options.dollarDomain.min, max: options.dollarDomain.max });
+    updatePaperBinanceOverlay(target, options, width, height);
     return true;
   } catch (error) {
     console.warn("uPlot live chart update failed", error);
@@ -1794,6 +1845,21 @@ function rowBelongsToMarketWindow(row, market) {
   const marketStart = marketWindowStartUnix(market);
   const rowStart = marketWindowStartUnix(row);
   return marketStart !== null && rowStart !== null && marketStart === rowStart;
+}
+
+function liveTickPointsForCurrentWindow(market, predicate = null) {
+  const start = marketWindowStartUnix(market);
+  if (start === null) return [];
+  const windowMarket = { window_start_unix: start, window_end_unix: start + 300 };
+  const rows = [];
+  state.liveBtcTicksByMarket.forEach((points) => {
+    (points || []).forEach((row) => {
+      if (!rowBelongsToMarketWindow(row, windowMarket)) return;
+      if (predicate && !predicate(row)) return;
+      rows.push(row);
+    });
+  });
+  return mergePaperChartRows(rows, []);
 }
 
 function compactPersistedRows(rows, maxRows) {
@@ -3947,8 +4013,7 @@ function labelExternalDepthSnapshot(snapshot) {
 }
 
 function latestExternalDepthSnapshotForMarket(market, rawPoints) {
-  const snapshots = liveTickPointsForMarket(market)
-    .filter((row) => rowBelongsToMarketWindow(row, market))
+  const snapshots = liveTickPointsForCurrentWindow(market, (row) => row?.backend_event_kind === "depth")
     .map(externalDepthSnapshotFromRow)
     .filter(Boolean)
     .sort((left, right) => externalDepthSnapshotTimeMicro(right) - externalDepthSnapshotTimeMicro(left));
@@ -5200,9 +5265,10 @@ function renderPaperDecisionGraph(options = {}) {
   if (marketTruthPoint && !truthRows.some((row) => row.point_id === marketTruthPoint.point_id || row.event_time_micro === marketTruthPoint.event_time_micro)) {
     truthRows = [...truthRows, marketTruthPoint];
   }
-  const directExternalCandidates = liveTickPointsForMarket(market)
-    .filter((row) => rowBelongsToMarketWindow(row, market))
-    .filter((row) => isExternalPricePoint(row) && !isPolymarketTruthPoint(row));
+  const directExternalCandidates = liveTickPointsForCurrentWindow(
+    market,
+    (row) => isExternalPricePoint(row) && !isPolymarketTruthPoint(row),
+  );
   const externalCandidates = mergePaperChartRows(
     priceRows.filter((row) => isExternalPricePoint(row) && !isPolymarketTruthPoint(row)),
     directExternalCandidates,
@@ -5214,7 +5280,7 @@ function renderPaperDecisionGraph(options = {}) {
       .filter((row) => isExternalPricePoint(row) && !isPolymarketTruthPoint(row)),
   );
   const externalBaselineRows = fullWindowExternalRows.length ? fullWindowExternalRows : externalRows;
-  const externalStartPrice = graphBaselinePrice(externalBaselineRows, "binance");
+  const externalStartPrice = graphBaselinePrice(externalBaselineRows, "binance", startMeta?.price);
   const externalStartAnchor = sourceStartAnchorSample(externalBaselineRows, "binance", externalStartPrice);
   const rawExternalSamples = externalStartPrice === null ? [] : [
     ...(externalStartAnchor ? [externalStartAnchor] : []),
@@ -6286,10 +6352,8 @@ async function main() {
     renderBacktestSelects();
     renderBacktestChart();
   });
-  document.addEventListener("click", (event) => {
-    const button = event.target?.closest?.("[data-paper-toggle]");
-    if (!button) return;
-    const panelId = button.dataset.paperToggle;
+  const togglePaperPanel = (button) => {
+    const panelId = button?.dataset?.paperToggle;
     if (!panelId) return;
     if (state.paperCollapsedPanels.has(panelId)) {
       state.paperCollapsedPanels.delete(panelId);
@@ -6298,7 +6362,25 @@ async function main() {
     }
     state.paperAuxVersion += 1;
     renderActiveTab();
-  });
+  };
+  document.addEventListener("pointerdown", (event) => {
+    const button = event.target?.closest?.("[data-paper-toggle]");
+    if (!button) return;
+    event.preventDefault();
+    togglePaperPanel(button);
+  }, true);
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const button = event.target?.closest?.("[data-paper-toggle]");
+    if (!button) return;
+    event.preventDefault();
+    togglePaperPanel(button);
+  }, true);
+  document.addEventListener("click", (event) => {
+    if (event.target?.closest?.("[data-paper-toggle]")) {
+      event.preventDefault();
+    }
+  }, true);
   window.setInterval(() => {
     if (state.activeTab === "paper" || state.activeTab === "live") {
       ensureLiveTickStream();
