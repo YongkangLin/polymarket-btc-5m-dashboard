@@ -52,6 +52,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 750;
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v2-two-normalized-lines";
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const BINANCE_DEPTH_TABLE_STALE_MS = 15000;
@@ -1087,7 +1088,7 @@ function updatePaperUPlot(chart, options) {
     if (!target) return false;
     const width = Math.max(320, Math.floor(target.clientWidth || chart.clientWidth || 680));
     const height = Math.max(260, Math.floor(target.clientHeight || (isCompactPaperChart() ? 300 : 392)));
-    const key = `${chart.id || "paperChart"}:${options.compact ? "compact" : "wide"}`;
+    const key = `${chart.id || "paperChart"}:${options.compact ? "compact" : "wide"}:${LIVE_CHART_SCHEMA_VERSION}`;
     const dataSignature = liveChartDataSignature(options.truthSamples, options.externalSamples);
     const makeOptions = () => ({
       width,
@@ -2697,7 +2698,7 @@ function paperGraphSample(row, index, total, startPrice, source) {
   };
 }
 
-function graphBaselineItem(rows, source, maxElapsedSeconds = 5) {
+function graphBaselineItem(rows, source, maxElapsedSeconds = 5, allowFirstFallback = false) {
   const ordered = (rows || [])
     .map((row, index) => ({
       row,
@@ -2709,11 +2710,11 @@ function graphBaselineItem(rows, source, maxElapsedSeconds = 5) {
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds || left.index - right.index);
   if (!ordered.length) return null;
   const nearOpen = ordered.find((item) => item.elapsedSeconds <= maxElapsedSeconds);
-  return nearOpen || null;
+  return nearOpen || (allowFirstFallback ? ordered[0] : null);
 }
 
-function graphBaselinePrice(rows, source, fallbackPrice = null) {
-  return graphBaselineItem(rows, source)?.price ?? metricNumber(fallbackPrice);
+function graphBaselinePrice(rows, source, fallbackPrice = null, allowFirstFallback = false) {
+  return graphBaselineItem(rows, source, 5, allowFirstFallback)?.price ?? metricNumber(fallbackPrice);
 }
 
 function paperGraphSamples(rows, startPrice, source) {
@@ -2745,8 +2746,8 @@ function chainlinkStartAnchorSample(market, startMeta) {
   };
 }
 
-function sourceStartAnchorSample(rows, source, startPrice) {
-  const item = graphBaselineItem(rows, source);
+function sourceStartAnchorSample(rows, source, startPrice, allowFirstFallback = false) {
+  const item = graphBaselineItem(rows, source, 5, allowFirstFallback);
   const price = metricNumber(startPrice);
   if (!item || price === null || price <= 0) return null;
   return {
@@ -4664,7 +4665,6 @@ function latestSessionMetric(market, rawPoints, session, keys) {
 
 function renderPaperSessionHistory(session) {
   const history = paperSessionHistoryRows(session);
-  if (!history.length) return "";
   const startingCapital = metricNumber(session?.starting_capital ?? session?.paper_session_starting_capital) ?? 100;
   let runningCapital = startingCapital;
   const chronologicalRows = history.map((row) => {
@@ -4672,7 +4672,7 @@ function renderPaperSessionHistory(session) {
     runningCapital += pnl ?? 0;
     return { ...row, _displayCapitalAfter: runningCapital };
   });
-  const rows = chronologicalRows.reverse().map((row) => {
+  const rows = chronologicalRows.length ? chronologicalRows.reverse().map((row) => {
     const pnl = metricNumber(row.pnl_dollars);
     const tone = pnl === null ? "" : pnl < 0 ? "is-loss" : "is-win";
     const slug = String(row.slug || "--").replace(/^btc-updown-5m-/, "");
@@ -4689,7 +4689,10 @@ function renderPaperSessionHistory(session) {
         <td>${escapeHtml(formatSignedMoney(pnl))}</td>
         <td>${escapeHtml(moneyCents.format(metricNumber(row._displayCapitalAfter) ?? metricNumber(row.capital_after) ?? 0))}</td>
       </tr>`;
-  }).join("");
+  }).join("") : `
+      <tr class="paper-session-row is-empty">
+        <td colspan="5">No closed markets yet. Session P&amp;L will appear here after a held position resolves.</td>
+      </tr>`;
   return renderCollapsiblePanel(
     "session_pnl",
     "paper-session-history",
@@ -5317,8 +5320,8 @@ function renderPaperDecisionGraph(options = {}) {
       .filter((row) => isExternalPricePoint(row) && !isPolymarketTruthPoint(row)),
   );
   const externalBaselineRows = fullWindowExternalRows.length ? fullWindowExternalRows : externalRows;
-  const externalStartPrice = graphBaselinePrice(externalBaselineRows, "binance", startMeta?.price);
-  const externalStartAnchor = sourceStartAnchorSample(externalBaselineRows, "binance", externalStartPrice);
+  const externalStartPrice = graphBaselinePrice(externalBaselineRows, "binance", startMeta?.price, true);
+  const externalStartAnchor = sourceStartAnchorSample(externalBaselineRows, "binance", externalStartPrice, true);
   const rawExternalSamples = externalStartPrice === null ? [] : [
     ...(externalStartAnchor ? [externalStartAnchor] : []),
     ...paperGraphSamples(externalRows, externalStartPrice, "binance"),
@@ -6109,6 +6112,7 @@ function handleBackendStreamMessage(payload) {
   if (payload.type === "paper_sql_snapshot") {
     state.paperSqlSession = payload.session || null;
     rememberPaperSqlActivity(payload);
+    bumpPaperAuxVersion();
     state.backendStatus = {
       ...state.backendStatus,
       state: "open",
