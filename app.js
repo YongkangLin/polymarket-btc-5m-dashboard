@@ -56,7 +56,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v2-two-normalized-lines-labeled";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v3-line-labels-countdown";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -1217,6 +1217,7 @@ function liveChartDataSignature(truthSamples, externalSamples) {
 function renderPaperChartHeader(market, options = {}) {
   const windowStart = marketWindowStartUnix(market);
   const windowEnd = marketWindowEndUnix(market);
+  const initialCountdown = countdownTextFromWindow(windowStart, windowEnd);
   const lineKey = (label, className, role) => `
     <span class="paper-line-key">
       <span class="paper-line-swatch ${escapeHtml(className)}"></span>
@@ -1231,8 +1232,21 @@ function renderPaperChartHeader(market, options = {}) {
       </div>
       <div class="paper-market-countdown" aria-label="Time left" data-paper-countdown-start="${escapeHtml(windowStart ?? "")}" data-paper-countdown-end="${escapeHtml(windowEnd ?? "")}">
         <span>Time left</span>
-        <strong data-paper-countdown-value>--</strong>
+        <strong data-paper-countdown-value>${escapeHtml(initialCountdown)}</strong>
       </div>
+    </div>`;
+}
+
+function renderPaperInChartLineLabels(options = {}) {
+  const label = (text, className, role) => `
+    <span class="paper-live-line-badge ${escapeHtml(className)}">
+      <span>${escapeHtml(text)}</span>
+      <strong>${escapeHtml(role)}</strong>
+    </span>`;
+  return `
+    <div class="paper-live-line-overlay" aria-label="Visible chart line labels">
+      ${options.showTruth === false ? "" : label(options.truthLabel || "Chainlink Data Streams", "is-chainlink", "truth")}
+      ${options.showExternal === false ? "" : label(options.externalLabel || "Binance", "is-binance", "signal")}
     </div>`;
 }
 
@@ -6093,7 +6107,15 @@ function renderPaperDecisionGraph(options = {}) {
     visualHtml = `${liveNotice}
       ${chartHeaderHtml}
       <div class="paper-live-fast" role="img" aria-label="${escapeHtml(chartAriaLabel)}">
-        <div class="paper-live-uplot"></div>
+        <div class="paper-live-plot-wrap">
+          ${renderPaperInChartLineLabels({
+            truthLabel,
+            externalLabel,
+            showTruth: Boolean(truthLineSamples.length),
+            showExternal: Boolean(externalLineSamples.length),
+          })}
+          <div class="paper-live-uplot"></div>
+        </div>
         <div class="paper-live-side-slot"></div>
       </div>
       <div class="paper-live-status-slot"></div>`;

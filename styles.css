@@ -205,14 +205,69 @@ select {
   min-width: 920px;
 }
 
-.paper-live-uplot {
+.paper-live-plot-wrap {
   position: relative;
   min-width: 0;
   height: 392px;
 }
 
+.paper-live-uplot {
+  position: relative;
+  min-width: 0;
+  height: 100%;
+}
+
 .paper-live-uplot .u-wrap {
   width: 100%;
+}
+
+.paper-live-line-overlay {
+  position: absolute;
+  top: 10px;
+  left: 72px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: calc(100% - 90px);
+  pointer-events: none;
+}
+
+.paper-live-line-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 5px 7px;
+  border: 1px solid rgba(20, 130, 86, 0.25);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--green);
+  box-shadow: 0 2px 8px rgba(18, 24, 31, 0.07);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.paper-live-line-badge::before {
+  content: "";
+  width: 22px;
+  height: 3px;
+  border-radius: 999px;
+  background: currentColor;
+  flex: 0 0 auto;
+}
+
+.paper-live-line-badge strong {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.paper-live-line-badge.is-binance {
+  border-color: rgba(0, 91, 255, 0.25);
+  color: #005bff;
 }
 
 .paper-live-side-html {
@@ -1203,8 +1258,13 @@ svg {
     justify-content: space-between;
   }
 
-  .paper-live-uplot {
+  .paper-live-plot-wrap {
     height: 300px;
+  }
+
+  .paper-live-line-overlay {
+    left: 54px;
+    max-width: calc(100% - 62px);
   }
 
   .paper-live-side-html {
