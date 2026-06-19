@@ -902,8 +902,12 @@ function renderPaperEmptyAuxHtml({ chartId, selectedCurrent, market, isLiveView 
   });
 }
 
+function isLockedPaperPanelId(panelId) {
+  return panelId === "session_pnl";
+}
+
 function renderCollapsiblePanel(panelId, className, title, meta, bodyHtml, open = true) {
-  const lockedOpen = panelId === "session_pnl";
+  const lockedOpen = isLockedPaperPanelId(panelId);
   const isOpen = lockedOpen || (open && !state.paperCollapsedPanels.has(panelId));
   return `
     <section class="${escapeHtml(className)} paper-collapsible" data-paper-panel="${escapeHtml(panelId)}" ${lockedOpen ? 'data-paper-locked-open="true"' : ""}>
@@ -987,7 +991,7 @@ function patchPaperAuxContent(aux, auxHtml) {
     syncPaperPanelCollapseState(existing);
   });
   [...aux.querySelectorAll(".paper-collapsible[data-paper-panel]")].forEach((section) => {
-    if (!seen.has(section.dataset.paperPanel)) section.remove();
+    if (!seen.has(section.dataset.paperPanel) && !isLockedPaperPanelId(section.dataset.paperPanel)) section.remove();
   });
   nextSections.forEach((nextSection) => {
     const panelId = nextSection.dataset.paperPanel;
