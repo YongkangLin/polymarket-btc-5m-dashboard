@@ -3042,6 +3042,40 @@ function strategyCell(title, body) {
     </div>`;
 }
 
+function routePromotionDecisionText(value) {
+  if (value === "stand_down") return "Stand down";
+  if (value === "keep_active") return "Keep active";
+  if (value === "shadow_challenger") return "Shadow challenger";
+  if (value === "promote_challenger_to_paper") return "Promote to paper";
+  return value ? humanReason(value) : "Collecting evidence";
+}
+
+function paperRouteGateCells() {
+  const routePromotion = state.workflow.paper_trade?.route_promotion || {};
+  const decision = routePromotion.decision || {};
+  if (!decision.decision && !routePromotion.typed_paper) return [];
+  const activeSummary = routePromotion.typed_paper?.active?.summary || {};
+  const thresholds = routePromotion.thresholds || {};
+  const fills = metricNumber(activeSummary.fills) ?? 0;
+  const settlements = metricNumber(activeSummary.settlements) ?? 0;
+  const pnl = metricNumber(activeSummary.realized_pnl);
+  const roi = metricNumber(activeSummary.roi_on_filled_cost);
+  const minFills = metricNumber(thresholds.min_typed_paper_fills) ?? 30;
+  const minSettlements = metricNumber(thresholds.min_typed_paper_settlements) ?? minFills;
+  const minRoi = metricNumber(thresholds.min_typed_paper_roi_on_filled_cost) ?? 0.03;
+  return [
+    strategyCell("Route Gate", routePromotionDecisionText(decision.decision)),
+    strategyCell(
+      "Typed Paper",
+      `${fmt.format(fills)} fills / ${fmt.format(settlements)} settled | ${pnl === null ? "$0.00" : formatSignedMoney(pnl)} | ROI ${formatPercent(roi)}`,
+    ),
+    strategyCell(
+      "Needed",
+      `${fmt.format(minFills)} fills, ${fmt.format(minSettlements)} settled, ROI >= ${formatPercent(minRoi)}`,
+    ),
+  ];
+}
+
 function renderStrategyPanels() {
   const activeSummary = state.workflow.active_backtest?.summary || {};
   const policy = state.workflow.live_trade.execution_policy || {};
@@ -3058,8 +3092,9 @@ function renderStrategyPanels() {
   ].join("");
   const paperStrategy = byId("paperStrategy");
   if (paperStrategy) {
-    paperStrategy.innerHTML = "";
-    paperStrategy.hidden = true;
+    const cells = paperRouteGateCells();
+    paperStrategy.innerHTML = cells.join("");
+    paperStrategy.hidden = !cells.length;
   }
   byId("liveStrategy").innerHTML = [
     strategyCell("Mode", liveStatus),
