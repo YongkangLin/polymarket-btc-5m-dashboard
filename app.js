@@ -17,10 +17,10 @@ const DEFAULT_BACKEND_BASE = "http://127.0.0.1:8788";
 const LIVE_TICK_RENDER_MAX_POINTS = 2400;
 const LIVE_AUX_RENDER_THROTTLE_MS = 500;
 const LIVE_TICK_PERSIST_MS = 7500;
-const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 3000;
-const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 300;
-const LIVE_TICK_PERSIST_POINTS_PER_MARKET = 1200;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v14";
+const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 24000;
+const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 1000;
+const LIVE_TICK_PERSIST_POINTS_PER_MARKET = 8000;
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v15";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
   "polymarketPaperLiveTicks.v3",
@@ -34,6 +34,7 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v11",
   "polymarketPaperLiveTicks.v12",
   "polymarketPaperLiveTicks.v13",
+  "polymarketPaperLiveTicks.v14",
 ];
 const LIVE_PAPER_X_WINDOW_SECONDS = 30;
 const LIVE_PAPER_X_LEAD_SECONDS = 4;
@@ -58,8 +59,8 @@ const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const BINANCE_DEPTH_TABLE_STALE_MS = 15000;
 const LOCAL_BACKEND_BASE = configuredBackendBase();
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
-const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 80;
-const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 320;
+const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 5000;
+const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 20000;
 const POLYMARKET_TRUTH_SOURCE = "chainlink_data_streams";
 const DEFAULT_PAPER_SESSION = Object.freeze({
   mode: "paper",
@@ -5611,9 +5612,10 @@ function renderPaperDecisionGraph(options = {}) {
   const externalBaselineRows = fullWindowExternalRows.length ? fullWindowExternalRows : externalRows;
   const externalStartPrice = graphBaselinePrice(externalBaselineRows, "binance", startMeta?.price, true);
   const externalStartAnchor = sourceStartAnchorSample(externalBaselineRows, "binance", externalStartPrice, true);
+  const externalSampleRows = fullWindowExternalRows.length ? fullWindowExternalRows : externalRows;
   const rawExternalSamples = externalStartPrice === null ? [] : [
     ...(externalStartAnchor ? [externalStartAnchor] : []),
-    ...paperGraphSamples(externalRows, externalStartPrice, "binance"),
+    ...paperGraphSamples(externalSampleRows, externalStartPrice, "binance"),
   ].sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
   const startAnchorSample = chainlinkStartAnchorSample(market, startMeta);
   const rawTruthSamples = (startMeta ? [
