@@ -967,8 +967,16 @@ function patchPaperAuxContent(aux, auxHtml) {
   });
 }
 
+function ensureTradeSessionAuxHtml(chart, auxHtml = "") {
+  const html = String(auxHtml || "");
+  if (!chart || (chart.id !== "paperChart" && chart.id !== "liveChart")) return html;
+  if (html.includes('data-paper-panel="session_pnl"')) return html;
+  return `${renderPaperSessionHistory(tradeViewSession(chart.id === "liveChart"))}${html}`;
+}
+
 function setPaperChartContent(chart, visualHtml, auxHtml = "") {
   if (!chart) return;
+  const normalizedAuxHtml = ensureTradeSessionAuxHtml(chart, auxHtml);
   if (!chart._paperSplitContent) {
     chart.innerHTML = '<div class="paper-chart-visual"></div><div class="paper-chart-aux"></div>';
     chart._paperSplitContent = true;
@@ -981,9 +989,9 @@ function setPaperChartContent(chart, visualHtml, auxHtml = "") {
     visual.innerHTML = visualHtml;
     chart._paperVisualHtml = visualHtml;
   }
-  if (aux && chart._paperAuxHtml !== auxHtml) {
-    patchPaperAuxContent(aux, auxHtml);
-    chart._paperAuxHtml = auxHtml;
+  if (aux && chart._paperAuxHtml !== normalizedAuxHtml) {
+    patchPaperAuxContent(aux, normalizedAuxHtml);
+    chart._paperAuxHtml = normalizedAuxHtml;
   }
 }
 
