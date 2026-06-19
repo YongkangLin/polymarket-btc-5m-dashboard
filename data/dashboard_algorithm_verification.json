@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-19T19:01:56.274182+00:00",
+  "generated_at": "2026-06-19T19:22:49.093264+00:00",
   "status": "passed",
   "feature_summary": {
     "markets": 2260,
@@ -23,8 +23,8 @@
     "roi_after_slippage_haircut": null
   },
   "workflow_summary": {
-    "strategy": "high_coverage_h5_challenger",
-    "status": "golden_strategy_contract",
+    "strategy": "consistency_t91_150_h5_challenger",
+    "status": "needs_backtest_audit",
     "clean_markets": 2260,
     "decision_rows": 133346,
     "wallet_profile_strategies": [
@@ -34,19 +34,19 @@
     ]
   },
   "engine_summary": {
-    "config": "live-engine/config/btc_5m_high_coverage_h5_challenger_shadow.json",
+    "config": "live-engine/config/btc_5m_consistency_t91_150_h5_challenger_shadow.json",
     "mode": "shadow",
     "symbols": [
       "BTC"
     ],
     "table_gate": {
       "enabled": true,
-      "min_seconds_left": 121,
-      "max_seconds_left": 240,
+      "min_seconds_left": 91,
+      "max_seconds_left": 150,
       "min_abs_distance_bps": 0.0,
-      "max_abs_distance_bps": 12.0,
-      "min_ask": 0.55,
-      "max_ask": 0.75,
+      "max_abs_distance_bps": 10.0,
+      "min_ask": 0.65,
+      "max_ask": 0.9,
       "min_top5_capacity_dollars": 25.0,
       "min_signal_depth_imbalance": null,
       "min_trade_flow_edge_dollars": null,
@@ -58,10 +58,10 @@
     "maker_route": {
       "mode": "improve_one_tick",
       "quote_horizon_seconds": 5,
-      "max_queue_ahead_notional": 400.0
+      "max_queue_ahead_notional": null
     },
     "quote_notional_dollars": 5.0,
-    "enforce_expected_edge_gate": true
+    "enforce_expected_edge_gate": false
   },
   "checks": [
     {
@@ -96,9 +96,9 @@
       "id": "strict_report_candidate_synced",
       "label": "Strict report and dashboard candidate are identical when strict is active",
       "actual": {
-        "candidate": "docs/data/candidate_high_coverage_h5_challenger_strategy.json",
-        "candidate_hash": "3fd02a25ced1fb2cf4607ec2df2c842a5afd7b214ac7e27ebbe45c10cb0d7b76",
-        "algorithm_hash": "ea23daf22ba6be8bbbe91b3bade8a623aedb871f4128de4e5ce474973af64319"
+        "candidate": "docs/data/candidate_consistency_t91_150_h5_challenger_strategy.json",
+        "candidate_hash": "f8038c6abf4cde2f3fd8ecded7ea36de701a6d0bf64033a41920ae123abcc7a6",
+        "algorithm_hash": "f8038c6abf4cde2f3fd8ecded7ea36de701a6d0bf64033a41920ae123abcc7a6"
       },
       "expected": {
         "strict_candidate": "docs/data/candidate_strict_directional_maker_strategy.json",
@@ -178,8 +178,8 @@
     {
       "id": "workflow_signals_match_algorithm",
       "label": "Workflow signal count matches algorithm",
-      "actual": 725,
-      "expected": 725,
+      "actual": 1830,
+      "expected": 1830,
       "passed": true
     },
     {
@@ -187,37 +187,37 @@
       "label": "Workflow active summary matches dashboard candidate",
       "actual": {
         "clean_markets_scanned": 2260,
-        "quote_markets": 725,
-        "quoted_markets": 725,
-        "quote_market_rate": 0.320796,
-        "filled_markets": 547,
-        "test_quote_markets": 200,
-        "test_filled_markets": 137,
-        "test_pnl_dollars": 71.7279,
-        "test_roi_on_planned_cost": 0.071728,
-        "test_roi_on_filled_cost": 0.10508,
-        "test_positive_day_share": 0.75
+        "quote_markets": 1830,
+        "quoted_markets": 1830,
+        "quote_market_rate": 0.809735,
+        "filled_markets": 1202,
+        "test_quote_markets": 490,
+        "test_filled_markets": 237,
+        "test_pnl_dollars": 87.9696,
+        "test_roi_on_planned_cost": 0.035906,
+        "test_roi_on_filled_cost": 0.075112,
+        "test_positive_day_share": 1.0
       },
       "expected": {
         "clean_markets_scanned": 2260,
-        "quote_markets": 725,
-        "quoted_markets": 725,
-        "quote_market_rate": 0.32079646017699115,
-        "filled_markets": 547,
-        "test_quote_markets": 200,
-        "test_filled_markets": 137,
-        "test_pnl_dollars": 71.72789999999999,
-        "test_roi_on_planned_cost": 0.0717279,
-        "test_roi_on_filled_cost": 0.10508042777615,
-        "test_positive_day_share": 0.75
+        "quote_markets": 1830,
+        "quoted_markets": 1830,
+        "quote_market_rate": 0.8097345132743363,
+        "filled_markets": 1202,
+        "test_quote_markets": 490,
+        "test_filled_markets": 237,
+        "test_pnl_dollars": 87.9696,
+        "test_roi_on_planned_cost": 0.035905959183673467,
+        "test_roi_on_filled_cost": 0.0751119832804422,
+        "test_positive_day_share": 1.0
       },
       "passed": true
     },
     {
       "id": "workflow_win_rate_matches_algorithm",
       "label": "Workflow ROI/reference metric matches algorithm",
-      "actual": 0.032705,
-      "expected": 0.032705,
+      "actual": 0.024653,
+      "expected": 0.024653,
       "passed": true
     },
     {
@@ -240,8 +240,8 @@
     {
       "id": "public_workflow_synced",
       "label": "Public dashboard workflow is synced",
-      "actual": "544beca25e31a3f498a05887db9fddbdc737b41a67b04efcb404e60d7051d9b5",
-      "expected": "544beca25e31a3f498a05887db9fddbdc737b41a67b04efcb404e60d7051d9b5",
+      "actual": "8c2e451e3a24743005a5cf7dac083f6098cc761145bde2caf3223d98f0d33eda",
+      "expected": "8c2e451e3a24743005a5cf7dac083f6098cc761145bde2caf3223d98f0d33eda",
       "passed": true
     },
     {
@@ -316,12 +316,12 @@
       "label": "Rust table gate matches selected algorithm",
       "actual": {
         "enabled": true,
-        "min_seconds_left": 121,
-        "max_seconds_left": 240,
+        "min_seconds_left": 91,
+        "max_seconds_left": 150,
         "min_abs_distance_bps": 0.0,
-        "max_abs_distance_bps": 12.0,
-        "min_ask": 0.55,
-        "max_ask": 0.75,
+        "max_abs_distance_bps": 10.0,
+        "min_ask": 0.65,
+        "max_ask": 0.9,
         "min_top5_capacity_dollars": 25.0,
         "min_signal_depth_imbalance": null,
         "min_trade_flow_edge_dollars": null,
@@ -332,12 +332,12 @@
       },
       "expected": {
         "enabled": true,
-        "min_seconds_left": 121,
-        "max_seconds_left": 240,
+        "min_seconds_left": 91,
+        "max_seconds_left": 150,
         "min_abs_distance_bps": 0.0,
-        "max_abs_distance_bps": 12.0,
-        "min_ask": 0.55,
-        "max_ask": 0.75,
+        "max_abs_distance_bps": 10.0,
+        "min_ask": 0.65,
+        "max_ask": 0.9,
         "min_top5_capacity_dollars": 25.0,
         "min_signal_depth_imbalance": null,
         "min_trade_flow_edge_dollars": null,
@@ -368,12 +368,12 @@
       "actual": {
         "mode": "improve_one_tick",
         "quote_horizon_seconds": 5,
-        "max_queue_ahead_notional": 400.0
+        "max_queue_ahead_notional": null
       },
       "expected": {
         "mode": "improve_one_tick",
         "quote_horizon_seconds": 5,
-        "max_queue_ahead_notional": 400.0
+        "max_queue_ahead_notional": null
       },
       "passed": true
     },
@@ -387,8 +387,8 @@
     {
       "id": "engine_expected_edge_gate_matches_algorithm",
       "label": "Rust expected-edge cancel gate matches selected fill policy",
-      "actual": true,
-      "expected": true,
+      "actual": false,
+      "expected": false,
       "passed": true
     }
   ]
