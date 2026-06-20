@@ -345,6 +345,10 @@ select {
   color: var(--ink);
 }
 
+.paper-live-plot-wrap .u-legend {
+  display: none !important;
+}
+
 .paper-line-swatch {
   width: 24px;
   height: 3px;
