@@ -61,7 +61,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 240;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 1200;
 const LIVE_RENDER_POINTS_PER_PIXEL = 1.4;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v41-sticky-polymarket-odds";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v42-sticky-current-window-odds";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -4805,12 +4805,21 @@ function outcomeOddsWindowKey(row) {
   return start === null ? "" : String(start);
 }
 
+function outcomeWindowAliasKeys(start) {
+  const number = metricNumber(start);
+  if (number === null) return [];
+  const windowStart = Math.floor(number);
+  return [
+    String(windowStart),
+    `btc-updown-5m-${windowStart}`,
+    `backend-live-btc-5m-${windowStart}`,
+  ];
+}
+
 function outcomeOddsCacheKeys(row) {
   const keys = [];
   const start = marketWindowStartUnix(row);
-  if (start !== null) {
-    keys.push(String(start), `btc-updown-5m-${start}`, `backend-live-btc-5m-${start}`);
-  }
+  if (start !== null) keys.push(...outcomeWindowAliasKeys(start));
   const key = paperGraphKey(row);
   if (key) keys.push(key);
   return [...new Set(keys)];
@@ -4833,6 +4842,41 @@ function outcomeRowsNewestFirst(candidates) {
     });
 }
 
+function outcomeOddsRowUsable(row) {
+  return metricNumber(row?.up) !== null
+    || metricNumber(row?.down) !== null
+    || rowHasUsableOutcomeOdds(row)
+    || rowHasDisplayPolymarketBook(row);
+}
+
+function outcomeOddsMapRowsForMarket(map, market, predicate = outcomeOddsRowUsable) {
+  const start = marketWindowStartUnix(market);
+  const keys = outcomeOddsCacheKeys(market);
+  if (start !== null) keys.push(...outcomeWindowAliasKeys(start));
+  const seen = new Set();
+  const rows = [];
+  const addRow = (key, row) => {
+    if (!row || seen.has(key)) return;
+    seen.add(key);
+    if (predicate && !predicate(row)) return;
+    rows.push(row);
+  };
+  [...new Set(keys)].forEach((key) => addRow(key, map.get(key)));
+  if (start !== null) {
+    map.forEach((row, key) => {
+      if (seen.has(key)) return;
+      const rowStart = marketWindowStartUnix({
+        market_key: key,
+        slug: key,
+        condition_id: key,
+        ...(row || {}),
+      });
+      if (rowStart === start) addRow(key, row);
+    });
+  }
+  return rows.sort((left, right) => (outcomeOddsTimestampMicro(right) ?? 0) - (outcomeOddsTimestampMicro(left) ?? 0));
+}
+
 function cachedOutcomeOddsForMarket(market) {
   const keys = outcomeOddsCacheKeys(market);
   for (const key of keys) {
@@ -4840,15 +4884,19 @@ function cachedOutcomeOddsForMarket(market) {
     if (odds && rowHasDisplayPolymarketBook(odds)) return odds;
     if (odds) state.latestOutcomeOddsByWindow.delete(key);
   }
-  return null;
+  return outcomeOddsMapRowsForMarket(state.latestOutcomeOddsByWindow, market, rowHasDisplayPolymarketBook)[0] || null;
 }
 
 function rememberOutcomeOddsForWindow(anchor, candidates = []) {
   const rows = [anchor, ...(candidates || [])].filter(Boolean);
   const oddsRows = displayPolymarketBookRows(rows);
-  const keys = [...new Set(rows.flatMap(outcomeOddsCacheKeys))];
-  const key = rows.map(outcomeOddsWindowKey).find(Boolean) || keys[0];
+  const windowKey = rows.map(outcomeOddsWindowKey).find(Boolean);
+  const aliasKeys = windowKey ? outcomeWindowAliasKeys(windowKey) : [];
+  const keys = [...new Set([...aliasKeys, ...rows.flatMap(outcomeOddsCacheKeys)])];
+  const key = windowKey || keys[0];
   if (!key || !keys.length) return null;
+  const numericKey = metricNumber(windowKey || key);
+  if (numericKey === null) return null;
   const { up, down } = outcomeDisplayBookOddsFromCandidates(oddsRows);
   if (up === null && down === null) return cachedOutcomeOddsForMarket(anchor) || null;
   const timestamps = oddsRows.map(outcomeOddsTimestampMicro).filter((value) => value !== null);
@@ -4859,10 +4907,10 @@ function rememberOutcomeOddsForWindow(anchor, candidates = []) {
   const source = oddsRows[0] ? { ...oddsRows[0] } : null;
   const odds = {
     ...existing,
-    window_start_unix: Number(key),
-    window_end_unix: Number(key) + 300,
-    slug: `btc-updown-5m-${key}`,
-    market_key: `btc-updown-5m-${key}`,
+    window_start_unix: numericKey,
+    window_end_unix: numericKey + 300,
+    slug: `btc-updown-5m-${numericKey}`,
+    market_key: `btc-updown-5m-${numericKey}`,
     _odds_updated_micro: incomingTime || existingTime || Date.now() * 1000,
   };
   copyLocalOutcomeBookFields(odds, source);
@@ -5106,10 +5154,16 @@ function renderPaperOddsStrip(market, latestRaw, latestBookRaw, odds = null) {
 }
 
 function stickyOutcomeOddsForMarket(market, odds) {
-  const keys = outcomeOddsCacheKeys(market);
-  const previouslyDisplayed = keys
-    .map((key) => state.lastDisplayedOutcomeOddsByWindow.get(key))
-    .find(Boolean);
+  const start = marketWindowStartUnix(market);
+  const keys = [...new Set([
+    ...outcomeOddsCacheKeys(market),
+    ...(start === null ? [] : outcomeWindowAliasKeys(start)),
+  ])];
+  const previouslyDisplayed = outcomeOddsMapRowsForMarket(
+    state.lastDisplayedOutcomeOddsByWindow,
+    market,
+    outcomeOddsRowUsable,
+  )[0] || null;
   const cached = cachedOutcomeOddsForMarket(market);
   const resolved = completeOutcomeOdds(
     odds,
@@ -5119,6 +5173,10 @@ function stickyOutcomeOddsForMarket(market, odds) {
     const stored = {
       up: resolved.up,
       down: resolved.down,
+      window_start_unix: start,
+      window_end_unix: start === null ? null : start + 300,
+      slug: start === null ? paperGraphKey(market) : `btc-updown-5m-${start}`,
+      market_key: start === null ? paperGraphKey(market) : `btc-updown-5m-${start}`,
       _odds_updated_micro: Date.now() * 1000,
     };
     keys.forEach((key) => state.lastDisplayedOutcomeOddsByWindow.set(key, stored));
