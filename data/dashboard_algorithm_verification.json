@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-06-19T20:28:33.675481+00:00",
+  "generated_at": "2026-06-20T09:05:27.196557+00:00",
   "status": "passed",
   "feature_summary": {
-    "markets": 2260,
-    "rows": 680260,
-    "complete_markets": 2260,
+    "markets": 2167,
+    "rows": 652267,
+    "complete_markets": 2167,
     "min_rows_per_market": 301,
     "max_rows_per_market": 301,
     "bad_rows": 0
@@ -24,8 +24,8 @@
   },
   "workflow_summary": {
     "strategy": "consistency_t91_150_h5_challenger",
-    "status": "needs_backtest_audit",
-    "clean_markets": 2260,
+    "status": "golden_strategy_contract",
+    "clean_markets": 2167,
     "decision_rows": 133346,
     "wallet_profile_strategies": [
       "profile_cheap_pair",
@@ -34,7 +34,7 @@
     ]
   },
   "engine_summary": {
-    "config": "live-engine/config/btc_5m_consistency_t91_150_h5_challenger_shadow.json",
+    "config": "live-engine/config/btc_5m_consistency_queue100_challenger_shadow.json",
     "mode": "shadow",
     "symbols": [
       "BTC"
@@ -58,10 +58,10 @@
     "maker_route": {
       "mode": "improve_one_tick",
       "quote_horizon_seconds": 5,
-      "max_queue_ahead_notional": null
+      "max_queue_ahead_notional": 100.0
     },
     "quote_notional_dollars": 5.0,
-    "enforce_expected_edge_gate": false
+    "enforce_expected_edge_gate": true
   },
   "checks": [
     {
@@ -97,7 +97,7 @@
       "label": "Strict report and dashboard candidate are identical when strict is active",
       "actual": {
         "candidate": "docs/data/candidate_consistency_t91_150_h5_challenger_strategy.json",
-        "candidate_hash": "f8038c6abf4cde2f3fd8ecded7ea36de701a6d0bf64033a41920ae123abcc7a6",
+        "candidate_hash": "0b61fe0be4fb9a21d1e256c946e37ac5b38d25eeda5b5c10c1233b0ad52429b8",
         "algorithm_hash": "ea23daf22ba6be8bbbe91b3bade8a623aedb871f4128de4e5ce474973af64319"
       },
       "expected": {
@@ -123,8 +123,8 @@
     {
       "id": "feature_markets_complete",
       "label": "Every feature market has 301 clean seconds",
-      "actual": 2260,
-      "expected": 2260,
+      "actual": 2167,
+      "expected": 2167,
       "passed": true
     },
     {
@@ -137,8 +137,8 @@
     {
       "id": "workflow_markets_match_clean_manifest",
       "label": "Workflow Back Test markets exactly match clean manifest",
-      "actual": 2260,
-      "expected": 2260,
+      "actual": 2167,
+      "expected": 2167,
       "passed": true
     },
     {
@@ -157,15 +157,15 @@
     {
       "id": "algorithm_clean_count_matches_features",
       "label": "Algorithm clean count matches selected data gate",
-      "actual": 2260,
-      "expected": 2260,
+      "actual": 2167,
+      "expected": 2167,
       "passed": true
     },
     {
       "id": "workflow_clean_count_matches_algorithm",
       "label": "Workflow clean count matches algorithm",
-      "actual": 2260,
-      "expected": 2260,
+      "actual": 2167,
+      "expected": 2167,
       "passed": true
     },
     {
@@ -178,37 +178,37 @@
     {
       "id": "workflow_signals_match_algorithm",
       "label": "Workflow signal count matches algorithm",
-      "actual": 1830,
-      "expected": 1830,
+      "actual": 1814,
+      "expected": 1814,
       "passed": true
     },
     {
       "id": "workflow_active_summary_matches_candidate",
       "label": "Workflow active summary matches dashboard candidate",
       "actual": {
-        "clean_markets_scanned": 2260,
-        "quote_markets": 1830,
-        "quoted_markets": 1830,
-        "quote_market_rate": 0.809735,
-        "filled_markets": 1202,
-        "test_quote_markets": 490,
-        "test_filled_markets": 237,
-        "test_pnl_dollars": 87.9696,
-        "test_roi_on_planned_cost": 0.035906,
-        "test_roi_on_filled_cost": 0.075112,
+        "clean_markets_scanned": 2167,
+        "quote_markets": 1814,
+        "quoted_markets": 1814,
+        "quote_market_rate": 0.837102,
+        "filled_markets": 1194,
+        "test_quote_markets": 592,
+        "test_filled_markets": 296,
+        "test_pnl_dollars": 105.156244,
+        "test_roi_on_planned_cost": 0.035526,
+        "test_roi_on_filled_cost": 0.071721,
         "test_positive_day_share": 1.0
       },
       "expected": {
-        "clean_markets_scanned": 2260,
-        "quote_markets": 1830,
-        "quoted_markets": 1830,
-        "quote_market_rate": 0.8097345132743363,
-        "filled_markets": 1202,
-        "test_quote_markets": 490,
-        "test_filled_markets": 237,
-        "test_pnl_dollars": 87.9696,
-        "test_roi_on_planned_cost": 0.035905959183673467,
-        "test_roi_on_filled_cost": 0.0751119832804422,
+        "clean_markets_scanned": 2167,
+        "quote_markets": 1814,
+        "quoted_markets": 1814,
+        "quote_market_rate": 0.8371019843101062,
+        "filled_markets": 1194,
+        "test_quote_markets": 592,
+        "test_filled_markets": 296,
+        "test_pnl_dollars": 105.15624399874,
+        "test_roi_on_planned_cost": 0.03552575810768243,
+        "test_roi_on_filled_cost": 0.07172127265152445,
         "test_positive_day_share": 1.0
       },
       "passed": true
@@ -216,8 +216,8 @@
     {
       "id": "workflow_win_rate_matches_algorithm",
       "label": "Workflow ROI/reference metric matches algorithm",
-      "actual": 0.024653,
-      "expected": 0.024653,
+      "actual": 0.023725,
+      "expected": 0.023725,
       "passed": true
     },
     {
@@ -226,22 +226,23 @@
       "actual": {
         "status": "paper_collecting",
         "maker_route_ready": false,
-        "selected_route_id": "maker_improve_1c_h5",
+        "selected_route_id": "maker_improve_1c_h5_q100",
         "selected_route_type": "maker"
       },
       "expected": {
         "status": "paper_collecting",
         "maker_route_ready": false,
         "selected_route_id": "maker_improve_1c_h5",
-        "selected_route_type": "maker"
+        "selected_route_type": "maker",
+        "paper_route_override": "maker_improve_1c_h5_q100"
       },
       "passed": true
     },
     {
       "id": "public_workflow_synced",
       "label": "Public dashboard workflow is synced",
-      "actual": "6ed995638662920475e20a2f3cdffda8ae61862f54c787d99dce685517bb6f86",
-      "expected": "6ed995638662920475e20a2f3cdffda8ae61862f54c787d99dce685517bb6f86",
+      "actual": "51aadd9e80633701abca1bf73975c653865b6177f74b47ce6d32ad604eee812a",
+      "expected": "51aadd9e80633701abca1bf73975c653865b6177f74b47ce6d32ad604eee812a",
       "passed": true
     },
     {
@@ -368,12 +369,12 @@
       "actual": {
         "mode": "improve_one_tick",
         "quote_horizon_seconds": 5,
-        "max_queue_ahead_notional": null
+        "max_queue_ahead_notional": 100.0
       },
       "expected": {
         "mode": "improve_one_tick",
         "quote_horizon_seconds": 5,
-        "max_queue_ahead_notional": null
+        "max_queue_ahead_notional": 100.0
       },
       "passed": true
     },
@@ -387,8 +388,8 @@
     {
       "id": "engine_expected_edge_gate_matches_algorithm",
       "label": "Rust expected-edge cancel gate matches selected fill policy",
-      "actual": false,
-      "expected": false,
+      "actual": true,
+      "expected": true,
       "passed": true
     }
   ]
