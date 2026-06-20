@@ -56,7 +56,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v21-source-label-guard";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v22-global-source-label-scrub";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -1128,12 +1128,16 @@ function dedupePaperChartSourceLabels(chart) {
     if (index > 0) node.remove();
   });
   chart.querySelectorAll(".paper-live-line-overlay").forEach((node) => node.remove());
-  chart.querySelectorAll(".paper-line-key, .paper-line-inline-label, .paper-source-card, .paper-side-source").forEach((node) => {
+  chart.querySelectorAll(".paper-line-inline-label, .paper-source-card, .paper-side-source").forEach((node) => {
+    node.remove();
+  });
+  chart.querySelectorAll(".paper-line-key").forEach((node) => {
     if (isLegacySourceRoleLabel(node)) {
       node.remove();
     }
   });
   removeLegacySourceRoleLabels(chart);
+  removeLegacySourceRoleLabels(document);
 }
 
 function normalizedNodeText(node) {
@@ -1145,15 +1149,21 @@ function isLegacySourceRoleLabel(node) {
   return text === "chainlink data streams truth"
     || text === "binance wss bookticker signal"
     || text.includes("chainlink data streams truth")
-    || text.includes("binance wss bookticker signal");
+    || text.includes("binance wss bookticker signal")
+    || text.includes("chainlink data streams")
+    || text.includes("binance wss bookticker");
 }
 
 function removeLegacySourceRoleLabels(root) {
-  (root || document).querySelectorAll("*").forEach((node) => {
+  const scope = root || document;
+  scope.querySelectorAll(".paper-line-inline-label, .paper-source-card, .paper-side-source").forEach((node) => node.remove());
+  scope.querySelectorAll("*").forEach((node) => {
     const text = normalizedNodeText(node);
     if (!text) return;
     const looksLikeLegacySource = text.includes("chainlink data streams truth")
-      || text.includes("binance wss bookticker signal");
+      || text.includes("binance wss bookticker signal")
+      || text.includes("chainlink data streams")
+      || text.includes("binance wss bookticker");
     if (!looksLikeLegacySource) return;
     const className = String(node.className || "").toLowerCase();
     const isKnownSourceNode = className.includes("source")
@@ -1163,6 +1173,26 @@ function removeLegacySourceRoleLabels(root) {
     const isSmallSourceBlock = text.length <= 140 && node.children.length <= 6;
     if (isKnownSourceNode || isSmallSourceBlock) node.remove();
   });
+}
+
+function startLegacySourceLabelScrubber() {
+  if (state.legacySourceLabelScrubberStarted || !document.body) return;
+  state.legacySourceLabelScrubberStarted = true;
+  removeLegacySourceRoleLabels(document);
+  const observer = new MutationObserver((mutations) => {
+    let shouldScrub = false;
+    mutations.forEach((mutation) => {
+      mutation.addedNodes.forEach((node) => {
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+        const text = normalizedNodeText(node);
+        if (isLegacySourceRoleLabel(node) || text.includes("chainlink data streams") || text.includes("binance wss bookticker")) {
+          shouldScrub = true;
+        }
+      });
+    });
+    if (shouldScrub) removeLegacySourceRoleLabels(document);
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
 }
 
 function canUseUPlot() {
@@ -6893,6 +6923,7 @@ function renderActiveTab() {
 }
 
 async function main() {
+  startLegacySourceLabelScrubber();
   loadPersistedPaperTicks();
   state.workflow = normalizeWorkflow(await loadJson("data/workflow.json"));
   renderStatus();

@@ -351,6 +351,12 @@ select {
   display: none !important;
 }
 
+.paper-line-inline-label,
+.paper-source-card,
+.paper-side-source {
+  display: none !important;
+}
+
 .paper-line-swatch {
   width: 24px;
   height: 3px;
