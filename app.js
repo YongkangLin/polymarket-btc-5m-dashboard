@@ -56,7 +56,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v18-single-feed-legend";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v19-single-source-legend";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -1114,7 +1114,20 @@ function setPaperChartContent(chart, visualHtml, auxHtml = "") {
     chart._paperAuxHtml = normalizedAuxHtml;
   }
   ensureTradeSessionPanelMounted(chart, aux);
+  dedupePaperChartSourceLabels(chart);
   refreshPaperCountdownLabels();
+}
+
+function dedupePaperChartSourceLabels(chart) {
+  const root = chart?.querySelector(".paper-chart-visual") || chart;
+  if (!root) return;
+  root.querySelectorAll(".u-legend").forEach((node) => node.remove());
+  root.querySelectorAll(".paper-live-chart-head").forEach((node, index) => {
+    if (index > 0) node.remove();
+  });
+  root.querySelectorAll(".paper-line-legend-html").forEach((node, index) => {
+    if (index > 0) node.remove();
+  });
 }
 
 function canUseUPlot() {
