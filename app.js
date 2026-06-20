@@ -1156,13 +1156,18 @@ function normalizedNodeText(node) {
 }
 
 function isLegacySourceRoleLabel(node) {
-  const text = normalizedNodeText(node);
-  return text === "chainlink data streams truth"
-    || text === "binance wss bookticker signal"
-    || text.includes("chainlink data streams truth")
-    || text.includes("binance wss bookticker signal")
-    || text.includes("chainlink data streams")
-    || text.includes("binance wss bookticker");
+  return textLooksLikeVerboseFeedRole(normalizedNodeText(node));
+}
+
+function textLooksLikeVerboseFeedRole(value) {
+  const text = String(value || "").toLowerCase().replace(/\s+/g, " ").trim();
+  if (!text) return false;
+  const hasTruthRole = text.includes("truth");
+  const hasSignalRole = text.includes("signal");
+  const hasChainlinkStreamWords = text.includes("chainlink") && text.includes("data") && text.includes("stream");
+  const hasBinanceTickerWords = text.includes("binance") && (text.includes("wss") || text.includes("book")) && text.includes("ticker");
+  return (hasChainlinkStreamWords && (hasTruthRole || text.length <= 80))
+    || (hasBinanceTickerWords && (hasSignalRole || text.length <= 80));
 }
 
 function removeLegacySourceRoleLabels(root) {
@@ -1170,12 +1175,7 @@ function removeLegacySourceRoleLabels(root) {
   scope.querySelectorAll(".paper-line-inline-label, .paper-source-card, .paper-side-source").forEach((node) => node.remove());
   scope.querySelectorAll("*").forEach((node) => {
     const text = normalizedNodeText(node);
-    if (!text) return;
-    const looksLikeLegacySource = text.includes("chainlink data streams truth")
-      || text.includes("binance wss bookticker signal")
-      || text.includes("chainlink data streams")
-      || text.includes("binance wss bookticker");
-    if (!looksLikeLegacySource) return;
+    if (!textLooksLikeVerboseFeedRole(text)) return;
     const className = String(node.className || "").toLowerCase();
     const isKnownSourceNode = className.includes("source")
       || className.includes("legend")
