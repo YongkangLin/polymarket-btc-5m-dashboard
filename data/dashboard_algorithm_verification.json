@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-20T23:08:55.305509+00:00",
+  "generated_at": "2026-06-20T23:21:24.604208+00:00",
   "status": "passed",
   "feature_summary": {
     "markets": 2167,
@@ -285,8 +285,8 @@
     {
       "id": "public_workflow_synced",
       "label": "Public dashboard workflow is synced",
-      "actual": "d026980310366fa16ef2e3b129d9c295a3bf77c1e7a6decdc7396dded63465dc",
-      "expected": "d026980310366fa16ef2e3b129d9c295a3bf77c1e7a6decdc7396dded63465dc",
+      "actual": "0af8a103ee8e5d66736d37e8dcb93d18ff88d1c98bf02a6f83a9188d8026ea1e",
+      "expected": "0af8a103ee8e5d66736d37e8dcb93d18ff88d1c98bf02a6f83a9188d8026ea1e",
       "passed": true
     },
     {
