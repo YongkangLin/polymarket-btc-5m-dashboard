@@ -57,7 +57,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v36-live-window-key-aliases";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v37-same-window-binance";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -2493,7 +2493,16 @@ function currentDisplayPaperMarket() {
 
 function isBinanceLivePoint(point) {
   const venue = String(point?.btc_price_venue || "");
-  if (!venue.startsWith("local_backend_binance_ws")) return false;
+  const source = [
+    point?.external_btc_source,
+    point?.external_btc_venue,
+    point?.price_role,
+    point?.reason,
+  ].filter(Boolean).join(" ").toLowerCase();
+  const isLocalBinanceVenue = venue.startsWith("local_backend_binance_ws");
+  const isCompactBinanceRow = source.includes("binance")
+    && ["trade", "book", "depth"].includes(point?.backend_event_kind);
+  if (!isLocalBinanceVenue && !isCompactBinanceRow) return false;
   if (["live_tick", "live_book_tick"].includes(point?.decision)) return true;
   return ["trade", "book", "depth"].includes(point?.backend_event_kind);
 }
@@ -2528,14 +2537,20 @@ function liveTickPointsForMarket(market) {
   });
   const seen = new Set();
   const rows = [];
+  const addPoint = (point) => {
+    if (!isBinanceLivePoint(point) && !isChainlinkPriceRow(point)) return;
+    if (!rowBelongsToMarketWindow(point, market)) return;
+    const pointKey = point.point_id || `${point.decision}:${pointTimestampMicro(point)}:${point.btc_price}`;
+    if (seen.has(pointKey)) return;
+    seen.add(pointKey);
+    rows.push(point);
+  };
   keys.forEach((tickKey) => {
-    (state.liveBtcTicksByMarket.get(tickKey) || []).forEach((point) => {
-      if (!isBinanceLivePoint(point) && !isChainlinkPriceRow(point)) return;
-      const pointKey = point.point_id || `${point.decision}:${pointTimestampMicro(point)}:${point.btc_price}`;
-      if (seen.has(pointKey)) return;
-      seen.add(pointKey);
-      rows.push(point);
-    });
+    (state.liveBtcTicksByMarket.get(tickKey) || []).forEach(addPoint);
+  });
+  state.liveBtcTicksByMarket.forEach((points, tickKey) => {
+    if (keys.has(tickKey)) return;
+    (points || []).forEach(addPoint);
   });
   return sortRowsIfNeeded(rows, pointTimestampMicro);
 }
