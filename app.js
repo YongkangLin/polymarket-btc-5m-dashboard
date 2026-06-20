@@ -5103,8 +5103,8 @@ function applyOutcomeOddsFromCandidates(target, candidates) {
   const rows = displayPolymarketBookRows([...(candidates || []), cachedOutcomeOddsForMarket(target)].filter(Boolean));
   const { up, down } = outcomeDisplayBookOddsFromCandidates(rows);
   const source = rows[0] ? { ...rows[0] } : null;
-  removeOutcomeAndBookFields(target);
   if (!source || (up === null && down === null)) return target;
+  removeOutcomeAndBookFields(target);
   copyLocalOutcomeBookFields(target, source);
   if (up !== null) {
     target.paper_up_probability = up;
@@ -7060,10 +7060,9 @@ function handleBackendStreamMessage(payload) {
     const point = payload.point;
     const market = rememberBackendStreamMarket(payload.market || point, {
       addTruthPoint: false,
-      preserveOutcomeOdds: false,
     }) || point;
     if (point && isPaperEventPoint(point)) {
-      rememberObservedPaperMarket(market, [point], [point], { preserveOutcomeOdds: false });
+      rememberObservedPaperMarket(market, [point], [point]);
     }
     state.backendStatus = {
       ...state.backendStatus,
