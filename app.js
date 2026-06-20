@@ -5437,12 +5437,25 @@ function startSourceLabel(source) {
 
 function preferredPaperStartMetadata(market) {
   const keys = paperStorageKeysForMarket(market);
+  const keySet = new Set(keys);
+  const liveMarketCandidates = [
+    ...state.livePersistedMarkets.values(),
+    ...state.paperObservedMarkets.values(),
+  ].filter((candidate) => samePaperWindow(market, candidate));
+  const liveTickCandidates = [];
+  state.liveBtcTicksByMarket.forEach((points, key) => {
+    (points || []).forEach((row) => {
+      if (keySet.has(key) || samePaperWindow(market, row)) liveTickCandidates.push(row);
+    });
+  });
   const candidates = [
     market,
+    ...liveMarketCandidates,
     ...keys.flatMap((key) => state.workflow?._paperPointsByMarket?.get(key) || []),
     ...keys.flatMap((key) => state.workflow?._paperMarkersByMarket?.get(key) || []),
     ...keys.flatMap((key) => state.paperObservedPointsByMarket.get(key) || []),
     ...keys.flatMap((key) => state.paperObservedMarkersByMarket.get(key) || []),
+    ...liveTickCandidates,
   ].filter(Boolean);
   const starts = candidates
     .map((source) => startMetadataFromSource(source))
