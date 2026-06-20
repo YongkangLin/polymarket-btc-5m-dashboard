@@ -5309,7 +5309,7 @@ function renderPaperSessionHistory(session) {
     "session_pnl",
     "paper-session-history",
     "Historical Session P&L",
-    `${chronologicalRows.length} closed | ${marketsSeen}/${marketLimit} markets`,
+    `${chronologicalRows.length} closed | ${marketsSeen}/${marketLimit} P&L markets`,
     `
       <table>
         <thead>
