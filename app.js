@@ -1909,7 +1909,7 @@ const PERSISTED_ROW_FIELDS = new Set([
 ]);
 
 function copyOutcomeOddsFields(target, source) {
-  if (!rowHasDisplayPolymarketBook(source)) return target;
+  if (!rowHasStickyPolymarketOdds(source)) return target;
   OUTCOME_ODDS_FIELDS.forEach((field) => {
     if (source && Object.prototype.hasOwnProperty.call(source, field) && source[field] !== undefined) {
       target[field] = source[field];
@@ -2413,7 +2413,7 @@ function currentRowsEntries(map, maxRows) {
 
 function currentOutcomeOddsEntries() {
   return [...state.latestOutcomeOddsByWindow.entries()]
-    .filter(([key, odds]) => Number(key) === currentWindowStartUnixNow() && currentWindowRow(odds, key) && rowHasDisplayPolymarketBook(odds))
+    .filter(([key, odds]) => Number(key) === currentWindowStartUnixNow() && currentWindowRow(odds, key) && rowHasStickyPolymarketOdds(odds))
     .map(([key, odds]) => [key, compactPersistedRow(odds)]);
 }
 
@@ -2435,7 +2435,7 @@ function loadPersistedPaperTicks() {
     state.paperObservedPointsByMarket = new Map(payload.observed_points || []);
     state.paperObservedMarkersByMarket = new Map(payload.observed_markers || []);
     state.latestOutcomeOddsByWindow = new Map(
-      (payload.outcome_odds || []).filter((entry) => Array.isArray(entry) && rowHasDisplayPolymarketBook(entry[1])),
+      (payload.outcome_odds || []).filter((entry) => Array.isArray(entry) && rowHasStickyPolymarketOdds(entry[1])),
     );
     state.liveBtcTicksByMarket = new Map(payload.live_ticks || []);
     state.liveBtcTickKeysByMarket = new Map(
@@ -2932,6 +2932,22 @@ function rowHasDisplayPolymarketBook(row) {
     row.books?.Down?.source,
   ].filter(Boolean).join(" ").toLowerCase();
   return source.includes("local_postgres_polymarket_order_books");
+}
+
+function rowHasStickyPolymarketOdds(row) {
+  if (!row || isActionOnlyPaperOddsRow(row)) return false;
+  const source = [
+    row.polymarket_book_source,
+    row.probability_source,
+    row.market_probability_source,
+    row.books?.Up?.source,
+    row.books?.Down?.source,
+  ].filter(Boolean).join(" ").toLowerCase();
+  if (!source.includes("local_postgres_polymarket_order_books")) return false;
+  return rowHasOutcomeBookQuote(row)
+    || rowHasUsableOutcomeOdds(row)
+    || metricNumber(row.up) !== null
+    || metricNumber(row.down) !== null;
 }
 
 function displayBookTimestampMicro(row) {
@@ -4881,10 +4897,10 @@ function cachedOutcomeOddsForMarket(market) {
   const keys = outcomeOddsCacheKeys(market);
   for (const key of keys) {
     const odds = state.latestOutcomeOddsByWindow.get(key);
-    if (odds && rowHasDisplayPolymarketBook(odds)) return odds;
-    if (odds) state.latestOutcomeOddsByWindow.delete(key);
+    if (odds && rowHasStickyPolymarketOdds(odds)) return odds;
+    if (odds && !rowHasStickyPolymarketOdds(odds)) state.latestOutcomeOddsByWindow.delete(key);
   }
-  return outcomeOddsMapRowsForMarket(state.latestOutcomeOddsByWindow, market, rowHasDisplayPolymarketBook)[0] || null;
+  return outcomeOddsMapRowsForMarket(state.latestOutcomeOddsByWindow, market, rowHasStickyPolymarketOdds)[0] || null;
 }
 
 function rememberOutcomeOddsForWindow(anchor, candidates = []) {
@@ -4901,7 +4917,7 @@ function rememberOutcomeOddsForWindow(anchor, candidates = []) {
   if (up === null && down === null) return cachedOutcomeOddsForMarket(anchor) || null;
   const timestamps = oddsRows.map(outcomeOddsTimestampMicro).filter((value) => value !== null);
   const incomingTime = timestamps.length ? Math.max(...timestamps) : 0;
-  const existing = keys.map((cacheKey) => state.latestOutcomeOddsByWindow.get(cacheKey)).find(rowHasDisplayPolymarketBook) || {};
+  const existing = keys.map((cacheKey) => state.latestOutcomeOddsByWindow.get(cacheKey)).find(rowHasStickyPolymarketOdds) || {};
   const existingTime = metricNumber(existing._odds_updated_micro) || 0;
   if (existingTime && incomingTime && incomingTime < existingTime) return existing;
   const source = oddsRows[0] ? { ...oddsRows[0] } : null;
@@ -5173,10 +5189,19 @@ function stickyOutcomeOddsForMarket(market, odds) {
     const stored = {
       up: resolved.up,
       down: resolved.down,
+      paper_up_probability: resolved.up,
+      market_up_probability: resolved.up,
+      up_probability: resolved.up,
+      paper_down_probability: resolved.down,
+      market_down_probability: resolved.down,
+      down_probability: resolved.down,
       window_start_unix: start,
       window_end_unix: start === null ? null : start + 300,
       slug: start === null ? paperGraphKey(market) : `btc-updown-5m-${start}`,
       market_key: start === null ? paperGraphKey(market) : `btc-updown-5m-${start}`,
+      polymarket_book_source: "local_postgres_polymarket_order_books",
+      probability_source: "local_postgres_polymarket_order_books",
+      market_probability_source: "local_postgres_polymarket_order_books",
       _odds_updated_micro: Date.now() * 1000,
     };
     keys.forEach((key) => state.lastDisplayedOutcomeOddsByWindow.set(key, stored));
