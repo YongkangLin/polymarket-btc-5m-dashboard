@@ -56,7 +56,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v28-single-feed-legend";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v29-single-feed-legend";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -412,6 +412,8 @@ function compactVerboseFeedText(value) {
   const text = String(value || "");
   if (!text) return "";
   return text
+    .replace(/\bChainlink\s+Data\s+Streams\b[\s:,-]*(?:truth|source\s+of\s+truth)?/gi, "Chainlink")
+    .replace(/\bBinance\s+WSS\s+book\s*Ticker\b[\s:,-]*(?:signal|external\s+signal)?/gi, "Binance")
     .replace(/\bChainlink\s+Data\s+Streams\b(?:\s+truth\b)?/gi, "Chainlink")
     .replace(/\bBinance\s+WSS\s+book\s*Ticker\b(?:\s+signal\b)?/gi, "Binance")
     .replace(/\b(Chainlink)\s+truth\b/gi, "$1")
@@ -3558,9 +3560,8 @@ function renderStrategyPanels() {
   ].join("");
   const paperStrategy = byId("paperStrategy");
   if (paperStrategy) {
-    const cells = paperRouteGateCells();
-    paperStrategy.innerHTML = cells.join("");
-    paperStrategy.hidden = !cells.length;
+    paperStrategy.innerHTML = "";
+    paperStrategy.hidden = true;
   }
   byId("liveStrategy").innerHTML = [
     strategyCell("Mode", liveStatus),
