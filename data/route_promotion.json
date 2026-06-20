@@ -481,7 +481,7 @@
       }
     }
   },
-  "generated_at": "2026-06-20T09:30:34.015656+00:00",
+  "generated_at": "2026-06-20T09:40:34.118013+00:00",
   "routes": {
     "active": {
       "key": "consistency_t91_150_h5_challenger",
@@ -556,7 +556,7 @@
         "quote_rate": 0.0,
         "top_reasons": [
           {
-            "events": 880,
+            "events": 864,
             "reason": "outside_time_window"
           }
         ],
@@ -621,7 +621,7 @@
       "quote_rate": 0.0,
       "top_reasons": [
         {
-          "events": 880,
+          "events": 864,
           "reason": "outside_time_window"
         }
       ],
@@ -638,7 +638,7 @@
         "quote_rate": 0.0,
         "top_reasons": [
           {
-            "events": 880,
+            "events": 864,
             "reason": "outside_time_window"
           }
         ],
@@ -768,7 +768,7 @@
         "quote_rate": 0.0,
         "top_reasons": [
           {
-            "events": 880,
+            "events": 864,
             "reason": "outside_time_window"
           }
         ],
@@ -886,14 +886,14 @@
         "edge_id": "consistency_queue100_h5_native",
         "fills": 1,
         "gross_fill_cost": 1.9656,
-        "last_updated": "2026-06-20T02:30:33.52348-07:00",
-        "markets_seen": 17,
+        "last_updated": "2026-06-20T02:40:33.553171-07:00",
+        "markets_seen": 18,
         "observed_fill_events": 3,
         "orders_placed": 9,
         "realized_pnl": 1.10565,
         "roi_on_filled_cost": 0.5625,
         "scored_fill_events": 1,
-        "sessions": 5,
+        "sessions": 6,
         "settlements": 1,
         "source": "typed_sql_current_config",
         "toxic_fill_rate": 0,
@@ -1151,14 +1151,14 @@
         "edge_id": "coverage_one_below_h60_edge2_tail",
         "fills": 0,
         "gross_fill_cost": 0,
-        "last_updated": "2026-06-20T02:30:33.918337-07:00",
-        "markets_seen": 1,
+        "last_updated": "2026-06-20T02:40:34.045536-07:00",
+        "markets_seen": 2,
         "observed_fill_events": 0,
         "orders_placed": 0,
         "realized_pnl": 0,
         "roi_on_filled_cost": null,
         "scored_fill_events": 0,
-        "sessions": 1,
+        "sessions": 2,
         "settlements": 0,
         "source": "typed_sql_current_config",
         "toxic_fill_rate": null,
@@ -1257,14 +1257,14 @@
         "edge_id": "high_coverage_h5_challenger",
         "fills": 3,
         "gross_fill_cost": 8.167200000000001,
-        "last_updated": "2026-06-20T02:30:33.71652-07:00",
-        "markets_seen": 12,
+        "last_updated": "2026-06-20T02:40:33.771636-07:00",
+        "markets_seen": 13,
         "observed_fill_events": 6,
         "orders_placed": 17,
         "realized_pnl": 3.2068086206896558,
         "roi_on_filled_cost": 0.39264480124028495,
         "scored_fill_events": 3,
-        "sessions": 4,
+        "sessions": 5,
         "settlements": 2,
         "source": "typed_sql_current_config",
         "toxic_fill_rate": 0,
