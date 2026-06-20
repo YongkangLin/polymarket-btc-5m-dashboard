@@ -57,7 +57,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v34-binance-event-kind";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v35-binance-merged-line";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -2990,16 +2990,33 @@ function priceChangingRows(rows, minDollarChange = 0.01) {
 
 function externalLineRows(rows) {
   const ordered = sortRowsIfNeeded((rows || []).filter(isExternalGraphPricePoint), pointTimestampMicro);
-  const bookTicks = ordered.filter(isExternalBookTickerPricePoint);
-  const trades = ordered.filter(isExternalTradePricePoint);
-  const depthTicks = ordered.filter(isExternalDepthPricePoint);
-  const preferred = [bookTicks, trades, depthTicks].find((candidate) => candidate.length >= 3)
-    || [bookTicks, trades, depthTicks].find((candidate) => candidate.length);
-  return preferred || ordered;
+  const merged = [];
+  const indexByTime = new Map();
+  ordered.forEach((row) => {
+    const timestamp = pointTimestampMicro(row);
+    const key = timestamp === null ? liveBtcPointKey(row) : String(timestamp);
+    const existingIndex = indexByTime.get(key);
+    if (existingIndex === undefined) {
+      indexByTime.set(key, merged.length);
+      merged.push(row);
+      return;
+    }
+    if (externalPointPriority(row) >= externalPointPriority(merged[existingIndex])) {
+      merged[existingIndex] = row;
+    }
+  });
+  return merged;
 }
 
 function externalLineLabel(rows) {
   return "Binance";
+}
+
+function externalPointPriority(row) {
+  if (isExternalDepthPricePoint(row)) return 3;
+  if (isExternalTradePricePoint(row)) return 2;
+  if (isExternalBookTickerPricePoint(row)) return 1;
+  return 0;
 }
 
 function backendBaseUrl() {
