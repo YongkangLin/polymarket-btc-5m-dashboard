@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-20T23:26:18.912078+00:00",
+  "generated_at": "2026-06-20T23:41:53.822840+00:00",
   "status": "passed",
   "feature_summary": {
     "markets": 2167,
@@ -64,15 +64,15 @@
     "enforce_expected_edge_gate": true
   },
   "paper_engine_summary": {
-    "config": "live-engine/config/btc_5m_nearline_queue_probe_shadow.json",
+    "config": "live-engine/config/btc_5m_coverage_one_below_h60_edge2_challenger_shadow.json",
     "mode": "shadow",
     "symbols": [
       "BTC"
     ],
     "maker_route": {
-      "mode": "improve_one_tick",
-      "quote_horizon_seconds": 5,
-      "max_queue_ahead_notional": 400.0
+      "mode": "one_below_ask",
+      "quote_horizon_seconds": 60,
+      "max_queue_ahead_notional": null
     },
     "quote_notional_dollars": 5.0,
     "enforce_expected_edge_gate": true
@@ -270,23 +270,22 @@
       "actual": {
         "status": "paper_collecting",
         "maker_route_ready": false,
-        "selected_route_id": "maker_improve_1c_h5",
+        "selected_route_id": "maker_one_below_ask_h60",
         "selected_route_type": "maker"
       },
       "expected": {
         "status": "paper_collecting",
         "maker_route_ready": false,
         "selected_route_id": "maker_one_below_ask_h60",
-        "selected_route_type": "maker",
-        "paper_route_override": "maker_improve_1c_h5"
+        "selected_route_type": "maker"
       },
       "passed": true
     },
     {
       "id": "public_workflow_synced",
       "label": "Public dashboard workflow is synced",
-      "actual": "670698edeff3ff00f660dab16bbb6dc124d6891c44a2691dbf3f4201b9afc78d",
-      "expected": "670698edeff3ff00f660dab16bbb6dc124d6891c44a2691dbf3f4201b9afc78d",
+      "actual": "434a3ad1e445b810c2afd6f014da927a7a183787059c8b214872ee2160edac66",
+      "expected": "434a3ad1e445b810c2afd6f014da927a7a183787059c8b214872ee2160edac66",
       "passed": true
     },
     {
@@ -425,14 +424,14 @@
       "id": "engine_maker_route_matches_algorithm",
       "label": "Rust maker route matches selected maker policy",
       "actual": {
-        "mode": "improve_one_tick",
-        "quote_horizon_seconds": 5,
-        "max_queue_ahead_notional": 400.0
+        "mode": "one_below_ask",
+        "quote_horizon_seconds": 60,
+        "max_queue_ahead_notional": null
       },
       "expected": {
-        "mode": "improve_one_tick",
-        "quote_horizon_seconds": 5,
-        "max_queue_ahead_notional": 400.0
+        "mode": "one_below_ask",
+        "quote_horizon_seconds": 60,
+        "max_queue_ahead_notional": null
       },
       "passed": true
     },

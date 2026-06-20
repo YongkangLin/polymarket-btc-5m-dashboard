@@ -4816,8 +4816,34 @@ function outcomeProbabilityFromRow(row, key) {
   return null;
 }
 
+function outcomeOddsWindowStart(row) {
+  const explicit = marketWindowStartUnix(row);
+  if (explicit !== null) return explicit;
+  if (!row) return null;
+  const source = [
+    row.polymarket_book_source,
+    row.probability_source,
+    row.market_probability_source,
+    row.books?.Up?.source,
+    row.books?.Down?.source,
+  ].filter(Boolean).join(" ").toLowerCase();
+  const status = String(row.status || row.state || "").toLowerCase();
+  const isCurrentLiveRow = row.is_current === true
+    || row.current === true
+    || row.is_open === true
+    || status.includes("backend_live")
+    || status.includes("current")
+    || status.includes("live")
+    || status.includes("open")
+    || isLivePriceTransportRow(row);
+  if (isCurrentLiveRow || source.includes("local_postgres_polymarket_order_books")) {
+    return currentWindowStartUnixNow();
+  }
+  return null;
+}
+
 function outcomeOddsWindowKey(row) {
-  const start = marketWindowStartUnix(row);
+  const start = outcomeOddsWindowStart(row);
   return start === null ? "" : String(start);
 }
 
@@ -4834,7 +4860,7 @@ function outcomeWindowAliasKeys(start) {
 
 function outcomeOddsCacheKeys(row) {
   const keys = [];
-  const start = marketWindowStartUnix(row);
+  const start = outcomeOddsWindowStart(row);
   if (start !== null) keys.push(...outcomeWindowAliasKeys(start));
   const key = paperGraphKey(row);
   if (key) keys.push(key);
@@ -4866,7 +4892,7 @@ function outcomeOddsRowUsable(row) {
 }
 
 function outcomeOddsMapRowsForMarket(map, market, predicate = outcomeOddsRowUsable) {
-  const start = marketWindowStartUnix(market);
+  const start = outcomeOddsWindowStart(market);
   const keys = outcomeOddsCacheKeys(market);
   if (start !== null) keys.push(...outcomeWindowAliasKeys(start));
   const seen = new Set();
@@ -4881,7 +4907,7 @@ function outcomeOddsMapRowsForMarket(map, market, predicate = outcomeOddsRowUsab
   if (start !== null) {
     map.forEach((row, key) => {
       if (seen.has(key)) return;
-      const rowStart = marketWindowStartUnix({
+      const rowStart = outcomeOddsWindowStart({
         market_key: key,
         slug: key,
         condition_id: key,
@@ -5170,7 +5196,7 @@ function renderPaperOddsStrip(market, latestRaw, latestBookRaw, odds = null) {
 }
 
 function stickyOutcomeOddsForMarket(market, odds) {
-  const start = marketWindowStartUnix(market);
+  const start = outcomeOddsWindowStart(market);
   const keys = [...new Set([
     ...outcomeOddsCacheKeys(market),
     ...(start === null ? [] : outcomeWindowAliasKeys(start)),
