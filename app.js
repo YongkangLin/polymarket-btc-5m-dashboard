@@ -56,7 +56,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v7-single-source-legend";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v8-short-source-legend";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -393,7 +393,7 @@ function liveFeedLabel(row) {
   if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws_depth")) return "Binance depth WS";
   if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws_book")) return "Binance bookTicker WS";
   if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws")) return "Local backend trade";
-  if (String(row?.btc_price_venue || row?.btc_price_source || "").includes("chainlink_data_streams")) return "Chainlink Data Streams";
+  if (String(row?.btc_price_venue || row?.btc_price_source || "").includes("chainlink_data_streams")) return "Chainlink";
   if (row?.decision === "live_tick") return "Local backend WS trade";
   if (row?.decision === "live_book_tick") return "Local backend WS book";
   return row?.btc_price_venue || row?.reason || "--";
@@ -2476,11 +2476,7 @@ function isChainlinkPriceRow(row) {
 }
 
 function chainlinkLineLabel(rows) {
-  const text = (rows || [])
-    .map((row) => String(row?.btc_price_source || row?.btc_price_venue || row?.price_source || "").toLowerCase())
-    .join(" ");
-  if (text.includes("chainlink_data_streams")) return "Chainlink Data Streams";
-  return "Chainlink Data Streams";
+  return "Chainlink";
 }
 
 function truthRowReceiveTimeMicro(row) {
@@ -2814,10 +2810,7 @@ function externalLineRows(rows) {
 }
 
 function externalLineLabel(rows) {
-  if ((rows || []).some(isExternalDepthPricePoint)) return "Binance WSS depth";
-  if ((rows || []).some(isExternalBookTickerPricePoint)) return "Binance WSS bookTicker";
-  if ((rows || []).some(isExternalTradePricePoint)) return "Binance WSS trades";
-  return "Binance WSS";
+  return "Binance";
 }
 
 function backendBaseUrl() {
@@ -5207,7 +5200,7 @@ function isPolymarketTruthSource(source) {
 function startSourceLabel(source) {
   const text = String(source || "");
   if (!text) return "source unknown";
-  if (isChainlinkDataStreamsSource(text)) return "Chainlink Data Streams";
+  if (isChainlinkDataStreamsSource(text)) return "Chainlink";
   if (text === "binance_ws_trade_at_window_start") return "Binance WS start tick";
   if (text === "polymarket_paper_event") return "paper capture";
   if (text.includes("binance.com")) return "Binance REST capture";
@@ -6067,7 +6060,7 @@ function renderPaperDecisionGraph(options = {}) {
     : "";
   const latestTitle = [
     hasTruthHead ? `latest ${Math.round(headSample.elapsedSeconds)}s in` : "waiting for Chainlink",
-    hasTruthHead ? truthLabel : "Chainlink Data Streams",
+    hasTruthHead ? truthLabel : "Chainlink",
     hasTruthHead ? `BTC ${formatBookMoney(headSample.btcPrice)}` : "BTC waiting",
     hasTruthHead ? formatDollarMove(headSample.dollarMove) : "move waiting",
     hasTruthHead && headSample.source === "chainlink" && latestRaw.receive_time_micro
