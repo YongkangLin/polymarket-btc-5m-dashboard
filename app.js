@@ -20,7 +20,7 @@ const LIVE_TICK_PERSIST_MS = 7500;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 4500;
 const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 120;
 const LIVE_TICK_PERSIST_POINTS_PER_MARKET = 3500;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v22";
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v23";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
   "polymarketPaperLiveTicks.v3",
@@ -42,6 +42,7 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v19",
   "polymarketPaperLiveTicks.v20",
   "polymarketPaperLiveTicks.v21",
+  "polymarketPaperLiveTicks.v22",
 ];
 const LIVE_PAPER_X_WINDOW_SECONDS = 15;
 const LIVE_PAPER_X_LEAD_SECONDS = 2;
@@ -60,7 +61,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 240;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 1200;
 const LIVE_RENDER_POINTS_PER_PIXEL = 1.4;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v40-light-render-actions";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v41-sticky-polymarket-odds";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -4991,7 +4992,21 @@ function paperPanelDisplayOutcomeProbabilities(market, latestRaw, latestBookRaw)
     ...liveTickPointsForMarket(market).slice(-80).reverse(),
   ].filter(Boolean);
   const bookOdds = outcomeDisplayBookOddsFromCandidates(candidates);
-  if (bookOdds.askBookObserved) return bookOdds;
+  if (bookOdds.askBookObserved) {
+    rememberOutcomeOddsForWindow(market, candidates);
+    const resolved = stickyOutcomeOddsForMarket(market, bookOdds);
+    return { ...bookOdds, up: resolved.up, down: resolved.down };
+  }
+  const resolved = stickyOutcomeOddsForMarket(market, bookOdds);
+  if (resolved.up !== null || resolved.down !== null) {
+    return {
+      up: resolved.up,
+      down: resolved.down,
+      upNoSellers: false,
+      downNoSellers: false,
+      askBookObserved: true,
+    };
+  }
   return { up: null, down: null, upNoSellers: false, downNoSellers: false, askBookObserved: false };
 }
 
@@ -5071,7 +5086,12 @@ function paperOutcomeProbabilities(market, latestRaw, latestBookRaw) {
 function renderPaperOddsStrip(market, latestRaw, latestBookRaw, odds = null) {
   if (!market) return "";
   const displayOdds = odds || paperPanelDisplayOutcomeProbabilities(market, latestRaw, latestBookRaw);
-  const resolved = displayOdds;
+  const sticky = stickyOutcomeOddsForMarket(market, displayOdds);
+  const resolved = {
+    ...displayOdds,
+    up: sticky.up,
+    down: sticky.down,
+  };
   return `
     <div class="paper-odds-strip" role="status" aria-label="Current Polymarket odds">
       <div>
