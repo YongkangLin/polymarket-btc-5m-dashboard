@@ -20,7 +20,7 @@ const LIVE_TICK_PERSIST_MS = 7500;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 4500;
 const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 120;
 const LIVE_TICK_PERSIST_POINTS_PER_MARKET = 3500;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v19";
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v20";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
   "polymarketPaperLiveTicks.v3",
@@ -39,6 +39,7 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v16",
   "polymarketPaperLiveTicks.v17",
   "polymarketPaperLiveTicks.v18",
+  "polymarketPaperLiveTicks.v19",
 ];
 const LIVE_PAPER_X_WINDOW_SECONDS = 15;
 const LIVE_PAPER_X_LEAD_SECONDS = 2;
@@ -57,7 +58,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v37-same-window-binance";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v38-source-balanced-binance";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -2310,6 +2311,58 @@ function balancedLiveTickRows(rows, maxRows) {
       selected.push(row);
     });
   while (selected.length > maxRows) selected.splice(1, 1);
+  return selected;
+}
+
+function latestMicroForRows(rows) {
+  let latestMicro = null;
+  (rows || []).forEach((row) => {
+    const timestamp = pointTimestampMicro(row);
+    if (timestamp !== null && (latestMicro === null || timestamp > latestMicro)) latestMicro = timestamp;
+  });
+  return latestMicro;
+}
+
+function recentRowsForOwnSourceClock(rows, tailSeconds = LIVE_PAPER_RENDER_TAIL_SECONDS) {
+  const ordered = sortRowsIfNeeded((rows || []).filter((row) => pointTimestampMicro(row) !== null), pointTimestampMicro);
+  const latestMicro = latestMicroForRows(ordered);
+  if (latestMicro === null) return ordered;
+  const cutoffMicro = latestMicro - (tailSeconds * 1_000_000);
+  const visible = [];
+  let carry = null;
+  ordered.forEach((row) => {
+    const timestamp = pointTimestampMicro(row);
+    if (timestamp === null || timestamp >= cutoffMicro) {
+      visible.push(row);
+    } else {
+      carry = row;
+    }
+  });
+  return carry ? [carry, ...visible] : visible;
+}
+
+function sourceBalancedRecentLiveTickRows(rows) {
+  const currentRows = sortRowsIfNeeded((rows || []).filter((row) => currentWindowRow(row)), pointTimestampMicro);
+  if (!currentRows.length) return [];
+  const chainlinkRows = currentRows.filter(isChainlinkPriceRow);
+  const binanceRows = currentRows.filter(isBinanceLivePoint);
+  const otherRows = currentRows.filter((row) => !isChainlinkPriceRow(row) && !isBinanceLivePoint(row));
+  const seen = new Set();
+  const selected = [];
+  [
+    currentRows[0],
+    ...recentRowsForOwnSourceClock(chainlinkRows),
+    ...recentRowsForOwnSourceClock(binanceRows),
+    ...recentRowsForOwnSourceClock(otherRows),
+  ]
+    .filter(Boolean)
+    .sort((left, right) => (pointTimestampMicro(left) || 0) - (pointTimestampMicro(right) || 0))
+    .forEach((row) => {
+      const key = liveBtcPointKey(row);
+      if (seen.has(key)) return;
+      seen.add(key);
+      selected.push(row);
+    });
   return selected;
 }
 
@@ -6029,8 +6082,10 @@ function renderPaperDecisionGraph(options = {}) {
   ] : [])
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
   const latestElapsedSeed = newestElapsedSeconds(rawTruthSamples, rawExternalSamples);
-  const truthSamples = selectedCurrent ? limitLiveSamplesForRender(rawTruthSamples, latestElapsedSeed) : rawTruthSamples;
-  const externalSamples = selectedCurrent ? limitLiveSamplesForRender(rawExternalSamples, latestElapsedSeed) : rawExternalSamples;
+  const latestTruthElapsed = newestElapsedSeconds(rawTruthSamples);
+  const latestExternalElapsed = newestElapsedSeconds(rawExternalSamples);
+  const truthSamples = selectedCurrent ? limitLiveSamplesForRender(rawTruthSamples, latestTruthElapsed ?? latestElapsedSeed) : rawTruthSamples;
+  const externalSamples = selectedCurrent ? limitLiveSamplesForRender(rawExternalSamples, latestExternalElapsed ?? latestElapsedSeed) : rawExternalSamples;
   const allSamples = [...truthSamples, ...externalSamples]
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
 
@@ -6498,26 +6553,7 @@ function liveTickKeySetForMarket(key, points) {
 function trimLiveBtcPointsForKey(key, points) {
   if (!Array.isArray(points) || !points.length) return [];
   const maxRows = LIVE_TICK_STORE_MAX_POINTS_PER_MARKET + LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET;
-  let latestMicro = null;
-  points.forEach((point) => {
-    const timestamp = pointTimestampMicro(point);
-    if (timestamp !== null && (latestMicro === null || timestamp > latestMicro)) latestMicro = timestamp;
-  });
-  let recentPoints = points;
-  if (latestMicro !== null) {
-    const cutoffMicro = latestMicro - (LIVE_PAPER_RENDER_TAIL_SECONDS * 1_000_000);
-    const visible = [];
-    let carry = null;
-    points.forEach((point) => {
-      const timestamp = pointTimestampMicro(point);
-      if (timestamp === null || timestamp >= cutoffMicro) {
-        visible.push(point);
-      } else {
-        carry = point;
-      }
-    });
-    recentPoints = carry ? [carry, ...visible] : visible;
-  }
+  const recentPoints = sourceBalancedRecentLiveTickRows(points);
   const trimmed = recentPoints.length > maxRows ? balancedLiveTickRows(recentPoints, maxRows) : recentPoints;
   state.liveBtcTickKeysByMarket.set(key, new Set(trimmed.map(liveBtcPointKey)));
   return trimmed;
