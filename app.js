@@ -56,7 +56,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v19-single-source-legend";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v20-single-source-legend";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -1119,14 +1119,20 @@ function setPaperChartContent(chart, visualHtml, auxHtml = "") {
 }
 
 function dedupePaperChartSourceLabels(chart) {
-  const root = chart?.querySelector(".paper-chart-visual") || chart;
-  if (!root) return;
-  root.querySelectorAll(".u-legend").forEach((node) => node.remove());
-  root.querySelectorAll(".paper-live-chart-head").forEach((node, index) => {
+  if (!chart) return;
+  chart.querySelectorAll(".u-legend").forEach((node) => node.remove());
+  chart.querySelectorAll(".paper-live-chart-head").forEach((node, index) => {
     if (index > 0) node.remove();
   });
-  root.querySelectorAll(".paper-line-legend-html").forEach((node, index) => {
+  chart.querySelectorAll(".paper-line-legend-html").forEach((node, index) => {
     if (index > 0) node.remove();
+  });
+  chart.querySelectorAll(".paper-live-line-overlay").forEach((node) => node.remove());
+  chart.querySelectorAll(".paper-line-key, .paper-line-inline-label, .paper-source-card, .paper-side-source").forEach((node) => {
+    const text = (node.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+    if (text.includes("chainlink data streams") || text.includes("binance wss bookticker")) {
+      node.remove();
+    }
   });
 }
 
