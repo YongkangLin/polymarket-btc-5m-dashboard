@@ -56,7 +56,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v11-compact-source-labels";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v12-single-source-labels";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -388,14 +388,10 @@ function formatMicroTimestamp(value) {
 }
 
 function liveFeedLabel(row) {
-  if (row?.decision === "live_book_tick" && row?.backend_event_kind === "depth") return "Binance depth WS";
-  if (row?.decision === "live_book_tick" && row?.backend_event_kind === "book") return "Binance bookTicker WS";
-  if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws_depth")) return "Binance depth WS";
-  if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws_book")) return "Binance bookTicker WS";
-  if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws")) return "Local backend trade";
+  if (row?.decision === "live_book_tick" && ["depth", "book"].includes(row?.backend_event_kind)) return "Binance";
+  if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws")) return "Binance";
   if (String(row?.btc_price_venue || row?.btc_price_source || "").includes("chainlink_data_streams")) return "Chainlink";
-  if (row?.decision === "live_tick") return "Local backend WS trade";
-  if (row?.decision === "live_book_tick") return "Local backend WS book";
+  if (row?.decision === "live_tick" || row?.decision === "live_book_tick") return "Binance";
   return row?.btc_price_venue || row?.reason || "--";
 }
 
