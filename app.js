@@ -56,7 +56,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v17-queue-diagnostics";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v18-single-feed-legend";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -1272,6 +1272,9 @@ function updatePaperUPlot(chart, options) {
     if (!canUseUPlot() || !chart) return false;
     const target = chart.querySelector(".paper-live-uplot");
     if (!target) return false;
+    const removeNativeLegend = () => {
+      target.querySelectorAll(".u-legend").forEach((node) => node.remove());
+    };
     const width = Math.max(320, Math.floor(target.clientWidth || chart.clientWidth || 680));
     const height = Math.max(260, Math.floor(target.clientHeight || (isCompactPaperChart() ? 300 : 392)));
     const key = `${chart.id || "paperChart"}:${options.compact ? "compact" : "wide"}:${LIVE_CHART_SCHEMA_VERSION}`;
@@ -1315,6 +1318,7 @@ function updatePaperUPlot(chart, options) {
       target.innerHTML = "";
       const data = uPlotDataFromSamples(options.truthSamples, options.externalSamples);
       const plot = new window.uPlot(makeOptions(), data, target);
+      removeNativeLegend();
       state.paperUPlotCharts.set(chart.id || "paperChart", { key, plot, dataSignature, width, height });
       return true;
     }
@@ -1330,6 +1334,7 @@ function updatePaperUPlot(chart, options) {
     }
     existing.plot.setScale("x", { min: options.xDomain.min, max: options.xDomain.max });
     existing.plot.setScale("y", { min: options.dollarDomain.min, max: options.dollarDomain.max });
+    removeNativeLegend();
     return true;
   } catch (error) {
     console.warn("uPlot live chart update failed", error);

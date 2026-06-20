@@ -345,7 +345,9 @@ select {
   color: var(--ink);
 }
 
-.paper-live-plot-wrap .u-legend {
+.paper-live-fast .u-legend,
+.paper-live-plot-wrap .u-legend,
+.paper-live-uplot .u-legend {
   display: none !important;
 }
 
