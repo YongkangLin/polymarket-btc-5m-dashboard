@@ -1225,17 +1225,16 @@ function renderPaperChartHeader(market, options = {}) {
   const windowStart = marketWindowStartUnix(market);
   const windowEnd = marketWindowEndUnix(market);
   const initialCountdown = countdownTextFromWindow(windowStart, windowEnd);
-  const lineKey = (label, className, role) => `
+  const lineKey = (label, className) => `
     <span class="paper-line-key">
       <span class="paper-line-swatch ${escapeHtml(className)}"></span>
       <span class="paper-line-label">${escapeHtml(label)}</span>
-      ${role ? `<span class="paper-line-role">${escapeHtml(role)}</span>` : ""}
     </span>`;
   return `
     <div class="paper-live-chart-head">
       <div class="paper-line-legend-html" aria-label="Chart lines">
-        ${lineKey(options.truthLabel || "Chainlink Data Streams", "is-chainlink", options.truthRole || "truth")}
-        ${lineKey(options.externalLabel || "Binance", "is-binance", options.externalRole || "signal")}
+        ${lineKey("Chainlink", "is-chainlink")}
+        ${lineKey("Binance", "is-binance")}
       </div>
       <div class="paper-market-countdown" aria-label="Time left" data-paper-countdown-start="${escapeHtml(windowStart ?? "")}" data-paper-countdown-end="${escapeHtml(windowEnd ?? "")}">
         <span>Time left</span>
