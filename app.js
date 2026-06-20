@@ -56,7 +56,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v22-global-source-label-scrub";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v23-compact-feed-labels";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -392,7 +392,18 @@ function liveFeedLabel(row) {
   if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws")) return "Binance";
   if (String(row?.btc_price_venue || row?.btc_price_source || "").includes("chainlink_data_streams")) return "Chainlink";
   if (row?.decision === "live_tick" || row?.decision === "live_book_tick") return "Binance";
-  return row?.btc_price_venue || row?.reason || "--";
+  const raw = compactFeedSourceLabel(row?.btc_price_venue || row?.btc_price_source || row?.reason);
+  return raw || "--";
+}
+
+function compactFeedSourceLabel(value) {
+  const text = String(value || "").trim();
+  const normalized = text.toLowerCase().replace(/[_-]+/g, " ");
+  if (!normalized) return "";
+  if (normalized.includes("chainlink") || normalized.includes("polymarket truth")) return "Chainlink";
+  if (normalized.includes("binance")) return "Binance";
+  if (normalized === "truth" || normalized === "signal") return "";
+  return compactNote(text.replace(/^https?:\/\//, ""), 24);
 }
 
 function formatPnl(value) {
@@ -6592,7 +6603,7 @@ function chainlinkPointFromMarket(market) {
 
 function chainlinkReasonFromMarket(market) {
   const source = market?.btc_price_source || market?.price_source || market?.start_price_source;
-  if (isChainlinkDataStreamsSource(source)) return "chainlink_data_streams";
+  if (isChainlinkDataStreamsSource(source)) return "chainlink";
   return "unknown_chainlink_source";
 }
 
