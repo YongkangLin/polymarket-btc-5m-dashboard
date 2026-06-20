@@ -56,7 +56,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v20-single-source-legend";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v21-source-label-guard";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -1129,10 +1129,39 @@ function dedupePaperChartSourceLabels(chart) {
   });
   chart.querySelectorAll(".paper-live-line-overlay").forEach((node) => node.remove());
   chart.querySelectorAll(".paper-line-key, .paper-line-inline-label, .paper-source-card, .paper-side-source").forEach((node) => {
-    const text = (node.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
-    if (text.includes("chainlink data streams") || text.includes("binance wss bookticker")) {
+    if (isLegacySourceRoleLabel(node)) {
       node.remove();
     }
+  });
+  removeLegacySourceRoleLabels(chart);
+}
+
+function normalizedNodeText(node) {
+  return (node?.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function isLegacySourceRoleLabel(node) {
+  const text = normalizedNodeText(node);
+  return text === "chainlink data streams truth"
+    || text === "binance wss bookticker signal"
+    || text.includes("chainlink data streams truth")
+    || text.includes("binance wss bookticker signal");
+}
+
+function removeLegacySourceRoleLabels(root) {
+  (root || document).querySelectorAll("*").forEach((node) => {
+    const text = normalizedNodeText(node);
+    if (!text) return;
+    const looksLikeLegacySource = text.includes("chainlink data streams truth")
+      || text.includes("binance wss bookticker signal");
+    if (!looksLikeLegacySource) return;
+    const className = String(node.className || "").toLowerCase();
+    const isKnownSourceNode = className.includes("source")
+      || className.includes("legend")
+      || className.includes("line")
+      || className.includes("feed");
+    const isSmallSourceBlock = text.length <= 140 && node.children.length <= 6;
+    if (isKnownSourceNode || isSmallSourceBlock) node.remove();
   });
 }
 
