@@ -56,7 +56,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v29-single-feed-legend";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v30-canonical-feed-legend";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -414,10 +414,13 @@ function compactVerboseFeedText(value) {
   return text
     .replace(/\bChainlink\s+Data\s+Streams\b[\s:,-]*(?:truth|source\s+of\s+truth)?/gi, "Chainlink")
     .replace(/\bBinance\s+WSS\s+book\s*Ticker\b[\s:,-]*(?:signal|external\s+signal)?/gi, "Binance")
+    .replace(/\bBinance\s+WSS\s+bookticker\b[\s:,-]*(?:signal|external\s+signal)?/gi, "Binance")
     .replace(/\bChainlink\s+Data\s+Streams\b(?:\s+truth\b)?/gi, "Chainlink")
     .replace(/\bBinance\s+WSS\s+book\s*Ticker\b(?:\s+signal\b)?/gi, "Binance")
+    .replace(/\bBinance\s+WSS\s+bookticker\b(?:\s+signal\b)?/gi, "Binance")
     .replace(/\b(Chainlink)\s+truth\b/gi, "$1")
     .replace(/\b(Binance)\s+signal\b/gi, "$1")
+    .replace(/^\s*(truth|signal)\s*$/gi, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -1184,9 +1187,13 @@ function textLooksLikeVerboseFeedRole(value) {
   if (!text) return false;
   const hasTruthRole = text.includes("truth");
   const hasSignalRole = text.includes("signal");
+  const isBareRole = text === "truth" || text === "signal";
   const hasChainlinkStreamWords = text.includes("chainlink") && text.includes("data") && text.includes("stream");
-  const hasBinanceTickerWords = text.includes("binance") && (text.includes("wss") || text.includes("book")) && text.includes("ticker");
-  return (hasChainlinkStreamWords && (hasTruthRole || text.length <= 80))
+  const hasBinanceTickerWords = text.includes("binance") && (text.includes("wss") || text.includes("book")) && (text.includes("ticker") || text.includes("bookticker"));
+  const isTwoFeedSourceBlock = hasChainlinkStreamWords && hasBinanceTickerWords && (hasTruthRole || hasSignalRole);
+  return isBareRole
+    || isTwoFeedSourceBlock
+    || (hasChainlinkStreamWords && (hasTruthRole || text.length <= 80))
     || (hasBinanceTickerWords && (hasSignalRole || text.length <= 80));
 }
 
@@ -1202,10 +1209,17 @@ function looksLikeFeedLabelParent(node) {
 function removeLegacySourceRoleLabels(root) {
   const scope = root || document;
   compactVerboseFeedTextNodes(scope);
-  scope.querySelectorAll(".paper-line-inline-label, .paper-source-card, .paper-side-source").forEach((node) => node.remove());
+  scope.querySelectorAll(".u-legend, .paper-line-inline-label, .paper-source-card, .paper-side-source, .paper-feed-source, .paper-source-strip, .paper-live-source, .paper-live-source-strip, .paper-live-feed-row").forEach((node) => node.remove());
   scope.querySelectorAll(".paper-line-legend-html *").forEach((node) => {
     const text = normalizedNodeText(node);
     if (text === "truth" || text === "signal" || textLooksLikeVerboseFeedRole(text)) node.remove();
+  });
+  scope.querySelectorAll(".paper-line-key").forEach((node) => {
+    const key = String(node.getAttribute("data-paper-line-key") || "").toLowerCase().trim();
+    if (key && key !== "chainlink" && key !== "binance") node.remove();
+  });
+  scope.querySelectorAll(".paper-line-legend-html").forEach((node) => {
+    node.replaceChildren(...paperLineLegendNodes());
   });
   scope.querySelectorAll("*").forEach((node) => {
     const text = normalizedNodeText(node);
@@ -1214,8 +1228,9 @@ function removeLegacySourceRoleLabels(root) {
     const isKnownSourceNode = className.includes("source")
       || className.includes("legend")
       || className.includes("line")
-      || className.includes("feed");
-    const isSmallSourceBlock = text.length <= 140 && node.children.length <= 6;
+      || className.includes("feed")
+      || Boolean(node.closest?.(".paper-live-chart-head, .paper-live-fast, .paper-live-status-slot"));
+    const isSmallSourceBlock = text.length <= 180 && node.children.length <= 8;
     if (isKnownSourceNode || isSmallSourceBlock) node.remove();
   });
 }

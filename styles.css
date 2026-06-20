@@ -341,6 +341,10 @@ select {
   text-transform: uppercase;
 }
 
+.paper-line-key:not([data-paper-line-key="chainlink"]):not([data-paper-line-key="binance"]) {
+  display: none !important;
+}
+
 .paper-line-label {
   color: var(--ink);
 }
@@ -353,7 +357,12 @@ select {
 
 .paper-line-inline-label,
 .paper-source-card,
-.paper-side-source {
+.paper-side-source,
+.paper-feed-source,
+.paper-source-strip,
+.paper-live-source,
+.paper-live-source-strip,
+.paper-live-feed-row {
   display: none !important;
 }
 
