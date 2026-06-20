@@ -56,7 +56,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v27-single-feed-legend";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v28-single-feed-legend";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -398,12 +398,26 @@ function liveFeedLabel(row) {
 
 function compactFeedSourceLabel(value) {
   const text = String(value || "").trim();
+  const canonical = compactVerboseFeedText(text);
+  if (canonical === "Chainlink" || canonical === "Binance") return canonical;
   const normalized = text.toLowerCase().replace(/[_-]+/g, " ");
   if (!normalized) return "";
   if (normalized.includes("chainlink") || normalized.includes("polymarket truth")) return "Chainlink";
   if (normalized.includes("binance")) return "Binance";
   if (normalized === "truth" || normalized === "signal") return "";
   return compactNote(text.replace(/^https?:\/\//, ""), 24);
+}
+
+function compactVerboseFeedText(value) {
+  const text = String(value || "");
+  if (!text) return "";
+  return text
+    .replace(/\bChainlink\s+Data\s+Streams\b(?:\s+truth\b)?/gi, "Chainlink")
+    .replace(/\bBinance\s+WSS\s+book\s*Ticker\b(?:\s+signal\b)?/gi, "Binance")
+    .replace(/\b(Chainlink)\s+truth\b/gi, "$1")
+    .replace(/\b(Binance)\s+signal\b/gi, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function formatPnl(value) {
@@ -1132,8 +1146,16 @@ function setPaperChartContent(chart, visualHtml, auxHtml = "") {
 function dedupePaperChartSourceLabels(chart) {
   if (!chart) return;
   chart.querySelectorAll(".u-legend").forEach((node) => node.remove());
-  normalizePaperChartHeader(chart);
-  normalizeVerboseFeedText(chart);
+  chart.querySelectorAll(".paper-live-chart-head").forEach((node, index) => {
+    if (index > 0) node.remove();
+  });
+  chart.querySelectorAll(".paper-line-legend-html").forEach((node, index) => {
+    if (index > 0) {
+      node.remove();
+      return;
+    }
+    node.replaceChildren(...paperLineLegendNodes());
+  });
   chart.querySelectorAll(".paper-live-line-overlay").forEach((node) => node.remove());
   chart.querySelectorAll(".paper-line-inline-label, .paper-source-card, .paper-side-source").forEach((node) => {
     node.remove();
@@ -1147,75 +1169,8 @@ function dedupePaperChartSourceLabels(chart) {
   removeLegacySourceRoleLabels(document);
 }
 
-function normalizePaperChartHeader(chart) {
-  const headers = [...chart.querySelectorAll(".paper-live-chart-head")];
-  headers.forEach((node, index) => {
-    if (index > 0) node.remove();
-  });
-  const header = headers[0];
-  if (!header) return;
-  header.querySelectorAll(".paper-line-legend-html").forEach((node, index) => {
-    if (index > 0) node.remove();
-  });
-  let legend = header.querySelector(".paper-line-legend-html");
-  if (!legend) {
-    legend = document.createElement("div");
-    legend.className = "paper-line-legend-html";
-    legend.setAttribute("aria-label", "Chart lines");
-    header.prepend(legend);
-  }
-  legend.dataset.paperFeedLegend = "canonical";
-  legend.replaceChildren(...paperLineLegendNodes());
-}
-
 function normalizedNodeText(node) {
   return (node?.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
-}
-
-function compactVerboseFeedText(value) {
-  const original = String(value || "");
-  if (!/chainlink\s+data\s+streams|binance\s+wss\s+bookticker/i.test(original)) return original;
-  return original
-    .replace(/chainlink\s+data\s+streams/gi, "Chainlink")
-    .replace(/binance\s+wss\s+bookticker/gi, "Binance")
-    .replace(/\btruth\b/gi, "")
-    .replace(/\bsignal\b/gi, "")
-    .replace(/\s{2,}/g, " ")
-    .replace(/\s+\|/g, " |")
-    .replace(/\|\s+\|/g, "|")
-    .trim();
-}
-
-function looksLikeFeedLabelParent(node) {
-  const className = String(node?.className || "").toLowerCase();
-  return className.includes("source")
-    || className.includes("legend")
-    || className.includes("line")
-    || className.includes("feed")
-    || Boolean(node?.closest?.(".paper-live-chart-head, .paper-live-fast, .paper-live-side-slot, .paper-live-status-slot"));
-}
-
-function normalizeVerboseFeedText(root) {
-  const scope = root?.nodeType === Node.DOCUMENT_NODE ? root.body : root;
-  if (!scope || !document.createTreeWalker) return;
-  const edits = [];
-  const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
-  while (walker.nextNode()) {
-    const node = walker.currentNode;
-    const text = node.nodeValue || "";
-    const compacted = compactVerboseFeedText(text);
-    if (compacted !== text) {
-      edits.push([node, compacted]);
-      continue;
-    }
-    const normalized = text.replace(/\s+/g, " ").trim().toLowerCase();
-    if ((normalized === "truth" || normalized === "signal") && looksLikeFeedLabelParent(node.parentElement)) {
-      edits.push([node, ""]);
-    }
-  }
-  edits.forEach(([node, value]) => {
-    node.nodeValue = value;
-  });
 }
 
 function isLegacySourceRoleLabel(node) {
@@ -1233,9 +1188,18 @@ function textLooksLikeVerboseFeedRole(value) {
     || (hasBinanceTickerWords && (hasSignalRole || text.length <= 80));
 }
 
+function looksLikeFeedLabelParent(node) {
+  const className = String(node?.className || "").toLowerCase();
+  return className.includes("source")
+    || className.includes("legend")
+    || className.includes("line")
+    || className.includes("feed")
+    || Boolean(node?.closest?.(".paper-live-chart-head, .paper-live-fast, .paper-live-status-slot"));
+}
+
 function removeLegacySourceRoleLabels(root) {
   const scope = root || document;
-  normalizeVerboseFeedText(scope);
+  compactVerboseFeedTextNodes(scope);
   scope.querySelectorAll(".paper-line-inline-label, .paper-source-card, .paper-side-source").forEach((node) => node.remove());
   scope.querySelectorAll(".paper-line-legend-html *").forEach((node) => {
     const text = normalizedNodeText(node);
@@ -1251,6 +1215,24 @@ function removeLegacySourceRoleLabels(root) {
       || className.includes("feed");
     const isSmallSourceBlock = text.length <= 140 && node.children.length <= 6;
     if (isKnownSourceNode || isSmallSourceBlock) node.remove();
+  });
+}
+
+function compactVerboseFeedTextNodes(root) {
+  if (typeof document === "undefined" || !root) return;
+  const scope = root.nodeType === Node.DOCUMENT_NODE ? root.body : root;
+  if (!scope) return;
+  const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  nodes.forEach((node) => {
+    const next = compactVerboseFeedText(node.nodeValue);
+    const normalized = String(next || node.nodeValue || "").replace(/\s+/g, " ").trim().toLowerCase();
+    if ((normalized === "truth" || normalized === "signal") && looksLikeFeedLabelParent(node.parentElement)) {
+      node.nodeValue = "";
+      return;
+    }
+    if (next && next !== node.nodeValue) node.nodeValue = next;
   });
 }
 
@@ -1381,10 +1363,11 @@ function liveChartDataSignature(truthSamples, externalSamples) {
 }
 
 function paperLineKeyHtml(label, className) {
+  const canonicalLabel = compactFeedSourceLabel(label) || label;
   return `
-    <span class="paper-line-key" data-paper-line-key="${escapeHtml(label.toLowerCase())}">
+    <span class="paper-line-key" data-paper-line-key="${escapeHtml(canonicalLabel.toLowerCase())}">
       <span class="paper-line-swatch ${escapeHtml(className)}"></span>
-      <span class="paper-line-label">${escapeHtml(label)}</span>
+      <span class="paper-line-label">${escapeHtml(canonicalLabel)}</span>
     </span>`;
 }
 
