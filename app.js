@@ -1,9 +1,9 @@
 const fmt = new Intl.NumberFormat("en-US");
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const moneyCents = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const ACTIVE_BACKTEST_KEY = "strict_directional_maker";
+const ACTIVE_BACKTEST_KEY = "coverage_focus_one_below_h60_edge2_scan";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
-const ACTIVE_PAPER_EDGE_ID = "consistency_queue100_h5_native";
+const ACTIVE_PAPER_EDGE_ID = "coverage_one_below_h60_edge2_tail";
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_REFRESH_MS = 30000;
 const LIVE_TICK_RENDER_THROTTLE_MS = 16;
@@ -56,7 +56,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v23-compact-feed-labels";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v20-single-source-legend";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -6603,7 +6603,7 @@ function chainlinkPointFromMarket(market) {
 
 function chainlinkReasonFromMarket(market) {
   const source = market?.btc_price_source || market?.price_source || market?.start_price_source;
-  if (isChainlinkDataStreamsSource(source)) return "chainlink";
+  if (isChainlinkDataStreamsSource(source)) return "chainlink_data_streams";
   return "unknown_chainlink_source";
 }
 
