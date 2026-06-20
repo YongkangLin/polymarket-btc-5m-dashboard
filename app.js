@@ -3,11 +3,11 @@ const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD
 const moneyCents = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const ACTIVE_BACKTEST_KEY = "strict_directional_maker";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
-const ACTIVE_PAPER_EDGE_ID = "high_coverage_h5_challenger";
+const ACTIVE_PAPER_EDGE_ID = "consistency_queue100_h5_native";
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_REFRESH_MS = 30000;
 const LIVE_TICK_RENDER_THROTTLE_MS = 16;
-const LIVE_CHART_CLOCK_MS = 16;
+const LIVE_CHART_CLOCK_MS = 250;
 const LIVE_TICK_STALE_MS = 10000;
 const LIVE_TICK_RECONNECT_MS = 2000;
 const LIVE_SOCKET_CONNECT_TIMEOUT_MS = 3500;
@@ -56,7 +56,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v4-line-labels-countdown";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v6-source-labels-countdown";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -64,7 +64,7 @@ const BINANCE_DEPTH_TABLE_STALE_MS = 15000;
 const LOCAL_BACKEND_BASE = configuredBackendBase();
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
 const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 300;
-const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 4000;
+const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 1200;
 const BACKEND_WS_SNAPSHOT_SECONDS = 15;
 const POLYMARKET_TRUTH_SOURCE = "chainlink_data_streams";
 const DEFAULT_PAPER_SESSION = Object.freeze({
@@ -459,6 +459,12 @@ function humanReason(value) {
     best_positive_train_maker_route: "Best positive maker route on training data",
     needs_more_maker_fill_evidence: "Needs more maker-fill evidence",
     insufficient_train_maker_evidence: "Needs more training evidence",
+    no_quotes_to_fill: "No quotes placed",
+    fills_observed: "Fills observed",
+    quoted_but_no_matching_polymarket_sells: "No matching Polymarket sells hit our bids",
+    matching_sells_did_not_reach_bid_price: "Sells happened, but above our bid",
+    sell_flow_crossed_bid_but_queue_did_not_clear: "Sells crossed us, but queue did not clear",
+    raw_sell_flow_reached_bid_without_recorded_fill: "Sell flow reached our bid; check matching",
   };
   return labels[value] || String(value || "");
 }
@@ -984,6 +990,7 @@ function patchPaperAuxContent(aux, auxHtml) {
   const safeAuxHtml = ensureTradeSessionAuxKeepsPanel(aux, auxHtml);
   template.innerHTML = safeAuxHtml;
   const nextSections = [...template.children].filter((child) => child.matches?.(".paper-collapsible[data-paper-panel]"));
+  aux.querySelectorAll(".paper-live-chart-head, .paper-odds-strip").forEach((node) => node.remove());
   if (!nextSections.length) {
     aux.innerHTML = safeAuxHtml;
     syncPaperCollapseStates(aux);
@@ -1227,8 +1234,8 @@ function renderPaperChartHeader(market, options = {}) {
   return `
     <div class="paper-live-chart-head">
       <div class="paper-line-legend-html" aria-label="Chart lines">
-        ${options.showTruth === false ? "" : lineKey(options.truthLabel || "Chainlink Data Streams", "is-chainlink", options.truthRole || "truth")}
-        ${options.showExternal === false ? "" : lineKey(options.externalLabel || "Binance", "is-binance", options.externalRole || "signal")}
+        ${lineKey(options.truthLabel || "Chainlink Data Streams", "is-chainlink", options.truthRole || "truth")}
+        ${lineKey(options.externalLabel || "Binance", "is-binance", options.externalRole || "signal")}
       </div>
       <div class="paper-market-countdown" aria-label="Time left" data-paper-countdown-start="${escapeHtml(windowStart ?? "")}" data-paper-countdown-end="${escapeHtml(windowEnd ?? "")}">
         <span>Time left</span>
@@ -1237,17 +1244,14 @@ function renderPaperChartHeader(market, options = {}) {
     </div>`;
 }
 
-function renderPaperInChartLineLabels(options = {}) {
-  const label = (text, className, role) => `
-    <span class="paper-live-line-badge ${escapeHtml(className)}">
-      <span>${escapeHtml(text)}</span>
-      <strong>${escapeHtml(role)}</strong>
-    </span>`;
-  return `
-    <div class="paper-live-line-overlay" aria-label="Visible chart line labels">
-      ${options.showTruth === false ? "" : label(options.truthLabel || "Chainlink Data Streams", "is-chainlink", "truth")}
-      ${options.showExternal === false ? "" : label(options.externalLabel || "Binance", "is-binance", "signal")}
-    </div>`;
+function renderPaperSvgLineHeadLabel(point, text, className, plot) {
+  if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return "";
+  const label = String(text || "").trim();
+  if (!label) return "";
+  const nearRightEdge = point.x > plot.left + plot.width - 86;
+  const x = nearRightEdge ? point.x - 8 : point.x + 8;
+  const y = Math.max(plot.top + 14, Math.min(plot.top + plot.height - 10, point.y));
+  return `<text class="paper-line-head-label ${escapeHtml(className)}" x="${x}" y="${y}" text-anchor="${nearRightEdge ? "end" : "start"}">${escapeHtml(label)}</text>`;
 }
 
 function renderPaperLiveSideHtml(marketMetrics, accountMetrics, positionRows) {
@@ -3362,6 +3366,13 @@ function paperRouteGateCells() {
     healthCells.push(strategyCell(
       "Paper Quotes",
       `${fmt.format(typedDecisions.place_markets || 0)}/${fmt.format(typedDecisions.markets || 0)} markets | ${formatPercent(placeRate)}`,
+    ));
+  }
+  const fillability = healthEdge.fillability || {};
+  if (recommendedEdge && fillability.orders) {
+    healthCells.push(strategyCell(
+      "Fillability",
+      `${humanReason(fillability.status)} | ${fmt.format(fillability.orders_with_crossing_sells || 0)}/${fmt.format(fillability.orders || 0)} crossed`,
     ));
   }
   const blockers = (healthEdge.top_reasons || [])
@@ -5729,7 +5740,6 @@ function renderPaperDecisionGraph(options = {}) {
   if (!market || !rawPoints.length) {
     if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) {
       const loadingExtras = [
-        renderPaperChartHeader(market, { truthLabel: "Chainlink Data Streams", externalLabel: "Binance" }),
         renderPaperOddsStrip(market, null, null),
         emptyAuxHtml,
       ].join("");
@@ -5755,6 +5765,12 @@ function renderPaperDecisionGraph(options = {}) {
   if (marketTruthPoint && !truthRows.some((row) => row.point_id === marketTruthPoint.point_id || row.event_time_micro === marketTruthPoint.event_time_micro)) {
     truthRows = [...truthRows, marketTruthPoint];
   }
+  const fullWindowTruthRows = liveTickPointsForMarket(market)
+    .filter((row) => rowBelongsToMarketWindow(row, market))
+    .filter(isPolymarketTruthPoint);
+  const truthSampleRows = fullWindowTruthRows.length
+    ? mergePaperChartRows(truthRows, fullWindowTruthRows)
+    : truthRows;
   const directExternalCandidates = liveTickPointsForCurrentWindow(
     market,
     (row) => isExternalPricePoint(row) && !isPolymarketTruthPoint(row),
@@ -5780,7 +5796,7 @@ function renderPaperDecisionGraph(options = {}) {
   const startAnchorSample = chainlinkStartAnchorSample(market, startMeta);
   const rawTruthSamples = (startMeta ? [
     ...(startAnchorSample ? [startAnchorSample] : []),
-    ...paperGraphSamples(truthRows, startMeta.price, "chainlink"),
+    ...paperGraphSamples(truthSampleRows, startMeta.price, "chainlink"),
   ] : [])
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
   const latestElapsedSeed = newestElapsedSeconds(rawTruthSamples, rawExternalSamples);
@@ -5792,7 +5808,6 @@ function renderPaperDecisionGraph(options = {}) {
   if (!allSamples.length) {
     const hasPrices = priceRows.some((row) => metricNumber(row?.btc_price) !== null);
     const waitingExtras = [
-      renderPaperChartHeader(market, { truthLabel: "Chainlink Data Streams", externalLabel: "Binance" }),
       renderPaperOddsStrip(market, null, null),
       emptyAuxHtml,
     ].join("");
@@ -5950,20 +5965,24 @@ function renderPaperDecisionGraph(options = {}) {
   const externalPath = externalLinePoints.length
     ? `<path class="line line-external" d="${selectedCurrent ? stepPathFrom(externalLinePoints, LIVE_BINANCE_MAX_LINE_GAP_SECONDS) : pathFrom(externalLinePoints, LIVE_BINANCE_MAX_LINE_GAP_SECONDS)}"></path>`
     : "";
-  const truthLabel = chainlinkLineLabel(truthRows);
+  const truthLabel = chainlinkLineLabel(truthSampleRows);
   const externalLabel = externalLineLabel(externalRows);
-  const truthLegend = truthLinePoints.length
-    ? `<text class="legend chainlink" x="${plot.left + 8}" y="${plot.top + 20}">${escapeHtml(truthLabel)}</text>`
-    : "";
-  const externalLegendX = plot.left + Math.min(220, 20 + truthLabel.length * 7);
-  const externalLegend = externalLinePoints.length
-    ? `<text class="legend external" x="${externalLegendX}" y="${plot.top + 20}">${escapeHtml(externalLabel)}</text>`
-    : "";
+  const svgLineLabelPlot = { ...plot, width: plotWidth };
+  const truthHeadLabel = renderPaperSvgLineHeadLabel(
+    latestRenderedLinePoint(truthLinePoints),
+    "Chainlink",
+    "is-chainlink",
+    svgLineLabelPlot,
+  );
+  const externalHeadLabel = renderPaperSvgLineHeadLabel(
+    latestRenderedLinePoint(externalLinePoints),
+    "Binance",
+    "is-binance",
+    svgLineLabelPlot,
+  );
   const chartHeaderHtml = renderPaperChartHeader(market, {
     truthLabel,
     externalLabel,
-    showTruth: Boolean(truthLinePoints.length),
-    showExternal: Boolean(externalLinePoints.length),
   });
   const anchorDot = (points, className, label) => {
     const point = points[0];
@@ -6108,12 +6127,6 @@ function renderPaperDecisionGraph(options = {}) {
       ${chartHeaderHtml}
       <div class="paper-live-fast" role="img" aria-label="${escapeHtml(chartAriaLabel)}">
         <div class="paper-live-plot-wrap">
-          ${renderPaperInChartLineLabels({
-            truthLabel,
-            externalLabel,
-            showTruth: Boolean(truthLineSamples.length),
-            showExternal: Boolean(externalLineSamples.length),
-          })}
           <div class="paper-live-uplot"></div>
         </div>
         <div class="paper-live-side-slot"></div>
@@ -6134,8 +6147,8 @@ function renderPaperDecisionGraph(options = {}) {
         ${externalPath}
         ${chainlinkStartDot}
         ${externalStartDot}
-        ${truthLegend}
-        ${externalLegend}
+        ${truthHeadLabel}
+        ${externalHeadLabel}
         ${eventDots}
         ${hasTruthHead ? `<line class="paper-latest-line" x1="${headX}" y1="${plot.top}" x2="${headX}" y2="${plotBottom}"></line>` : ""}
         ${hasTruthHead ? `<circle class="dot latest ${selectedCurrent ? "live-now" : ""}" cx="${headX}" cy="${headY}" r="6">
@@ -6437,7 +6450,6 @@ function ensureLiveChartClock() {
       return;
     }
     refreshPaperCountdownLabels();
-    scheduleLiveTickRender();
   }, LIVE_CHART_CLOCK_MS);
 }
 
