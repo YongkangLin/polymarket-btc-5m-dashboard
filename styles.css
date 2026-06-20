@@ -700,21 +700,6 @@ svg {
   fill: var(--blue);
 }
 
-.paper-line-head-label {
-  fill: var(--green);
-  font-size: 12px;
-  font-weight: 900;
-  paint-order: stroke;
-  pointer-events: none;
-  stroke: #fff;
-  stroke-linejoin: round;
-  stroke-width: 4px;
-}
-
-.paper-line-head-label.is-binance {
-  fill: var(--blue);
-}
-
 .paper-move-label {
   fill: var(--muted);
   font-size: 11px;

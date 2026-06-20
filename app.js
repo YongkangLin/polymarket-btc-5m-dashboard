@@ -1244,16 +1244,6 @@ function renderPaperChartHeader(market, options = {}) {
     </div>`;
 }
 
-function renderPaperSvgLineHeadLabel(point, text, className, plot) {
-  if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return "";
-  const label = String(text || "").trim();
-  if (!label) return "";
-  const nearRightEdge = point.x > plot.left + plot.width - 86;
-  const x = nearRightEdge ? point.x - 8 : point.x + 8;
-  const y = Math.max(plot.top + 14, Math.min(plot.top + plot.height - 10, point.y));
-  return `<text class="paper-line-head-label ${escapeHtml(className)}" x="${x}" y="${y}" text-anchor="${nearRightEdge ? "end" : "start"}">${escapeHtml(label)}</text>`;
-}
-
 function renderPaperLiveSideHtml(marketMetrics, accountMetrics, positionRows) {
   const metricRows = (rows) => rows.map((row) => `
     <div class="paper-live-side-row">
@@ -5967,19 +5957,6 @@ function renderPaperDecisionGraph(options = {}) {
     : "";
   const truthLabel = chainlinkLineLabel(truthSampleRows);
   const externalLabel = externalLineLabel(externalRows);
-  const svgLineLabelPlot = { ...plot, width: plotWidth };
-  const truthHeadLabel = renderPaperSvgLineHeadLabel(
-    latestRenderedLinePoint(truthLinePoints),
-    "Chainlink",
-    "is-chainlink",
-    svgLineLabelPlot,
-  );
-  const externalHeadLabel = renderPaperSvgLineHeadLabel(
-    latestRenderedLinePoint(externalLinePoints),
-    "Binance",
-    "is-binance",
-    svgLineLabelPlot,
-  );
   const chartHeaderHtml = renderPaperChartHeader(market, {
     truthLabel,
     externalLabel,
@@ -6147,8 +6124,6 @@ function renderPaperDecisionGraph(options = {}) {
         ${externalPath}
         ${chainlinkStartDot}
         ${externalStartDot}
-        ${truthHeadLabel}
-        ${externalHeadLabel}
         ${eventDots}
         ${hasTruthHead ? `<line class="paper-latest-line" x1="${headX}" y1="${plot.top}" x2="${headX}" y2="${plotBottom}"></line>` : ""}
         ${hasTruthHead ? `<circle class="dot latest ${selectedCurrent ? "live-now" : ""}" cx="${headX}" cy="${headY}" r="6">
