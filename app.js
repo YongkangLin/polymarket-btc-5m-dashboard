@@ -61,7 +61,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 240;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 1200;
 const LIVE_RENDER_POINTS_PER_PIXEL = 1.4;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v42-sticky-current-window-odds";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v43-fast-paper-snapshot";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -3132,7 +3132,7 @@ function backendWebSocketUrl() {
     snapshot_seconds: String(BACKEND_WS_SNAPSHOT_SECONDS),
     paper_edge_id: activePaperEdgeId(),
     paper_history_limit: "36",
-    paper_snapshot_seconds: "5",
+    paper_snapshot_seconds: "1",
   }).toString();
   return url.toString();
 }
