@@ -56,7 +56,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v23-compact-feed-labels";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v24-canonical-feed-labels";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -1140,7 +1140,7 @@ function dedupePaperChartSourceLabels(chart) {
       node.remove();
       return;
     }
-    node.innerHTML = paperLineLegendHtml();
+    node.replaceChildren(...paperLineLegendNodes());
   });
   chart.querySelectorAll(".paper-live-line-overlay").forEach((node) => node.remove());
   chart.querySelectorAll(".paper-line-inline-label, .paper-source-card, .paper-side-source").forEach((node) => {
@@ -1192,6 +1192,12 @@ function removeLegacySourceRoleLabels(root) {
     const isSmallSourceBlock = text.length <= 140 && node.children.length <= 6;
     if (isKnownSourceNode || isSmallSourceBlock) node.remove();
   });
+}
+
+function paperLineLegendNodes() {
+  const template = document.createElement("template");
+  template.innerHTML = paperLineLegendHtml();
+  return [...template.content.childNodes];
 }
 
 function startLegacySourceLabelScrubber() {
