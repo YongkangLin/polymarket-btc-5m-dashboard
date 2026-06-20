@@ -1,9 +1,9 @@
 const fmt = new Intl.NumberFormat("en-US");
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const moneyCents = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const ACTIVE_BACKTEST_KEY = "narrow_queuecap_search";
+const ACTIVE_BACKTEST_KEY = "coverage_focus_one_below_h60_edge2_scan";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
-const ACTIVE_PAPER_EDGE_ID = "narrow_queuecap_h60_q25_native";
+const ACTIVE_PAPER_EDGE_ID = "coverage_one_below_h60_edge2_tail";
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_REFRESH_MS = 30000;
 const LIVE_TICK_RENDER_THROTTLE_MS = 16;
@@ -20,7 +20,7 @@ const LIVE_TICK_PERSIST_MS = 7500;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 4500;
 const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 120;
 const LIVE_TICK_PERSIST_POINTS_PER_MARKET = 3500;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v18";
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v19";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
   "polymarketPaperLiveTicks.v3",
@@ -38,6 +38,7 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v15",
   "polymarketPaperLiveTicks.v16",
   "polymarketPaperLiveTicks.v17",
+  "polymarketPaperLiveTicks.v18",
 ];
 const LIVE_PAPER_X_WINDOW_SECONDS = 15;
 const LIVE_PAPER_X_LEAD_SECONDS = 2;
@@ -56,7 +57,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v32-single-feed-legend";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v34-binance-event-kind";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -177,9 +178,11 @@ function configuredBackendBase() {
   if (window.POLYMARKET_BACKEND_BASE) return String(window.POLYMARKET_BACKEND_BASE).replace(/\/+$/, "");
   const explicit = params.get("backend");
   if (explicit) return String(explicit).replace(/\/+$/, "");
+  const protocol = window.location.protocol === "https:" ? "https:" : "http:";
+  const isLocalHost = ["127.0.0.1", "localhost", "::1", ""].includes(host);
+  if (isLocalHost) return DEFAULT_BACKEND_BASE;
   const saved = window.localStorage?.getItem(LOCAL_BACKEND_BASE_KEY);
   if (saved) return String(saved).replace(/\/+$/, "");
-  const protocol = window.location.protocol === "https:" ? "https:" : "http:";
   if (host && !["127.0.0.1", "localhost", "yongkanglin.github.io"].includes(host)) {
     return `${protocol}//${host}:8788`;
   }
@@ -398,31 +401,12 @@ function liveFeedLabel(row) {
 
 function compactFeedSourceLabel(value) {
   const text = String(value || "").trim();
-  const canonical = compactVerboseFeedText(text);
-  if (canonical === "Chainlink" || canonical === "Binance") return canonical;
   const normalized = text.toLowerCase().replace(/[_-]+/g, " ");
   if (!normalized) return "";
   if (normalized.includes("chainlink") || normalized.includes("polymarket truth")) return "Chainlink";
   if (normalized.includes("binance")) return "Binance";
   if (normalized === "truth" || normalized === "signal") return "";
   return compactNote(text.replace(/^https?:\/\//, ""), 24);
-}
-
-function compactVerboseFeedText(value) {
-  const text = String(value || "");
-  if (!text) return "";
-  return text
-    .replace(/\bChainlink\s+Data\s+Streams\b[\s:,-]*(?:truth|source\s+of\s+truth)?/gi, "Chainlink")
-    .replace(/\bBinance\s+WSS\s+book\s*Ticker\b[\s:,-]*(?:signal|external\s+signal)?/gi, "Binance")
-    .replace(/\bBinance\s+WSS\s+bookticker\b[\s:,-]*(?:signal|external\s+signal)?/gi, "Binance")
-    .replace(/\bChainlink\s+Data\s+Streams\b(?:\s+truth\b)?/gi, "Chainlink")
-    .replace(/\bBinance\s+WSS\s+book\s*Ticker\b(?:\s+signal\b)?/gi, "Binance")
-    .replace(/\bBinance\s+WSS\s+bookticker\b(?:\s+signal\b)?/gi, "Binance")
-    .replace(/\b(Chainlink)\s+truth\b/gi, "$1")
-    .replace(/\b(Binance)\s+signal\b/gi, "$1")
-    .replace(/^\s*(truth|signal)\s*$/gi, "")
-    .replace(/\s+/g, " ")
-    .trim();
 }
 
 function formatPnl(value) {
@@ -1151,16 +1135,8 @@ function setPaperChartContent(chart, visualHtml, auxHtml = "") {
 function dedupePaperChartSourceLabels(chart) {
   if (!chart) return;
   chart.querySelectorAll(".u-legend").forEach((node) => node.remove());
-  chart.querySelectorAll(".paper-live-chart-head").forEach((node, index) => {
-    if (index > 0) node.remove();
-  });
-  chart.querySelectorAll(".paper-line-legend-html").forEach((node, index) => {
-    if (index > 0) {
-      node.remove();
-      return;
-    }
-    node.replaceChildren(...paperLineLegendNodes());
-  });
+  normalizePaperChartHeader(chart);
+  normalizeVerboseFeedText(chart);
   chart.querySelectorAll(".paper-live-line-overlay").forEach((node) => node.remove());
   chart.querySelectorAll(".paper-line-inline-label, .paper-source-card, .paper-side-source").forEach((node) => {
     node.remove();
@@ -1174,8 +1150,76 @@ function dedupePaperChartSourceLabels(chart) {
   removeLegacySourceRoleLabels(document);
 }
 
+function normalizePaperChartHeader(chart) {
+  const headers = [...chart.querySelectorAll(".paper-live-chart-head")];
+  headers.forEach((node, index) => {
+    if (index > 0) node.remove();
+  });
+  const header = headers[0];
+  if (!header) return;
+  header.querySelectorAll(".paper-line-legend-html").forEach((node, index) => {
+    if (index > 0) node.remove();
+  });
+  let legend = header.querySelector(".paper-line-legend-html");
+  if (!legend) {
+    legend = document.createElement("div");
+    legend.className = "paper-line-legend-html";
+    legend.setAttribute("aria-label", "Chart lines");
+    header.prepend(legend);
+  }
+  legend.dataset.paperFeedLegend = "canonical";
+  legend.replaceChildren(...paperLineLegendNodes());
+}
+
 function normalizedNodeText(node) {
   return (node?.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function compactVerboseFeedText(value) {
+  const original = String(value || "");
+  if (!/chainlink\s+data\s+streams|binance\s+wss\s+book\s*ticker|binance\s+wss\s+bookticker|\btruth\b|\bsignal\b/i.test(original)) return original;
+  return original
+    .replace(/chainlink\s+data\s+streams(?:\s*(?:truth|source\s+of\s+truth))?/gi, "Chainlink")
+    .replace(/binance\s+wss\s+book\s*ticker(?:\s*(?:signal|external\s+signal))?/gi, "Binance")
+    .replace(/binance\s+wss\s+bookticker(?:\s*(?:signal|external\s+signal))?/gi, "Binance")
+    .replace(/\btruth\b/gi, "")
+    .replace(/\bsignal\b/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+\|/g, " |")
+    .replace(/\|\s+\|/g, "|")
+    .trim();
+}
+
+function looksLikeFeedLabelParent(node) {
+  const className = String(node?.className || "").toLowerCase();
+  return className.includes("source")
+    || className.includes("legend")
+    || className.includes("line")
+    || className.includes("feed")
+    || Boolean(node?.closest?.(".paper-live-chart-head, .paper-live-fast, .paper-live-side-slot, .paper-live-status-slot"));
+}
+
+function normalizeVerboseFeedText(root) {
+  const scope = root?.nodeType === Node.DOCUMENT_NODE ? root.body : root;
+  if (!scope || !document.createTreeWalker) return;
+  const edits = [];
+  const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    const text = node.nodeValue || "";
+    const compacted = compactVerboseFeedText(text);
+    if (compacted !== text) {
+      edits.push([node, compacted]);
+      continue;
+    }
+    const normalized = text.replace(/\s+/g, " ").trim().toLowerCase();
+    if ((normalized === "truth" || normalized === "signal") && looksLikeFeedLabelParent(node.parentElement)) {
+      edits.push([node, ""]);
+    }
+  }
+  edits.forEach(([node, value]) => {
+    node.nodeValue = value;
+  });
 }
 
 function isLegacySourceRoleLabel(node) {
@@ -1197,18 +1241,9 @@ function textLooksLikeVerboseFeedRole(value) {
     || (hasBinanceTickerWords && (hasSignalRole || text.length <= 80));
 }
 
-function looksLikeFeedLabelParent(node) {
-  const className = String(node?.className || "").toLowerCase();
-  return className.includes("source")
-    || className.includes("legend")
-    || className.includes("line")
-    || className.includes("feed")
-    || Boolean(node?.closest?.(".paper-live-chart-head, .paper-live-fast, .paper-live-status-slot"));
-}
-
 function removeLegacySourceRoleLabels(root) {
   const scope = root || document;
-  compactVerboseFeedTextNodes(scope);
+  normalizeVerboseFeedText(scope);
   scope.querySelectorAll(".u-legend, .paper-line-inline-label, .paper-source-card, .paper-side-source, .paper-feed-source, .paper-source-strip, .paper-live-source, .paper-live-source-strip, .paper-live-feed-row").forEach((node) => node.remove());
   scope.querySelectorAll(".paper-line-legend-html *").forEach((node) => {
     const text = normalizedNodeText(node);
@@ -1232,24 +1267,6 @@ function removeLegacySourceRoleLabels(root) {
       || Boolean(node.closest?.(".paper-live-chart-head, .paper-live-fast, .paper-live-status-slot"));
     const isSmallSourceBlock = text.length <= 180 && node.children.length <= 8;
     if (isKnownSourceNode || isSmallSourceBlock) node.remove();
-  });
-}
-
-function compactVerboseFeedTextNodes(root) {
-  if (typeof document === "undefined" || !root) return;
-  const scope = root.nodeType === Node.DOCUMENT_NODE ? root.body : root;
-  if (!scope) return;
-  const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
-  const nodes = [];
-  while (walker.nextNode()) nodes.push(walker.currentNode);
-  nodes.forEach((node) => {
-    const next = compactVerboseFeedText(node.nodeValue);
-    const normalized = String(next || node.nodeValue || "").replace(/\s+/g, " ").trim().toLowerCase();
-    if ((normalized === "truth" || normalized === "signal") && looksLikeFeedLabelParent(node.parentElement)) {
-      node.nodeValue = "";
-      return;
-    }
-    if (next && next !== node.nodeValue) node.nodeValue = next;
   });
 }
 
@@ -1380,11 +1397,10 @@ function liveChartDataSignature(truthSamples, externalSamples) {
 }
 
 function paperLineKeyHtml(label, className) {
-  const canonicalLabel = compactFeedSourceLabel(label) || label;
   return `
-    <span class="paper-line-key" data-paper-line-key="${escapeHtml(canonicalLabel.toLowerCase())}">
+    <span class="paper-line-key" data-paper-line-key="${escapeHtml(label.toLowerCase())}">
       <span class="paper-line-swatch ${escapeHtml(className)}"></span>
-      <span class="paper-line-label">${escapeHtml(canonicalLabel)}</span>
+      <span class="paper-line-label">${escapeHtml(label)}</span>
     </span>`;
 }
 
@@ -2474,10 +2490,9 @@ function currentDisplayPaperMarket() {
 
 function isBinanceLivePoint(point) {
   const venue = String(point?.btc_price_venue || "");
-  return (
-    ["live_tick", "live_book_tick"].includes(point?.decision) &&
-    venue.startsWith("local_backend_binance_ws")
-  );
+  if (!venue.startsWith("local_backend_binance_ws")) return false;
+  if (["live_tick", "live_book_tick"].includes(point?.decision)) return true;
+  return ["trade", "book", "depth"].includes(point?.backend_event_kind);
 }
 
 function isBackendLivePoint(point) {
@@ -2930,11 +2945,13 @@ function isExternalPricePoint(row) {
 }
 
 function isExternalBookPricePoint(row) {
-  return isExternalPricePoint(row) && row?.decision === "live_book_tick";
+  return isExternalPricePoint(row)
+    && (row?.decision === "live_book_tick" || ["book", "depth"].includes(row?.backend_event_kind));
 }
 
 function isExternalTradePricePoint(row) {
-  return isExternalPricePoint(row) && row?.decision === "live_tick";
+  return isExternalPricePoint(row)
+    && (row?.decision === "live_tick" || row?.backend_event_kind === "trade");
 }
 
 function isExternalBookTickerPricePoint(row) {
@@ -2991,11 +3008,12 @@ function backendBaseUrl() {
 
 function activePaperEdgeId() {
   return configuredPaperEdgeId()
-    || state.workflow?.paper_trade?.edge_id
-    || state.workflow?.active_backtest_key
+    || state.workflow?.paper_trade?.source_edge_id
     || state.workflow?.paper_trade?.recommended_dashboard_edge_id
     || state.workflow?.paper_trade?.paper_health?.recommended_dashboard_edge_id
+    || state.workflow?.paper_trade?.edge_id
     || ACTIVE_PAPER_EDGE_ID
+    || state.workflow?.active_backtest_key
     || ACTIVE_BACKTEST_KEY;
 }
 
@@ -3575,8 +3593,9 @@ function renderStrategyPanels() {
   ].join("");
   const paperStrategy = byId("paperStrategy");
   if (paperStrategy) {
-    paperStrategy.innerHTML = "";
-    paperStrategy.hidden = true;
+    const cells = paperRouteGateCells();
+    paperStrategy.innerHTML = cells.join("");
+    paperStrategy.hidden = !cells.length;
   }
   byId("liveStrategy").innerHTML = [
     strategyCell("Mode", liveStatus),
@@ -5950,12 +5969,9 @@ function renderPaperDecisionGraph(options = {}) {
       .filter((row) => rowBelongsToMarketWindow(row, market))
       .filter((row) => isExternalPricePoint(row) && !isPolymarketTruthPoint(row)),
   );
-  const externalBaselineRows = fullWindowExternalRows.length ? fullWindowExternalRows : externalRows;
-  const externalStartPrice = graphBaselinePrice(externalBaselineRows, "binance", startMeta?.price, true);
-  const externalStartAnchor = sourceStartAnchorSample(externalBaselineRows, "binance", externalStartPrice, true);
+  const externalStartPrice = metricNumber(startMeta?.price);
   const externalSampleRows = fullWindowExternalRows.length ? fullWindowExternalRows : externalRows;
   const rawExternalSamples = externalStartPrice === null ? [] : [
-    ...(externalStartAnchor ? [externalStartAnchor] : []),
     ...paperGraphSamples(externalSampleRows, externalStartPrice, "binance"),
   ].sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
   const startAnchorSample = chainlinkStartAnchorSample(market, startMeta);
