@@ -56,7 +56,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v20-single-source-legend";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v21-compact-line-legend";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -1136,7 +1136,11 @@ function dedupePaperChartSourceLabels(chart) {
     if (index > 0) node.remove();
   });
   chart.querySelectorAll(".paper-line-legend-html").forEach((node, index) => {
-    if (index > 0) node.remove();
+    if (index > 0) {
+      node.remove();
+      return;
+    }
+    node.innerHTML = paperLineLegendHtml();
   });
   chart.querySelectorAll(".paper-live-line-overlay").forEach((node) => node.remove());
   chart.querySelectorAll(".paper-line-inline-label, .paper-source-card, .paper-side-source").forEach((node) => {
@@ -1173,6 +1177,10 @@ function textLooksLikeVerboseFeedRole(value) {
 function removeLegacySourceRoleLabels(root) {
   const scope = root || document;
   scope.querySelectorAll(".paper-line-inline-label, .paper-source-card, .paper-side-source").forEach((node) => node.remove());
+  scope.querySelectorAll(".paper-line-legend-html *").forEach((node) => {
+    const text = normalizedNodeText(node);
+    if (text === "truth" || text === "signal" || textLooksLikeVerboseFeedRole(text)) node.remove();
+  });
   scope.querySelectorAll("*").forEach((node) => {
     const text = normalizedNodeText(node);
     if (!textLooksLikeVerboseFeedRole(text)) return;
@@ -1306,20 +1314,28 @@ function liveChartDataSignature(truthSamples, externalSamples) {
   return `${liveSeriesSignature(truthSamples)}::${liveSeriesSignature(externalSamples)}`;
 }
 
+function paperLineKeyHtml(label, className) {
+  return `
+    <span class="paper-line-key" data-paper-line-key="${escapeHtml(label.toLowerCase())}">
+      <span class="paper-line-swatch ${escapeHtml(className)}"></span>
+      <span class="paper-line-label">${escapeHtml(label)}</span>
+    </span>`;
+}
+
+function paperLineLegendHtml() {
+  return `
+        ${paperLineKeyHtml("Chainlink", "is-chainlink")}
+        ${paperLineKeyHtml("Binance", "is-binance")}`;
+}
+
 function renderPaperChartHeader(market) {
   const windowStart = marketWindowStartUnix(market);
   const windowEnd = marketWindowEndUnix(market);
   const initialCountdown = countdownTextFromWindow(windowStart, windowEnd);
-  const lineKey = (label, className) => `
-    <span class="paper-line-key">
-      <span class="paper-line-swatch ${escapeHtml(className)}"></span>
-      <span class="paper-line-label">${escapeHtml(label)}</span>
-    </span>`;
   return `
     <div class="paper-live-chart-head">
       <div class="paper-line-legend-html" aria-label="Chart lines">
-        ${lineKey("Chainlink", "is-chainlink")}
-        ${lineKey("Binance", "is-binance")}
+        ${paperLineLegendHtml()}
       </div>
       <div class="paper-market-countdown" aria-label="Time left" data-paper-countdown-start="${escapeHtml(windowStart ?? "")}" data-paper-countdown-end="${escapeHtml(windowEnd ?? "")}">
         <span>Time left</span>
