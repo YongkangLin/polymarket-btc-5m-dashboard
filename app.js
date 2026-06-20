@@ -56,7 +56,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v6-source-labels-countdown";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v7-single-source-legend";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -1221,7 +1221,7 @@ function liveChartDataSignature(truthSamples, externalSamples) {
   return `${liveSeriesSignature(truthSamples)}::${liveSeriesSignature(externalSamples)}`;
 }
 
-function renderPaperChartHeader(market, options = {}) {
+function renderPaperChartHeader(market) {
   const windowStart = marketWindowStartUnix(market);
   const windowEnd = marketWindowEndUnix(market);
   const initialCountdown = countdownTextFromWindow(windowStart, windowEnd);
@@ -5956,10 +5956,7 @@ function renderPaperDecisionGraph(options = {}) {
     : "";
   const truthLabel = chainlinkLineLabel(truthSampleRows);
   const externalLabel = externalLineLabel(externalRows);
-  const chartHeaderHtml = renderPaperChartHeader(market, {
-    truthLabel,
-    externalLabel,
-  });
+  const chartHeaderHtml = renderPaperChartHeader(market);
   const anchorDot = (points, className, label) => {
     const point = points[0];
     if (!point) return "";
