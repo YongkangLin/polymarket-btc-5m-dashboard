@@ -56,7 +56,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v25-single-feed-legend";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v26-canonical-feed-legend";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -1132,16 +1132,7 @@ function setPaperChartContent(chart, visualHtml, auxHtml = "") {
 function dedupePaperChartSourceLabels(chart) {
   if (!chart) return;
   chart.querySelectorAll(".u-legend").forEach((node) => node.remove());
-  chart.querySelectorAll(".paper-live-chart-head").forEach((node, index) => {
-    if (index > 0) node.remove();
-  });
-  chart.querySelectorAll(".paper-line-legend-html").forEach((node, index) => {
-    if (index > 0) {
-      node.remove();
-      return;
-    }
-    node.replaceChildren(...paperLineLegendNodes());
-  });
+  normalizePaperChartHeader(chart);
   chart.querySelectorAll(".paper-live-line-overlay").forEach((node) => node.remove());
   chart.querySelectorAll(".paper-line-inline-label, .paper-source-card, .paper-side-source").forEach((node) => {
     node.remove();
@@ -1153,6 +1144,27 @@ function dedupePaperChartSourceLabels(chart) {
   });
   removeLegacySourceRoleLabels(chart);
   removeLegacySourceRoleLabels(document);
+}
+
+function normalizePaperChartHeader(chart) {
+  const headers = [...chart.querySelectorAll(".paper-live-chart-head")];
+  headers.forEach((node, index) => {
+    if (index > 0) node.remove();
+  });
+  const header = headers[0];
+  if (!header) return;
+  header.querySelectorAll(".paper-line-legend-html").forEach((node, index) => {
+    if (index > 0) node.remove();
+  });
+  let legend = header.querySelector(".paper-line-legend-html");
+  if (!legend) {
+    legend = document.createElement("div");
+    legend.className = "paper-line-legend-html";
+    legend.setAttribute("aria-label", "Chart lines");
+    header.prepend(legend);
+  }
+  legend.dataset.paperFeedLegend = "canonical";
+  legend.replaceChildren(...paperLineLegendNodes());
 }
 
 function normalizedNodeText(node) {
@@ -1340,7 +1352,7 @@ function renderPaperChartHeader(market) {
   const initialCountdown = countdownTextFromWindow(windowStart, windowEnd);
   return `
     <div class="paper-live-chart-head">
-      <div class="paper-line-legend-html" aria-label="Chart lines">
+      <div class="paper-line-legend-html" data-paper-feed-legend="canonical" aria-label="Chart lines">
         ${paperLineLegendHtml()}
       </div>
       <div class="paper-market-countdown" aria-label="Time left" data-paper-countdown-start="${escapeHtml(windowStart ?? "")}" data-paper-countdown-end="${escapeHtml(windowEnd ?? "")}">
