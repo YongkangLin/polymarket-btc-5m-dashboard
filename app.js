@@ -20,7 +20,7 @@ const LIVE_TICK_PERSIST_MS = 7500;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 4500;
 const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 120;
 const LIVE_TICK_PERSIST_POINTS_PER_MARKET = 3500;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v20";
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v21";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
   "polymarketPaperLiveTicks.v3",
@@ -40,6 +40,7 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v17",
   "polymarketPaperLiveTicks.v18",
   "polymarketPaperLiveTicks.v19",
+  "polymarketPaperLiveTicks.v20",
 ];
 const LIVE_PAPER_X_WINDOW_SECONDS = 15;
 const LIVE_PAPER_X_LEAD_SECONDS = 2;
@@ -58,7 +59,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v38-source-balanced-binance";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v39-explicit-binance";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -2692,7 +2693,6 @@ function rowPriceSourceText(row) {
 }
 
 function rowUsesExternalBinancePrice(row) {
-  if (hasChainlinkDataStreamsPrice(row)) return false;
   const text = rowPriceSourceText(row);
   return text.includes("local_backend_binance_ws")
     || text.includes("binance")
