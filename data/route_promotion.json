@@ -539,7 +539,7 @@
       }
     }
   },
-  "generated_at": "2026-06-20T15:09:51.131497+00:00",
+  "generated_at": "2026-06-20T15:14:27.073514+00:00",
   "routes": {
     "active": {
       "key": "narrow_queuecap_search",
@@ -607,18 +607,18 @@
     "best_probe": {
       "key": "strict_high_confidence_scout",
       "live": {
-        "inband_events": 6144,
+        "inband_events": 7998,
         "key": "strict_high_confidence_scout",
         "label": "Scout: 181-240s, 30+ bps, 75c-98c",
         "path": "reports/live_narrow_queuecap_h60_q25_miss_diagnosis.json",
         "quote_rate": 0.0,
         "top_reasons": [
           {
-            "events": 6144,
+            "events": 7998,
             "reason": "distance_outside_route"
           },
           {
-            "events": 22770,
+            "events": 29384,
             "reason": "outside_time_window"
           }
         ],
@@ -676,18 +676,18 @@
       }
     },
     "best_probe_live": {
-      "inband_events": 6144,
+      "inband_events": 7998,
       "key": "strict_high_confidence_scout",
       "label": "Scout: 181-240s, 30+ bps, 75c-98c",
       "path": "reports/live_narrow_queuecap_h60_q25_miss_diagnosis.json",
       "quote_rate": 0.0,
       "top_reasons": [
         {
-          "events": 6144,
+          "events": 7998,
           "reason": "distance_outside_route"
         },
         {
-          "events": 22770,
+          "events": 29384,
           "reason": "outside_time_window"
         }
       ],
@@ -697,7 +697,7 @@
     "capacity_probe": {
       "key": "strict_high_coverage_scout",
       "live": {
-        "inband_events": 5972,
+        "inband_events": 7824,
         "key": "strict_high_coverage_scout",
         "label": "Scout: 91-150s, 0-10 bps, 65c-90c with book/fair checks",
         "path": "reports/live_narrow_queuecap_h60_q25_miss_diagnosis.json",
@@ -708,11 +708,11 @@
             "reason": "distance_outside_route"
           },
           {
-            "events": 3076,
+            "events": 4928,
             "reason": "missing_entry_price"
           },
           {
-            "events": 22942,
+            "events": 29558,
             "reason": "outside_time_window"
           }
         ],
@@ -835,22 +835,22 @@
     "scout": {
       "key": "strict_external_pressure_probe",
       "live": {
-        "inband_events": 5972,
+        "inband_events": 7824,
         "key": "strict_external_pressure_probe",
         "label": "Probe: active strict plus Binance book/microprice/trade-flow support",
         "path": "reports/live_narrow_queuecap_h60_q25_miss_diagnosis.json",
         "quote_rate": 0.0,
         "top_reasons": [
           {
-            "events": 3616,
+            "events": 5148,
             "reason": "distance_outside_route"
           },
           {
-            "events": 2356,
+            "events": 2676,
             "reason": "missing_entry_price"
           },
           {
-            "events": 22942,
+            "events": 29558,
             "reason": "outside_time_window"
           }
         ],
@@ -968,10 +968,10 @@
         "edge_id": "narrow_queuecap_h60_q25_native",
         "fills": 0,
         "gross_fill_cost": 0,
-        "last_updated": "2026-06-20T08:09:50.364481-07:00",
-        "markets_seen": 3,
+        "last_updated": "2026-06-20T08:14:26.416877-07:00",
+        "markets_seen": 4,
         "observed_fill_events": 0,
-        "orders_placed": 1,
+        "orders_placed": 8,
         "realized_pnl": 0,
         "roi_on_filled_cost": null,
         "scored_fill_events": 0,
@@ -1180,10 +1180,10 @@
         "edge_id": "coverage_one_below_h60_edge2_tail",
         "fills": 1,
         "gross_fill_cost": 5,
-        "last_updated": "2026-06-20T08:09:50.474909-07:00",
-        "markets_seen": 16,
+        "last_updated": "2026-06-20T08:14:26.471892-07:00",
+        "markets_seen": 17,
         "observed_fill_events": 1,
-        "orders_placed": 9,
+        "orders_placed": 10,
         "realized_pnl": 2.352941176470588,
         "roi_on_filled_cost": 0.4705882352941176,
         "scored_fill_events": 1,
@@ -1339,10 +1339,10 @@
         "edge_id": "coverage_one_below_h60_edge2_tail",
         "fills": 1,
         "gross_fill_cost": 5,
-        "last_updated": "2026-06-20T08:09:50.91421-07:00",
-        "markets_seen": 16,
+        "last_updated": "2026-06-20T08:14:26.87195-07:00",
+        "markets_seen": 17,
         "observed_fill_events": 1,
-        "orders_placed": 9,
+        "orders_placed": 10,
         "realized_pnl": 2.352941176470588,
         "roi_on_filled_cost": 0.4705882352941176,
         "scored_fill_events": 1,
