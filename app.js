@@ -6,7 +6,7 @@ const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
 const ACTIVE_PAPER_EDGE_ID = "coverage_one_below_h60_edge2_tail";
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_REFRESH_MS = 30000;
-const LIVE_TICK_RENDER_THROTTLE_MS = 16;
+const LIVE_TICK_RENDER_THROTTLE_MS = 50;
 const LIVE_CHART_CLOCK_MS = 250;
 const LIVE_TICK_STALE_MS = 10000;
 const LIVE_TICK_RECONNECT_MS = 2000;
@@ -14,13 +14,13 @@ const LIVE_SOCKET_CONNECT_TIMEOUT_MS = 3500;
 const LOCAL_BACKEND_BASE_KEY = "POLYMARKET_LOCAL_BACKEND_BASE";
 const LOCAL_PAPER_EDGE_KEY = "POLYMARKET_PAPER_EDGE_ID";
 const DEFAULT_BACKEND_BASE = "http://127.0.0.1:8788";
-const LIVE_TICK_RENDER_MAX_POINTS = 2400;
+const LIVE_TICK_RENDER_MAX_POINTS = 900;
 const LIVE_AUX_RENDER_THROTTLE_MS = 500;
 const LIVE_TICK_PERSIST_MS = 7500;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 4500;
 const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 120;
 const LIVE_TICK_PERSIST_POINTS_PER_MARKET = 3500;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v21";
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v22";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
   "polymarketPaperLiveTicks.v3",
@@ -41,6 +41,7 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v18",
   "polymarketPaperLiveTicks.v19",
   "polymarketPaperLiveTicks.v20",
+  "polymarketPaperLiveTicks.v21",
 ];
 const LIVE_PAPER_X_WINDOW_SECONDS = 15;
 const LIVE_PAPER_X_LEAD_SECONDS = 2;
@@ -54,12 +55,12 @@ const LIVE_STEP_EPS_SECONDS = 0.0005;
 const LIVE_CHAINLINK_MAX_LINE_GAP_SECONDS = 10;
 const LIVE_BINANCE_MAX_LINE_GAP_SECONDS = 5;
 const LIVE_PAPER_RENDER_TAIL_SECONDS = 15;
-const LIVE_RENDER_MAX_SOURCE_ROWS_PER_LINE = 20000;
-const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
-const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
-const LIVE_RENDER_POINTS_PER_PIXEL = 5;
+const LIVE_RENDER_MAX_SOURCE_ROWS_PER_LINE = 3000;
+const LIVE_RENDER_MIN_POINTS_PER_LINE = 240;
+const LIVE_RENDER_MAX_POINTS_PER_LINE = 1200;
+const LIVE_RENDER_POINTS_PER_PIXEL = 1.4;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v39-explicit-binance";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v40-light-render-actions";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -5186,6 +5187,10 @@ function paperSessionPositionsForMarket(market) {
   return paperPositionsForMarket(market, []);
 }
 
+function paperNoPositionPanelRow() {
+  return { label: "No position", value: "None", detail: "waiting for a fill", tone: "move-flat" };
+}
+
 function paperPositionLabel(position) {
   const shares = metricNumber(position?.shares);
   const side = position?.side || "--";
@@ -5358,7 +5363,7 @@ function paperPositionPanelRows(positions) {
   if (active.length) return active.slice(0, 2);
   const closed = rows.filter((row) => row.label === "Closed");
   if (closed.length) return closed.slice(0, 2);
-  return [{ label: "No position", value: "None", detail: "waiting for a fill", tone: "move-flat" }];
+  return [paperNoPositionPanelRow()];
 }
 
 function latestSessionMetric(market, rawPoints, session, keys) {
@@ -5946,6 +5951,44 @@ function isPaperActionLogRow(row) {
     || eventType === "maker_paper_settlement";
 }
 
+function paperActionSessionRows() {
+  const session = paperSession();
+  const markers = Array.isArray(session?.markers)
+    ? session.markers
+    : Object.values(session?.markers || {});
+  if (markers.some(isPaperActionLogRow)) return markers.filter(isPaperActionLogRow);
+  const positionRows = Array.isArray(session?.positions)
+    ? session.positions
+    : Object.values(session?.positions || {});
+  const settlementRows = paperSessionHistoryRows(session).map((row) => ({
+    ...row,
+    event_type: "maker_paper_settlement",
+    generated_at: row.generated_at || (row.time_unix ? new Date(Number(row.time_unix) * 1000).toISOString() : null),
+    quote_price: row.entry_price ?? row.position_entry_price,
+    maker_quote_price: row.entry_price ?? row.position_entry_price,
+    price: row.entry_price ?? row.position_entry_price,
+    filled_cost: row.filled_cost,
+    shares: row.position_shares,
+    side: row.side || row.position_side,
+    reason: row.reason || "hold_to_chainlink_settlement",
+  }));
+  const fillRows = positionRows
+    .filter((row) => (metricNumber(row?.filled_cost ?? row?.cost) ?? 0) > 0)
+    .map((row) => ({
+      ...row,
+      event_type: "maker_paper_fill",
+      generated_at: row.generated_at
+        || (row.last_fill_time_micro ? new Date(Number(row.last_fill_time_micro) / 1000).toISOString() : null)
+        || (row.time_unix ? new Date(Number(row.time_unix) * 1000).toISOString() : null),
+      quote_price: row.quote_price ?? row.entry_price ?? row.price,
+      maker_quote_price: row.quote_price ?? row.entry_price ?? row.price,
+      filled_cost: row.filled_cost ?? row.cost,
+      shares: row.shares,
+      reason: row.fill_reason || "same_outcome_sell_flow_crossed_quote",
+    }));
+  return [...fillRows, ...settlementRows].filter(isPaperActionLogRow);
+}
+
 function paperActionBuyText(row) {
   const type = paperMarkerType(row);
   if (type === "quote" || type === "fill") return "yes";
@@ -5955,10 +5998,11 @@ function paperActionBuyText(row) {
 }
 
 function paperActionLogRows(market, rawPoints) {
-  const rows = [
+  const marketRows = [
     ...(rawPoints || []),
     ...paperMarkersFor(market),
   ].filter(isPaperActionLogRow);
+  const rows = marketRows.length ? marketRows : paperActionSessionRows();
   const seen = new Set();
   const sorted = rows
     .filter((row, index) => {
@@ -6289,6 +6333,7 @@ function renderPaperDecisionGraph(options = {}) {
   const positionRows = isLiveView
     ? [{ label: "No live positions", value: "Live disabled", detail: "Manual enable required", tone: "move-flat" }]
     : paperPositionPanelRows(currentPositions);
+  const displayedPositionRows = positionRows.length ? positionRows : [paperNoPositionPanelRow()];
   const sessionCapital = isLiveView
     ? null
     : paperSessionCapital(session)
@@ -6335,7 +6380,7 @@ function renderPaperDecisionGraph(options = {}) {
     return `
       <rect class="paper-side-section is-positions" x="708" y="288" width="242" height="144" rx="6"></rect>
       <text class="paper-side-section-title" x="${x}" y="314">POSITIONS</text>
-      ${positionRows.map((row, index) => {
+      ${displayedPositionRows.map((row, index) => {
         const y = 341 + index * 50;
         return `
           <text class="paper-position-status ${row.tone || ""}" x="${x}" y="${y}">${escapeHtml(row.label)}</text>
@@ -6351,7 +6396,7 @@ function renderPaperDecisionGraph(options = {}) {
   const mobileMetrics = [
     ...marketMetrics,
     ...accountMetrics,
-    { label: "Positions", value: positionRows.map((row) => `${row.label}: ${row.value}`).join(" | "), compact: true },
+    { label: "Positions", value: displayedPositionRows.map((row) => `${row.label}: ${row.value}`).join(" | "), compact: true },
   ];
   const compactInfoRows = compact
     ? `<div class="paper-mobile-stats">${mobileMetrics.map((row) => `
@@ -6388,7 +6433,7 @@ function renderPaperDecisionGraph(options = {}) {
   });
 
   const chartAriaLabel = isLiveView ? "Live trade BTC path and events" : "Paper trade BTC path and events";
-  const sideHtml = compact ? "" : renderPaperLiveSideHtml(marketMetrics, accountMetrics, positionRows);
+  const sideHtml = compact ? "" : renderPaperLiveSideHtml(marketMetrics, accountMetrics, displayedPositionRows);
   let visualHtml = "";
   if (useUPlot) {
     visualHtml = `${liveNotice}
