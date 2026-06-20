@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-20T19:45:07.403189+00:00",
+  "generated_at": "2026-06-20T20:54:59.261519+00:00",
   "status": "passed",
   "feature_summary": {
     "markets": 2167,
@@ -59,6 +59,20 @@
       "mode": "one_below_ask",
       "quote_horizon_seconds": 60,
       "max_queue_ahead_notional": null
+    },
+    "quote_notional_dollars": 5.0,
+    "enforce_expected_edge_gate": true
+  },
+  "paper_engine_summary": {
+    "config": "live-engine/config/btc_5m_nearline_queue_probe_shadow.json",
+    "mode": "shadow",
+    "symbols": [
+      "BTC"
+    ],
+    "maker_route": {
+      "mode": "improve_one_tick",
+      "quote_horizon_seconds": 5,
+      "max_queue_ahead_notional": 400.0
     },
     "quote_notional_dollars": 5.0,
     "enforce_expected_edge_gate": true
@@ -256,22 +270,23 @@
       "actual": {
         "status": "paper_collecting",
         "maker_route_ready": false,
-        "selected_route_id": "maker_one_below_ask_h60",
+        "selected_route_id": "maker_improve_1c_h5",
         "selected_route_type": "maker"
       },
       "expected": {
         "status": "paper_collecting",
         "maker_route_ready": false,
         "selected_route_id": "maker_one_below_ask_h60",
-        "selected_route_type": "maker"
+        "selected_route_type": "maker",
+        "paper_route_override": "maker_improve_1c_h5"
       },
       "passed": true
     },
     {
       "id": "public_workflow_synced",
       "label": "Public dashboard workflow is synced",
-      "actual": "7574be6560034bc3265657935d6c3ef2a69afffdfec977442dc59b9059e6f675",
-      "expected": "7574be6560034bc3265657935d6c3ef2a69afffdfec977442dc59b9059e6f675",
+      "actual": "07c687f44e5c01395ce386d109077a419aeaafcc2b57be7dfdcacbc011ab91c5",
+      "expected": "07c687f44e5c01395ce386d109077a419aeaafcc2b57be7dfdcacbc011ab91c5",
       "passed": true
     },
     {
@@ -312,6 +327,13 @@
     {
       "id": "engine_config_exists",
       "label": "Rust shadow config exists",
+      "actual": true,
+      "expected": true,
+      "passed": true
+    },
+    {
+      "id": "paper_engine_config_exists",
+      "label": "Rust paper shadow config exists",
       "actual": true,
       "expected": true,
       "passed": true
@@ -403,14 +425,14 @@
       "id": "engine_maker_route_matches_algorithm",
       "label": "Rust maker route matches selected maker policy",
       "actual": {
-        "mode": "one_below_ask",
-        "quote_horizon_seconds": 60,
-        "max_queue_ahead_notional": null
+        "mode": "improve_one_tick",
+        "quote_horizon_seconds": 5,
+        "max_queue_ahead_notional": 400.0
       },
       "expected": {
-        "mode": "one_below_ask",
-        "quote_horizon_seconds": 60,
-        "max_queue_ahead_notional": null
+        "mode": "improve_one_tick",
+        "quote_horizon_seconds": 5,
+        "max_queue_ahead_notional": 400.0
       },
       "passed": true
     },

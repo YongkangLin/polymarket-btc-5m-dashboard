@@ -57,7 +57,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 900;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 4000;
 const LIVE_RENDER_POINTS_PER_PIXEL = 5;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v35-binance-merged-line";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v36-live-window-key-aliases";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -1638,8 +1638,11 @@ function paperStorageKeysForMarket(market) {
 }
 
 function liveTickStorageKeysForMarket(market) {
-  const windowKey = polymarketWindowKeyForMarket(market) || browserWindowKeyForMarket(market);
-  return [...new Set([windowKey, paperGraphKey(market)].filter(Boolean))].slice(0, 1);
+  return [...new Set([
+    polymarketWindowKeyForMarket(market),
+    browserWindowKeyForMarket(market),
+    paperGraphKey(market),
+  ].filter(Boolean))];
 }
 
 function samePaperWindow(left, right) {
@@ -3025,9 +3028,9 @@ function backendBaseUrl() {
 
 function activePaperEdgeId() {
   return configuredPaperEdgeId()
-    || state.workflow?.paper_trade?.source_edge_id
     || state.workflow?.paper_trade?.recommended_dashboard_edge_id
     || state.workflow?.paper_trade?.paper_health?.recommended_dashboard_edge_id
+    || state.workflow?.paper_trade?.source_edge_id
     || state.workflow?.paper_trade?.edge_id
     || ACTIVE_PAPER_EDGE_ID
     || state.workflow?.active_backtest_key
