@@ -4144,6 +4144,8 @@ function plainCheckLabel(row) {
     maker_win_rate: "Maker wins",
     maker_roi_on_filled_cost: "Maker profit rate",
     maker_worst_day: "Worst maker day",
+    maker_post_fill_edge: "Post-fill edge",
+    maker_non_toxic_rate: "Clean fills",
     paper_signals: "Paper setups found",
     paper_days: "Paper setup days",
     maker_route: "Maker route",
