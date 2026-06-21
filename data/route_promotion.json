@@ -283,8 +283,8 @@
       "Live challenger evidence is too small for promotion: 0 would-quote events across 0 markets.",
       "The higher-coverage scout passes historical maker gates (held-out ROI 2.27%), but live feature evidence is still being collected.",
       "The Binance-pressure probe has route evidence (held-out ROI 3.80%), but it cannot become active until historical Binance depth is complete.",
-      "Typed Rust paper evidence: active/coverage_one_below_h60_edge2_tail: 2 fills, 2 settlements, 1 complete 36-market sessions, P&L 3.1548, ROI 34.25%, avg unfilled queue 1707.52; challenger/consistency_t91_150_h5_native: 3 fills, 3 settlements, 0 complete 36-market sessions, P&L -6.6956, ROI -64.20%, avg unfilled queue 2170.57; capacity_probe/high_coverage_queuecap_challenger: 1 fills, 1 settlements, 0 complete 36-market sessions, P&L -1.0500, ROI -100.00%, avg unfilled queue 0.00; nearline_queue_probe/nearline_queue_probe: 15 fills, 15 settlements, 0 complete 36-market sessions, P&L 8.2960, ROI 11.94%, avg unfilled queue 125.28; high_coverage_h5/high_coverage_h5_challenger: 10 fills, 9 settlements, 0 complete 36-market sessions, P&L 1.8396, ROI 5.33%, avg unfilled queue 164.33; micro_reversion_h5/t91_150_micro_reversion_h5_challenger: 0 fills, 0 settlements, 0 complete 36-market sessions, P&L 0.0000, ROI n/a, avg unfilled queue n/a; edge5_q25_raw_trades/edge5_q25_raw_trades_tail: 0 fills, 0 settlements, 0 complete 36-market sessions, P&L 0.0000, ROI n/a, avg unfilled queue n/a; consistency_q500_raw_trades/consistency_queue500_raw_trades_tail: 0 fills, 0 settlements, 0 complete 36-market sessions, P&L 0.0000, ROI n/a, avg unfilled queue n/a; coverage_one_below_h60_edge2/coverage_one_below_h60_edge2_tail: 2 fills, 2 settlements, 1 complete 36-market sessions, P&L 3.1548, ROI 34.25%, avg unfilled queue 1707.52; consistency_q100_fair_h5/consistency_queue100_fair_h5_native: 0 fills, 0 settlements, 0 complete 36-market sessions, P&L 0.0000, ROI n/a, avg unfilled queue n/a; binance_pressure_q400_h5/binance_supported_q400_h5_native: 0 fills, 0 settlements, 0 complete 36-market sessions, P&L 0.0000, ROI n/a, avg unfilled queue n/a; binance_pressure_faircap_q400_h5/binance_supported_faircap_q400_h5_native: 9 fills, 9 settlements, 0 complete 36-market sessions, P&L 1.8106, ROI 7.66%, avg unfilled queue 190.39",
-      "Best current typed paper route is nearline_queue_probe/nearline_queue_probe with 15 fills, 15 settlements, P&L 8.2960, ROI 11.94%, avg unfilled queue 125.28; this is dashboard evidence only, not live approval.",
+      "Typed Rust paper evidence: active/coverage_one_below_h60_edge2_tail: 2 fills, 2 settlements, 1 complete 36-market sessions, P&L 3.1548, ROI 34.25%, avg unfilled queue 1702.04; challenger/consistency_t91_150_h5_native: 3 fills, 3 settlements, 0 complete 36-market sessions, P&L -6.6956, ROI -64.20%, avg unfilled queue 2170.57; capacity_probe/high_coverage_queuecap_challenger: 1 fills, 1 settlements, 0 complete 36-market sessions, P&L -1.0500, ROI -100.00%, avg unfilled queue 0.00; nearline_queue_probe/nearline_queue_probe: 16 fills, 16 settlements, 0 complete 36-market sessions, P&L 8.6560, ROI 12.00%, avg unfilled queue 125.28; high_coverage_h5/high_coverage_h5_challenger: 10 fills, 9 settlements, 0 complete 36-market sessions, P&L 1.8396, ROI 5.33%, avg unfilled queue 164.33; micro_reversion_h5/t91_150_micro_reversion_h5_challenger: 0 fills, 0 settlements, 0 complete 36-market sessions, P&L 0.0000, ROI n/a, avg unfilled queue n/a; edge5_q25_raw_trades/edge5_q25_raw_trades_tail: 0 fills, 0 settlements, 0 complete 36-market sessions, P&L 0.0000, ROI n/a, avg unfilled queue n/a; consistency_q500_raw_trades/consistency_queue500_raw_trades_tail: 0 fills, 0 settlements, 0 complete 36-market sessions, P&L 0.0000, ROI n/a, avg unfilled queue n/a; coverage_one_below_h60_edge2/coverage_one_below_h60_edge2_tail: 2 fills, 2 settlements, 1 complete 36-market sessions, P&L 3.1548, ROI 34.25%, avg unfilled queue 1702.04; consistency_q100_fair_h5/consistency_queue100_fair_h5_native: 0 fills, 0 settlements, 0 complete 36-market sessions, P&L 0.0000, ROI n/a, avg unfilled queue n/a; binance_pressure_q400_h5/binance_supported_q400_h5_native: 0 fills, 0 settlements, 0 complete 36-market sessions, P&L 0.0000, ROI n/a, avg unfilled queue n/a; binance_pressure_faircap_q400_h5/binance_supported_faircap_q400_h5_native: 9 fills, 9 settlements, 0 complete 36-market sessions, P&L 1.8106, ROI 7.66%, avg unfilled queue 190.39",
+      "Best current typed paper route is nearline_queue_probe/nearline_queue_probe with 16 fills, 16 settlements, P&L 8.6560, ROI 12.00%, avg unfilled queue 125.28; this is dashboard evidence only, not live approval.",
       "Paper promotion is blocked by typed Rust SQL evidence, even if historical backtests or source-level paper fills look positive."
     ],
     "recommendation": "Keep live trading disabled. No typed Rust paper route has enough settled, profitable 36-market evidence yet.",
@@ -346,12 +346,12 @@
         "avg_unfilled_queue_remaining_notional": 125.27821875000001,
         "complete_36_market_sessions": 0,
         "edge_id": "nearline_queue_probe",
-        "fills": 15,
+        "fills": 16,
         "key": "nearline_queue_probe",
         "ready": false,
-        "realized_pnl": 8.295987359464167,
-        "roi_on_filled_cost": 0.11938390213648246,
-        "settlements": 15
+        "realized_pnl": 8.655987359464167,
+        "roi_on_filled_cost": 0.12000537029618973,
+        "settlements": 16
       },
       "ready": false,
       "ready_routes": [],
@@ -755,7 +755,7 @@
       }
     }
   },
-  "generated_at": "2026-06-21T00:20:51.573973+00:00",
+  "generated_at": "2026-06-21T00:34:28.359953+00:00",
   "routes": {
     "active": {
       "key": "coverage_focus_one_below_h60_edge2_scan",
@@ -823,18 +823,18 @@
     "best_probe": {
       "key": "strict_high_confidence_scout",
       "live": {
-        "inband_events": 1616,
+        "inband_events": 2250,
         "key": "strict_high_confidence_scout",
         "label": "Scout: 181-240s, 30+ bps, 75c-98c",
         "path": "reports/live_coverage_one_below_h60_edge2_miss_diagnosis.json",
         "quote_rate": 0.0,
         "top_reasons": [
           {
-            "events": 1616,
+            "events": 2250,
             "reason": "distance_outside_route"
           },
           {
-            "events": 8384,
+            "events": 7750,
             "reason": "outside_time_window"
           }
         ],
@@ -892,18 +892,18 @@
       }
     },
     "best_probe_live": {
-      "inband_events": 1616,
+      "inband_events": 2250,
       "key": "strict_high_confidence_scout",
       "label": "Scout: 181-240s, 30+ bps, 75c-98c",
       "path": "reports/live_coverage_one_below_h60_edge2_miss_diagnosis.json",
       "quote_rate": 0.0,
       "top_reasons": [
         {
-          "events": 1616,
+          "events": 2250,
           "reason": "distance_outside_route"
         },
         {
-          "events": 8384,
+          "events": 7750,
           "reason": "outside_time_window"
         }
       ],
@@ -913,18 +913,18 @@
     "capacity_probe": {
       "key": "strict_high_coverage_scout",
       "live": {
-        "inband_events": 2178,
+        "inband_events": 2212,
         "key": "strict_high_coverage_scout",
         "label": "Scout: 91-150s, 0-10 bps, 65c-90c with book/fair checks",
         "path": "reports/live_coverage_one_below_h60_edge2_miss_diagnosis.json",
         "quote_rate": 0.0,
         "top_reasons": [
           {
-            "events": 2178,
+            "events": 2212,
             "reason": "missing_entry_price"
           },
           {
-            "events": 7822,
+            "events": 7788,
             "reason": "outside_time_window"
           }
         ],
@@ -1047,18 +1047,18 @@
     "scout": {
       "key": "strict_external_pressure_probe",
       "live": {
-        "inband_events": 2178,
+        "inband_events": 2212,
         "key": "strict_external_pressure_probe",
         "label": "Probe: active strict plus Binance book/microprice/trade-flow support",
         "path": "reports/live_coverage_one_below_h60_edge2_miss_diagnosis.json",
         "quote_rate": 0.0,
         "top_reasons": [
           {
-            "events": 2178,
+            "events": 2212,
             "reason": "distance_outside_route"
           },
           {
-            "events": 7822,
+            "events": 7788,
             "reason": "outside_time_window"
           }
         ],
@@ -1175,22 +1175,22 @@
       },
       "summary": {
         "available": true,
-        "avg_order_queue_remaining_notional": 1639.2181699999994,
+        "avg_order_queue_remaining_notional": 1635.297315686274,
         "avg_post_fill_edge": 0.1688761989170211,
-        "avg_unfilled_queue_remaining_notional": 1707.5189270833328,
+        "avg_unfilled_queue_remaining_notional": 1702.0441448979586,
         "complete_36_market_sessions": 1,
         "config_fingerprint": "5e062f1877bd8d883e96e96b4e1010804098f912fe7c79c0fa9042b292db2318",
         "edge_id": "coverage_one_below_h60_edge2_tail",
         "fills": 2,
         "gross_fill_cost": 9.21,
-        "last_updated": "2026-06-20T17:20:50.894574-07:00",
+        "last_updated": "2026-06-20T17:34:27.609022-07:00",
         "markets_seen": 51,
         "max_order_queue_remaining_notional": 3692.7088000000003,
         "max_unfilled_queue_remaining_notional": 3692.7088000000003,
-        "median_unfilled_queue_remaining_notional": 1705.5198000000003,
+        "median_unfilled_queue_remaining_notional": 1699.5906000000002,
         "observed_fill_events": 2,
-        "orders": 50,
-        "orders_placed": 50,
+        "orders": 51,
+        "orders_placed": 51,
         "realized_pnl": 3.1548459383753498,
         "roi_on_filled_cost": 0.3425457044924375,
         "scored_fill_events": 2,
@@ -1199,7 +1199,7 @@
         "source": "typed_sql_current_config",
         "toxic_fill_rate": 0,
         "toxic_fills": 0,
-        "unfilled_orders": 48
+        "unfilled_orders": 49
       }
     },
     "binance_pressure_faircap_q400_h5": {
@@ -1239,15 +1239,15 @@
       },
       "summary": {
         "available": true,
-        "avg_order_queue_remaining_notional": 183.697796484375,
+        "avg_order_queue_remaining_notional": 183.69779648437498,
         "avg_post_fill_edge": 0.10711323256329111,
-        "avg_unfilled_queue_remaining_notional": 190.39123846153848,
+        "avg_unfilled_queue_remaining_notional": 190.39123846153845,
         "complete_36_market_sessions": 0,
         "config_fingerprint": "ba878858b2a98077e961886e9d8fa4831226e3f7f471dfe27f8b171d804d5835",
         "edge_id": "binance_supported_faircap_q400_h5_native",
         "fills": 9,
         "gross_fill_cost": 23.623,
-        "last_updated": "2026-06-20T17:20:51.515718-07:00",
+        "last_updated": "2026-06-20T17:34:28.248161-07:00",
         "markets_seen": 9,
         "max_order_queue_remaining_notional": 399.42749999999995,
         "max_unfilled_queue_remaining_notional": 399.42749999999995,
@@ -1623,22 +1623,22 @@
       },
       "summary": {
         "available": true,
-        "avg_order_queue_remaining_notional": 1639.2181699999994,
+        "avg_order_queue_remaining_notional": 1635.297315686274,
         "avg_post_fill_edge": 0.1688761989170211,
-        "avg_unfilled_queue_remaining_notional": 1707.5189270833328,
+        "avg_unfilled_queue_remaining_notional": 1702.0441448979586,
         "complete_36_market_sessions": 1,
         "config_fingerprint": "5e062f1877bd8d883e96e96b4e1010804098f912fe7c79c0fa9042b292db2318",
         "edge_id": "coverage_one_below_h60_edge2_tail",
         "fills": 2,
         "gross_fill_cost": 9.21,
-        "last_updated": "2026-06-20T17:20:51.30869-07:00",
+        "last_updated": "2026-06-20T17:34:28.140656-07:00",
         "markets_seen": 51,
         "max_order_queue_remaining_notional": 3692.7088000000003,
         "max_unfilled_queue_remaining_notional": 3692.7088000000003,
-        "median_unfilled_queue_remaining_notional": 1705.5198000000003,
+        "median_unfilled_queue_remaining_notional": 1699.5906000000002,
         "observed_fill_events": 2,
-        "orders": 50,
-        "orders_placed": 50,
+        "orders": 51,
+        "orders_placed": 51,
         "realized_pnl": 3.1548459383753498,
         "roi_on_filled_cost": 0.3425457044924375,
         "scored_fill_events": 2,
@@ -1647,7 +1647,7 @@
         "source": "typed_sql_current_config",
         "toxic_fill_rate": 0,
         "toxic_fills": 0,
-        "unfilled_orders": 48
+        "unfilled_orders": 49
       }
     },
     "edge5_q25_raw_trades": {
@@ -1751,15 +1751,15 @@
       },
       "summary": {
         "available": true,
-        "avg_order_queue_remaining_notional": 147.50865196850398,
+        "avg_order_queue_remaining_notional": 147.50865196850395,
         "avg_post_fill_edge": 0.08387984013381132,
-        "avg_unfilled_queue_remaining_notional": 164.3298140350878,
+        "avg_unfilled_queue_remaining_notional": 164.32981403508774,
         "complete_36_market_sessions": 0,
         "config_fingerprint": "af8cf5f3b2b19d495ce81d6eae0ac33dac7b7c15caccf7c2ef50392d26152536",
         "edge_id": "high_coverage_h5_challenger",
         "fills": 10,
         "gross_fill_cost": 34.53,
-        "last_updated": "2026-06-20T17:20:51.099974-07:00",
+        "last_updated": "2026-06-20T17:34:27.822671-07:00",
         "markets_seen": 13,
         "max_order_queue_remaining_notional": 399.51,
         "max_unfilled_queue_remaining_notional": 399.51,
@@ -1879,27 +1879,27 @@
       },
       "summary": {
         "available": true,
-        "avg_order_queue_remaining_notional": 101.49121518987343,
-        "avg_post_fill_edge": 0.09158441404939334,
+        "avg_order_queue_remaining_notional": 100.222575,
+        "avg_post_fill_edge": 0.09044568999905753,
         "avg_unfilled_queue_remaining_notional": 125.27821875000001,
         "complete_36_market_sessions": 0,
         "config_fingerprint": "6052cb48ef39de1a97ac25fa514bbb23e88c1317821033bfe576e41197118e27",
         "edge_id": "nearline_queue_probe",
-        "fills": 15,
-        "gross_fill_cost": 69.49000000000001,
-        "last_updated": "2026-06-20T17:20:51.057997-07:00",
-        "markets_seen": 15,
+        "fills": 16,
+        "gross_fill_cost": 72.13000000000001,
+        "last_updated": "2026-06-20T17:34:27.832311-07:00",
+        "markets_seen": 16,
         "max_order_queue_remaining_notional": 394.01050000000004,
         "max_unfilled_queue_remaining_notional": 394.01050000000004,
         "median_unfilled_queue_remaining_notional": 0,
-        "observed_fill_events": 15,
-        "orders": 79,
-        "orders_placed": 80,
-        "realized_pnl": 8.295987359464167,
-        "roi_on_filled_cost": 0.11938390213648246,
-        "scored_fill_events": 15,
+        "observed_fill_events": 16,
+        "orders": 80,
+        "orders_placed": 81,
+        "realized_pnl": 8.655987359464167,
+        "roi_on_filled_cost": 0.12000537029618973,
+        "scored_fill_events": 16,
         "sessions": 1,
-        "settlements": 15,
+        "settlements": 16,
         "source": "typed_sql_current_config",
         "toxic_fill_rate": 0,
         "toxic_fills": 0,
