@@ -122,6 +122,7 @@ const state = {
   paperObservedMarkersByMarket: new Map(),
   latestOutcomeOddsByWindow: new Map(),
   lastDisplayedOutcomeOddsByWindow: new Map(),
+  lastRenderedOutcomeOddsByWindow: new Map(),
   liveTickStatus: {
     state: "idle",
     venue: "local_backend_ws",
@@ -2412,9 +2413,20 @@ function currentRowsEntries(map, maxRows) {
 }
 
 function currentOutcomeOddsEntries() {
-  return [...state.latestOutcomeOddsByWindow.entries()]
-    .filter(([key, odds]) => Number(key) === currentWindowStartUnixNow() && currentWindowRow(odds, key) && rowHasStickyPolymarketOdds(odds))
-    .map(([key, odds]) => [key, compactPersistedRow(odds)]);
+  const start = currentWindowStartUnixNow();
+  const entries = new Map();
+  [
+    state.latestOutcomeOddsByWindow,
+    state.lastDisplayedOutcomeOddsByWindow,
+    state.lastRenderedOutcomeOddsByWindow,
+  ].forEach((map) => {
+    outcomeOddsMapRowsForStart(map, start, rowHasStickyPolymarketOdds).forEach((odds) => {
+      stableOutcomeCacheKeysForMarket(odds).forEach((key) => {
+        if (!entries.has(key)) entries.set(key, compactPersistedRow(odds));
+      });
+    });
+  });
+  return [...entries.entries()];
 }
 
 function loadPersistedPaperTicks() {
@@ -2437,6 +2449,8 @@ function loadPersistedPaperTicks() {
     state.latestOutcomeOddsByWindow = new Map(
       (payload.outcome_odds || []).filter((entry) => Array.isArray(entry) && rowHasStickyPolymarketOdds(entry[1])),
     );
+    state.lastDisplayedOutcomeOddsByWindow = new Map(state.latestOutcomeOddsByWindow);
+    state.lastRenderedOutcomeOddsByWindow = new Map(state.latestOutcomeOddsByWindow);
     state.liveBtcTicksByMarket = new Map(payload.live_ticks || []);
     state.liveBtcTickKeysByMarket = new Map(
       [...state.liveBtcTicksByMarket.entries()].map(([key, rows]) => [key, new Set((rows || []).map(liveBtcPointKey))]),
@@ -4853,6 +4867,10 @@ function stableOutcomeWindowStart(market) {
   return isCurrentBtcWindowMarket(market) ? currentWindowStartUnixNow() : null;
 }
 
+function displayOutcomeWindowStart(market) {
+  return stableOutcomeWindowStart(market) ?? currentWindowStartUnixNow();
+}
+
 function outcomeWindowAliasKeys(start) {
   const number = metricNumber(start);
   if (number === null) return [];
@@ -4931,7 +4949,7 @@ function outcomeOddsRowUsable(row) {
 }
 
 function outcomeOddsMapRowsForMarket(map, market, predicate = outcomeOddsRowUsable) {
-  const start = outcomeOddsWindowStart(market);
+  const start = displayOutcomeWindowStart(market);
   const keys = outcomeOddsCacheKeys(market);
   if (start !== null) keys.push(...outcomeWindowAliasKeys(start));
   const seen = new Set();
@@ -4958,6 +4976,32 @@ function outcomeOddsMapRowsForMarket(map, market, predicate = outcomeOddsRowUsab
   return rows.sort((left, right) => (outcomeOddsTimestampMicro(right) ?? 0) - (outcomeOddsTimestampMicro(left) ?? 0));
 }
 
+function outcomeOddsMapRowsForStart(map, start, predicate = outcomeOddsRowUsable) {
+  const numericStart = metricNumber(start);
+  if (numericStart === null) return [];
+  const windowStart = Math.floor(numericStart);
+  const aliases = new Set([
+    ...outcomeWindowAliasKeys(windowStart),
+    stableOutcomeWindowDisplayKey(windowStart),
+  ]);
+  const seen = new Set();
+  const rows = [];
+  map.forEach((row, key) => {
+    if (!row || seen.has(key)) return;
+    const rowStart = outcomeOddsWindowStart({
+      market_key: key,
+      slug: key,
+      condition_id: key,
+      ...(row || {}),
+    });
+    if (!aliases.has(String(key)) && rowStart !== windowStart) return;
+    seen.add(key);
+    if (predicate && !predicate(row)) return;
+    rows.push(row);
+  });
+  return rows.sort((left, right) => (outcomeOddsTimestampMicro(right) ?? 0) - (outcomeOddsTimestampMicro(left) ?? 0));
+}
+
 function cachedOutcomeOddsForMarket(market) {
   const keys = stableOutcomeCacheKeysForMarket(market);
   for (const key of keys) {
@@ -4966,8 +5010,15 @@ function cachedOutcomeOddsForMarket(market) {
     if (odds && rowHasDisplayedOutcomeOdds(odds)) return odds;
     if (odds && !rowHasDisplayedOutcomeOdds(odds)) state.latestOutcomeOddsByWindow.delete(key);
   }
+  const start = displayOutcomeWindowStart(market);
   return outcomeOddsMapRowsForMarket(state.latestOutcomeOddsByWindow, market, rowHasStickyPolymarketOdds)[0]
     || outcomeOddsMapRowsForMarket(state.latestOutcomeOddsByWindow, market, rowHasDisplayedOutcomeOdds)[0]
+    || outcomeOddsMapRowsForMarket(state.lastDisplayedOutcomeOddsByWindow, market, rowHasDisplayedOutcomeOdds)[0]
+    || outcomeOddsMapRowsForMarket(state.lastRenderedOutcomeOddsByWindow, market, rowHasDisplayedOutcomeOdds)[0]
+    || outcomeOddsMapRowsForStart(state.latestOutcomeOddsByWindow, start, rowHasStickyPolymarketOdds)[0]
+    || outcomeOddsMapRowsForStart(state.latestOutcomeOddsByWindow, start, rowHasDisplayedOutcomeOdds)[0]
+    || outcomeOddsMapRowsForStart(state.lastDisplayedOutcomeOddsByWindow, start, rowHasDisplayedOutcomeOdds)[0]
+    || outcomeOddsMapRowsForStart(state.lastRenderedOutcomeOddsByWindow, start, rowHasDisplayedOutcomeOdds)[0]
     || null;
 }
 
@@ -5261,6 +5312,7 @@ function stickyOutcomeOddsForMarket(market, odds) {
     cached,
     ...outcomeOddsMapRowsForMarket(state.latestOutcomeOddsByWindow, market, rowHasDisplayedOutcomeOdds),
     ...outcomeOddsMapRowsForMarket(state.lastDisplayedOutcomeOddsByWindow, market, rowHasDisplayedOutcomeOdds),
+    ...outcomeOddsMapRowsForMarket(state.lastRenderedOutcomeOddsByWindow, market, rowHasDisplayedOutcomeOdds),
   ]
     .map(outcomeOddsPairFromRow)
     .find((row) => row.up !== null || row.down !== null) || null;
@@ -5289,6 +5341,7 @@ function stickyOutcomeOddsForMarket(market, odds) {
     };
     keys.forEach((key) => {
       state.lastDisplayedOutcomeOddsByWindow.set(key, stored);
+      state.lastRenderedOutcomeOddsByWindow.set(key, stored);
       state.latestOutcomeOddsByWindow.set(key, stored);
     });
   }
