@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-21T00:34:44.270710+00:00",
+  "generated_at": "2026-06-21T10:49:41.612173+00:00",
   "status": "passed",
   "feature_summary": {
     "markets": 2167,
@@ -10,10 +10,10 @@
     "bad_rows": 0
   },
   "decision_summary": {
-    "rows": 133346,
-    "markets": 2186,
-    "signal_rows": 2170,
-    "signal_markets": 865
+    "rows": 651665,
+    "markets": 2165,
+    "signal_rows": 33941,
+    "signal_markets": 1506
   },
   "algorithm_summary": {
     "paper_status": null,
@@ -23,10 +23,10 @@
     "roi_after_slippage_haircut": null
   },
   "workflow_summary": {
-    "strategy": "coverage_focus_one_below_h60_edge2_scan",
-    "status": "golden_strategy_contract",
-    "clean_markets": 2167,
-    "decision_rows": 133346,
+    "strategy": "consistency_t91_150_h5_q400",
+    "status": "needs_backtest_audit",
+    "clean_markets": 2165,
+    "decision_rows": 651665,
     "wallet_profile_strategies": [
       "profile_cheap_pair",
       "profile_paper_gate",
@@ -34,7 +34,7 @@
     ]
   },
   "engine_summary": {
-    "config": "live-engine/config/btc_5m_coverage_one_below_h60_edge2_challenger_shadow.json",
+    "config": "live-engine/config/btc_5m_consistency_t91_150_h5_q400_challenger_shadow.json",
     "mode": "shadow",
     "symbols": [
       "BTC"
@@ -43,8 +43,8 @@
       "enabled": true,
       "min_seconds_left": 91,
       "max_seconds_left": 150,
-      "min_abs_distance_bps": 5.0,
-      "max_abs_distance_bps": 15.0,
+      "min_abs_distance_bps": 0.0,
+      "max_abs_distance_bps": 10.0,
       "min_ask": 0.65,
       "max_ask": 0.9,
       "min_top5_capacity_dollars": 25.0,
@@ -56,23 +56,23 @@
       "max_complement_ask_sum": null
     },
     "maker_route": {
-      "mode": "one_below_ask",
-      "quote_horizon_seconds": 60,
-      "max_queue_ahead_notional": null
+      "mode": "improve_one_tick",
+      "quote_horizon_seconds": 5,
+      "max_queue_ahead_notional": 400.0
     },
     "quote_notional_dollars": 5.0,
     "enforce_expected_edge_gate": true
   },
   "paper_engine_summary": {
-    "config": "live-engine/config/btc_5m_coverage_one_below_h60_edge2_challenger_shadow.json",
+    "config": "live-engine/config/btc_5m_consistency_t91_150_h5_q400_challenger_shadow.json",
     "mode": "shadow",
     "symbols": [
       "BTC"
     ],
     "maker_route": {
-      "mode": "one_below_ask",
-      "quote_horizon_seconds": 60,
-      "max_queue_ahead_notional": null
+      "mode": "improve_one_tick",
+      "quote_horizon_seconds": 5,
+      "max_queue_ahead_notional": 400.0
     },
     "quote_notional_dollars": 5.0,
     "enforce_expected_edge_gate": true
@@ -110,9 +110,9 @@
       "id": "strict_report_candidate_synced",
       "label": "Strict report and dashboard candidate are identical when strict is active",
       "actual": {
-        "candidate": "docs/data/candidate_coverage_one_below_h60_edge2_strategy.json",
-        "candidate_hash": "5cadc3978b360ee8276cd6d4409a87a8423e5af622b6d714d4fa3812f37de035",
-        "algorithm_hash": "ea23daf22ba6be8bbbe91b3bade8a623aedb871f4128de4e5ce474973af64319"
+        "candidate": "reports/runtime/consistency_t91_150_h5_q400_strategy.json",
+        "candidate_hash": "c08bc630810bf810728545231542ef476355a13ab339f1bb48357a97f38bed9c",
+        "algorithm_hash": "c08bc630810bf810728545231542ef476355a13ab339f1bb48357a97f38bed9c"
       },
       "expected": {
         "strict_candidate": "docs/data/candidate_strict_directional_maker_strategy.json",
@@ -149,10 +149,10 @@
       "passed": true
     },
     {
-      "id": "workflow_markets_match_clean_manifest",
-      "label": "Workflow Back Test markets exactly match clean manifest",
-      "actual": 2167,
-      "expected": 2167,
+      "id": "workflow_markets_match_admitted_universe",
+      "label": "Workflow Back Test markets exactly match decision table",
+      "actual": 2165,
+      "expected": 2165,
       "passed": true
     },
     {
@@ -171,58 +171,58 @@
     {
       "id": "algorithm_clean_count_matches_features",
       "label": "Algorithm clean count matches selected data gate",
-      "actual": 2167,
-      "expected": 2167,
+      "actual": 2165,
+      "expected": 2165,
       "passed": true
     },
     {
       "id": "workflow_clean_count_matches_algorithm",
       "label": "Workflow clean count matches algorithm",
-      "actual": 2167,
-      "expected": 2167,
+      "actual": 2165,
+      "expected": 2165,
       "passed": true
     },
     {
       "id": "workflow_decision_rows_match_decisions",
       "label": "Workflow decision row count matches decision table",
-      "actual": 133346,
-      "expected": 133346,
+      "actual": 651665,
+      "expected": 651665,
       "passed": true
     },
     {
       "id": "workflow_signals_match_algorithm",
       "label": "Workflow signal count matches algorithm",
-      "actual": 913,
-      "expected": 913,
+      "actual": 1506,
+      "expected": 1506,
       "passed": true
     },
     {
       "id": "workflow_active_summary_matches_candidate",
       "label": "Workflow active summary matches dashboard candidate",
       "actual": {
-        "clean_markets_scanned": 2167,
-        "quote_markets": 913,
-        "quoted_markets": 913,
-        "quote_market_rate": 0.42132,
-        "filled_markets": 765,
-        "test_quote_markets": 342,
-        "test_filled_markets": 268,
-        "test_pnl_dollars": 71.646952,
-        "test_roi_on_planned_cost": 0.041899,
-        "test_roi_on_filled_cost": 0.053534,
+        "clean_markets_scanned": 2165,
+        "quote_markets": 1506,
+        "quoted_markets": 1506,
+        "quote_market_rate": 0.695612,
+        "filled_markets": 1062,
+        "test_quote_markets": 508,
+        "test_filled_markets": 322,
+        "test_pnl_dollars": 70.141367,
+        "test_roi_on_planned_cost": 0.033965,
+        "test_roi_on_filled_cost": 0.054486,
         "test_positive_day_share": 1.0
       },
       "expected": {
-        "clean_markets_scanned": 2167,
-        "quote_markets": 913,
-        "quoted_markets": 913,
-        "quote_market_rate": 0.4213197969543147,
-        "filled_markets": 765,
-        "test_quote_markets": 342,
-        "test_filled_markets": 268,
-        "test_pnl_dollars": 71.64695214179834,
-        "test_roi_on_planned_cost": 0.04189880242210429,
-        "test_roi_on_filled_cost": 0.05353373775207006,
+        "clean_markets_scanned": 2165,
+        "quote_markets": 1506,
+        "quoted_markets": 1506,
+        "quote_market_rate": 0.6956120092378753,
+        "filled_markets": 1062,
+        "test_quote_markets": 508,
+        "test_filled_markets": 322,
+        "test_pnl_dollars": 70.14136689589631,
+        "test_roi_on_planned_cost": 0.033964789889157194,
+        "test_roi_on_filled_cost": 0.054486315735533135,
         "test_positive_day_share": 1.0
       },
       "passed": true
@@ -231,14 +231,14 @@
       "id": "candidate_walkforward_route_matches_engine",
       "label": "Walk-forward candidate maker route matches Rust config",
       "actual": {
-        "mode": "one_below_ask",
-        "quote_horizon_seconds": 60,
-        "max_queue_ahead_notional": null
+        "mode": "improve_one_tick",
+        "quote_horizon_seconds": 5,
+        "max_queue_ahead_notional": 400.0
       },
       "expected": {
-        "mode": "one_below_ask",
-        "quote_horizon_seconds": 60,
-        "max_queue_ahead_notional": null
+        "mode": "improve_one_tick",
+        "quote_horizon_seconds": 5,
+        "max_queue_ahead_notional": 400.0
       },
       "passed": true
     },
@@ -260,8 +260,8 @@
     {
       "id": "workflow_win_rate_matches_algorithm",
       "label": "Workflow ROI/reference metric matches algorithm",
-      "actual": 0.034564,
-      "expected": 0.034564,
+      "actual": 0.028611,
+      "expected": 0.028611,
       "passed": true
     },
     {
@@ -270,13 +270,13 @@
       "actual": {
         "status": "paper_collecting",
         "maker_route_ready": false,
-        "selected_route_id": "maker_one_below_ask_h60",
+        "selected_route_id": "maker_improve_1c_h5_q400",
         "selected_route_type": "maker"
       },
       "expected": {
         "status": "paper_collecting",
         "maker_route_ready": false,
-        "selected_route_id": "maker_one_below_ask_h60",
+        "selected_route_id": "maker_improve_1c_h5_q400",
         "selected_route_type": "maker"
       },
       "passed": true
@@ -284,8 +284,8 @@
     {
       "id": "public_workflow_synced",
       "label": "Public dashboard workflow is synced",
-      "actual": "fe7aa597daf2fe797549a41c2364c00907ffac21d62435e076d8d94085f0d301",
-      "expected": "fe7aa597daf2fe797549a41c2364c00907ffac21d62435e076d8d94085f0d301",
+      "actual": "96fd64e0a8d16266e2b4a52936750ec8453d2e6e14d9c50822cf5b2837df182b",
+      "expected": "96fd64e0a8d16266e2b4a52936750ec8453d2e6e14d9c50822cf5b2837df182b",
       "passed": true
     },
     {
@@ -369,8 +369,8 @@
         "enabled": true,
         "min_seconds_left": 91,
         "max_seconds_left": 150,
-        "min_abs_distance_bps": 5.0,
-        "max_abs_distance_bps": 15.0,
+        "min_abs_distance_bps": 0.0,
+        "max_abs_distance_bps": 10.0,
         "min_ask": 0.65,
         "max_ask": 0.9,
         "min_top5_capacity_dollars": 25.0,
@@ -385,8 +385,8 @@
         "enabled": true,
         "min_seconds_left": 91,
         "max_seconds_left": 150,
-        "min_abs_distance_bps": 5.0,
-        "max_abs_distance_bps": 15.0,
+        "min_abs_distance_bps": 0.0,
+        "max_abs_distance_bps": 10.0,
         "min_ask": 0.65,
         "max_ask": 0.9,
         "min_top5_capacity_dollars": 25.0,
@@ -424,14 +424,14 @@
       "id": "engine_maker_route_matches_algorithm",
       "label": "Rust maker route matches selected maker policy",
       "actual": {
-        "mode": "one_below_ask",
-        "quote_horizon_seconds": 60,
-        "max_queue_ahead_notional": null
+        "mode": "improve_one_tick",
+        "quote_horizon_seconds": 5,
+        "max_queue_ahead_notional": 400.0
       },
       "expected": {
-        "mode": "one_below_ask",
-        "quote_horizon_seconds": 60,
-        "max_queue_ahead_notional": null
+        "mode": "improve_one_tick",
+        "quote_horizon_seconds": 5,
+        "max_queue_ahead_notional": 400.0
       },
       "passed": true
     },
