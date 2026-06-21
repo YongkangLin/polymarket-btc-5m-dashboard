@@ -7381,3 +7381,70 @@ async function main() {
 main().catch((error) => {
   byId("statusText").textContent = `Load failed: ${error.message}`;
 });
+(() => {
+  const installStablePaperOddsStrip = () => {
+  let dashboardState = null;
+  try { dashboardState = state; } catch (_) { dashboardState = null; }
+  if (typeof renderPaperOddsStrip !== "function" || !dashboardState) {
+    window.setTimeout?.(installStablePaperOddsStrip, 25);
+    return;
+  }
+  const originalRenderPaperOddsStrip = renderPaperOddsStrip;
+  const lastGoodPaperOddsByWindow = new Map();
+  const displayCacheKeysForMarket = (market) => {
+    const keys = [];
+    try {
+      if (typeof outcomeOddsCacheKeys === "function") keys.push(...outcomeOddsCacheKeys(market));
+      if (typeof outcomeOddsWindowStart === "function" && typeof outcomeWindowAliasKeys === "function") {
+        const start = outcomeOddsWindowStart(market);
+        if (start !== null && start !== undefined) keys.push(...outcomeWindowAliasKeys(start));
+      }
+      if (typeof paperGraphKey === "function") keys.push(paperGraphKey(market));
+    } catch (_) {
+      // Render-only guard: bad cache keys should never break the paper chart.
+    }
+    return [...new Set(keys.filter(Boolean))];
+  };
+  const firstCachedOdds = (keys) => {
+    for (const key of keys) {
+      const row = lastGoodPaperOddsByWindow.get(key) || dashboardState.lastDisplayedOutcomeOddsByWindow?.get(key);
+      if (row && (metricNumber(row.up) !== null || metricNumber(row.down) !== null)) return row;
+    }
+    return null;
+  };
+  if (typeof stickyOutcomeOddsForMarket === "function" && !stickyOutcomeOddsForMarket.__stablePaperOddsWrapped) {
+    const originalStickyOutcomeOddsForMarket = stickyOutcomeOddsForMarket;
+    stickyOutcomeOddsForMarket = function stickyOutcomeOddsForMarketWithIncomingFallback(market, odds = {}) {
+      const resolved = originalStickyOutcomeOddsForMarket(market, odds) || {};
+      return {
+        ...resolved,
+        up: metricNumber(resolved.up) !== null ? resolved.up : (metricNumber(odds?.up) !== null ? odds.up : null),
+        down: metricNumber(resolved.down) !== null ? resolved.down : (metricNumber(odds?.down) !== null ? odds.down : null),
+      };
+    };
+    stickyOutcomeOddsForMarket.__stablePaperOddsWrapped = true;
+  }
+  renderPaperOddsStrip = function renderPaperOddsStripWithStableDisplay(market, latestRaw, latestBookRaw, odds = null) {
+    const keys = displayCacheKeysForMarket(market);
+    const incoming = odds || (typeof paperPanelDisplayOutcomeProbabilities === "function" ? paperPanelDisplayOutcomeProbabilities(market, latestRaw, latestBookRaw) : null);
+    const cached = firstCachedOdds(keys);
+    const merged = incoming ? {
+      ...incoming,
+      up: metricNumber(incoming.up) !== null ? incoming.up : cached?.up ?? null,
+      down: metricNumber(incoming.down) !== null ? incoming.down : cached?.down ?? null,
+      upNoSellers: incoming.upNoSellers ?? cached?.upNoSellers ?? false,
+      downNoSellers: incoming.downNoSellers ?? cached?.downNoSellers ?? false,
+      askBookObserved: incoming.askBookObserved ?? cached?.askBookObserved ?? false,
+    } : cached;
+    if (merged && (metricNumber(merged.up) !== null || metricNumber(merged.down) !== null)) {
+      const row = { ...merged, _displayed_at: Date.now() };
+      keys.forEach((key) => {
+        lastGoodPaperOddsByWindow.set(key, row);
+          dashboardState.lastDisplayedOutcomeOddsByWindow?.set(key, row);
+      });
+    }
+    return originalRenderPaperOddsStrip(market, latestRaw, latestBookRaw, merged || odds);
+  };
+  };
+  installStablePaperOddsStrip();
+})();
