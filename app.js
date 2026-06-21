@@ -4907,11 +4907,27 @@ function outcomeRowsNewestFirst(candidates) {
     });
 }
 
-function outcomeOddsRowUsable(row) {
-  return metricNumber(row?.up) !== null
-    || metricNumber(row?.down) !== null
+function rowHasDisplayedOutcomeOdds(row) {
+  if (!row || isActionOnlyPaperOddsRow(row)) return false;
+  return metricNumber(row.up) !== null
+    || metricNumber(row.down) !== null
+    || rowHasStickyPolymarketOdds(row)
     || rowHasUsableOutcomeOdds(row)
     || rowHasDisplayPolymarketBook(row);
+}
+
+function outcomeOddsPairFromRow(row) {
+  if (!row) return { up: null, down: null };
+  const directUp = metricNumber(row.up);
+  const directDown = metricNumber(row.down);
+  return completeOutcomeOdds({
+    up: directUp !== null ? directUp : outcomeProbabilityFromRow(row, "up"),
+    down: directDown !== null ? directDown : outcomeProbabilityFromRow(row, "down"),
+  });
+}
+
+function outcomeOddsRowUsable(row) {
+  return rowHasDisplayedOutcomeOdds(row);
 }
 
 function outcomeOddsMapRowsForMarket(map, market, predicate = outcomeOddsRowUsable) {
@@ -4947,9 +4963,12 @@ function cachedOutcomeOddsForMarket(market) {
   for (const key of keys) {
     const odds = state.latestOutcomeOddsByWindow.get(key);
     if (odds && rowHasStickyPolymarketOdds(odds)) return odds;
-    if (odds && !rowHasStickyPolymarketOdds(odds)) state.latestOutcomeOddsByWindow.delete(key);
+    if (odds && rowHasDisplayedOutcomeOdds(odds)) return odds;
+    if (odds && !rowHasDisplayedOutcomeOdds(odds)) state.latestOutcomeOddsByWindow.delete(key);
   }
-  return outcomeOddsMapRowsForMarket(state.latestOutcomeOddsByWindow, market, rowHasStickyPolymarketOdds)[0] || null;
+  return outcomeOddsMapRowsForMarket(state.latestOutcomeOddsByWindow, market, rowHasStickyPolymarketOdds)[0]
+    || outcomeOddsMapRowsForMarket(state.latestOutcomeOddsByWindow, market, rowHasDisplayedOutcomeOdds)[0]
+    || null;
 }
 
 function rememberOutcomeOddsForWindow(anchor, candidates = []) {
@@ -4973,7 +4992,7 @@ function rememberOutcomeOddsForWindow(anchor, candidates = []) {
   if (up === null && down === null) return cachedOutcomeOddsForMarket(anchor) || null;
   const timestamps = oddsRows.map(outcomeOddsTimestampMicro).filter((value) => value !== null);
   const incomingTime = timestamps.length ? Math.max(...timestamps) : 0;
-  const existing = keys.map((cacheKey) => state.latestOutcomeOddsByWindow.get(cacheKey)).find(rowHasStickyPolymarketOdds) || {};
+  const existing = keys.map((cacheKey) => state.latestOutcomeOddsByWindow.get(cacheKey)).find(rowHasDisplayedOutcomeOdds) || {};
   const existingTime = metricNumber(existing._odds_updated_micro) || 0;
   if (existingTime && incomingTime && incomingTime < existingTime) return existing;
   const source = oddsRows[0] ? { ...oddsRows[0] } : null;
@@ -5230,16 +5249,24 @@ function stickyOutcomeOddsForMarket(market, odds) {
   const keys = stableOutcomeCacheKeysForMarket(market);
   const directPrevious = keys
     .map((key) => state.lastDisplayedOutcomeOddsByWindow.get(key))
-    .find(outcomeOddsRowUsable) || null;
+    .find(rowHasDisplayedOutcomeOdds) || null;
   const previouslyDisplayed = directPrevious || outcomeOddsMapRowsForMarket(
     state.lastDisplayedOutcomeOddsByWindow,
     market,
-    outcomeOddsRowUsable,
+    rowHasDisplayedOutcomeOdds,
   )[0] || null;
   const cached = cachedOutcomeOddsForMarket(market);
+  const fallback = [
+    previouslyDisplayed,
+    cached,
+    ...outcomeOddsMapRowsForMarket(state.latestOutcomeOddsByWindow, market, rowHasDisplayedOutcomeOdds),
+    ...outcomeOddsMapRowsForMarket(state.lastDisplayedOutcomeOddsByWindow, market, rowHasDisplayedOutcomeOdds),
+  ]
+    .map(outcomeOddsPairFromRow)
+    .find((row) => row.up !== null || row.down !== null) || null;
   const resolved = completeOutcomeOdds(
     odds,
-    previouslyDisplayed || (cached ? outcomeOddsFromCandidates([cached]) : null),
+    fallback,
   );
   if (resolved.up !== null || resolved.down !== null) {
     const stored = {
@@ -5260,7 +5287,10 @@ function stickyOutcomeOddsForMarket(market, odds) {
       market_probability_source: "local_postgres_polymarket_order_books",
       _odds_updated_micro: Date.now() * 1000,
     };
-    keys.forEach((key) => state.lastDisplayedOutcomeOddsByWindow.set(key, stored));
+    keys.forEach((key) => {
+      state.lastDisplayedOutcomeOddsByWindow.set(key, stored);
+      state.latestOutcomeOddsByWindow.set(key, stored);
+    });
   }
   return resolved;
 }
@@ -7411,71 +7441,3 @@ async function main() {
 main().catch((error) => {
   byId("statusText").textContent = `Load failed: ${error.message}`;
 });
-(() => {
-  const installStablePaperOddsStrip = () => {
-    let dashboardState = null;
-    try { dashboardState = state; } catch (_) { dashboardState = null; }
-    if (typeof renderPaperOddsStrip !== "function" || !dashboardState) {
-      window.setTimeout?.(installStablePaperOddsStrip, 25);
-      return;
-    }
-    const originalRenderPaperOddsStrip = renderPaperOddsStrip;
-    const lastGoodPaperOddsByWindow = new Map();
-    const displayCacheKeysForMarket = (market) => {
-      const keys = [];
-      try {
-        if (typeof stableOutcomeCacheKeysForMarket === "function") keys.push(...stableOutcomeCacheKeysForMarket(market));
-        if (typeof outcomeOddsCacheKeys === "function") keys.push(...outcomeOddsCacheKeys(market));
-        if (typeof outcomeOddsWindowStart === "function" && typeof outcomeWindowAliasKeys === "function") {
-          const start = typeof stableOutcomeWindowStart === "function" ? stableOutcomeWindowStart(market) : outcomeOddsWindowStart(market);
-          if (start !== null && start !== undefined) keys.push(...outcomeWindowAliasKeys(start));
-        }
-        if (typeof paperGraphKey === "function") keys.push(paperGraphKey(market));
-      } catch (_) {
-        // Render-only guard: bad cache keys should never break the paper chart.
-      }
-      return [...new Set(keys.filter(Boolean))];
-    };
-    const firstCachedOdds = (keys) => {
-      for (const key of keys) {
-        const row = lastGoodPaperOddsByWindow.get(key) || dashboardState.lastDisplayedOutcomeOddsByWindow?.get(key);
-        if (row && (metricNumber(row.up) !== null || metricNumber(row.down) !== null)) return row;
-      }
-      return null;
-    };
-    if (typeof stickyOutcomeOddsForMarket === "function" && !stickyOutcomeOddsForMarket.__stablePaperOddsWrapped) {
-      const originalStickyOutcomeOddsForMarket = stickyOutcomeOddsForMarket;
-      stickyOutcomeOddsForMarket = function stickyOutcomeOddsForMarketWithIncomingFallback(market, odds = {}) {
-        const resolved = originalStickyOutcomeOddsForMarket(market, odds) || {};
-        return {
-          ...resolved,
-          up: metricNumber(resolved.up) !== null ? resolved.up : (metricNumber(odds?.up) !== null ? odds.up : null),
-          down: metricNumber(resolved.down) !== null ? resolved.down : (metricNumber(odds?.down) !== null ? odds.down : null),
-        };
-      };
-      stickyOutcomeOddsForMarket.__stablePaperOddsWrapped = true;
-    }
-    renderPaperOddsStrip = function renderPaperOddsStripWithStableDisplay(market, latestRaw, latestBookRaw, odds = null) {
-      const keys = displayCacheKeysForMarket(market);
-      const incoming = odds || (typeof paperPanelDisplayOutcomeProbabilities === "function" ? paperPanelDisplayOutcomeProbabilities(market, latestRaw, latestBookRaw) : null);
-      const cached = firstCachedOdds(keys);
-      const merged = incoming ? {
-        ...incoming,
-        up: metricNumber(incoming.up) !== null ? incoming.up : cached?.up ?? null,
-        down: metricNumber(incoming.down) !== null ? incoming.down : cached?.down ?? null,
-        upNoSellers: incoming.upNoSellers ?? cached?.upNoSellers ?? false,
-        downNoSellers: incoming.downNoSellers ?? cached?.downNoSellers ?? false,
-        askBookObserved: incoming.askBookObserved ?? cached?.askBookObserved ?? false,
-      } : cached;
-      if (merged && (metricNumber(merged.up) !== null || metricNumber(merged.down) !== null)) {
-        const row = { ...merged, _displayed_at: Date.now() };
-        keys.forEach((key) => {
-          lastGoodPaperOddsByWindow.set(key, row);
-          dashboardState.lastDisplayedOutcomeOddsByWindow?.set(key, row);
-        });
-      }
-      return originalRenderPaperOddsStrip(market, latestRaw, latestBookRaw, merged || odds);
-    };
-  };
-  installStablePaperOddsStrip();
-})();
