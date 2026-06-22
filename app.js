@@ -953,9 +953,14 @@ function isLockedPaperPanelId(panelId) {
   return false;
 }
 
+function paperPanelIsOpen(panelId, open = true) {
+  const lockedOpen = isLockedPaperPanelId(panelId);
+  return lockedOpen || (open && !state.paperCollapsedPanels.has(panelId));
+}
+
 function renderCollapsiblePanel(panelId, className, title, meta, bodyHtml, open = true) {
   const lockedOpen = isLockedPaperPanelId(panelId);
-  const isOpen = lockedOpen || (open && !state.paperCollapsedPanels.has(panelId));
+  const isOpen = paperPanelIsOpen(panelId, open);
   return `
     <section class="${escapeHtml(className)} paper-collapsible" data-paper-panel="${escapeHtml(panelId)}" ${lockedOpen ? 'data-paper-locked-open="true"' : ""}>
       <button class="paper-book-heading paper-collapse-button" type="button" data-paper-toggle="${escapeHtml(panelId)}" ${lockedOpen ? 'data-paper-locked-open="true" aria-disabled="true"' : ""} aria-expanded="${isOpen ? "true" : "false"}">
@@ -969,7 +974,7 @@ function renderCollapsiblePanel(panelId, className, title, meta, bodyHtml, open 
         </span>
       </button>
       <div class="paper-collapsible-body" ${isOpen ? "" : "hidden"}>
-        ${bodyHtml}
+        ${isOpen ? bodyHtml : ""}
       </div>
     </section>`;
 }
@@ -6145,13 +6150,15 @@ function polymarketBookTableRows(snapshot = null) {
 }
 
 function renderPolymarketBookTable(market, rawPoints) {
+  const panelId = "polymarket_depth";
+  const isOpen = paperPanelIsOpen(panelId, true);
   const snapshot = latestPolymarketDepthSnapshotForMarket(market, rawPoints);
   const rows = polymarketBookTableRows(snapshot);
   const ageText = ageMsText(snapshot?.ageMs);
   const sourceLabel = !snapshot
     ? "waiting for Rust Polymarket book recorder"
     : (snapshot.stale ? `Rust Polymarket book stale${ageText ? ` | ${ageText}` : ""}` : `Rust Polymarket book${ageText ? ` | ${ageText}` : ""}`);
-  const body = rows.length ? rows.map((row) => `
+  const body = !isOpen ? "" : rows.length ? rows.map((row) => `
     <tr class="paper-book-row is-${escapeHtml(row.sideClass || "neutral")}">
       <th scope="row">${escapeHtml(row.outcome)}</th>
       <td>${escapeHtml(row.side)}</td>
@@ -6163,7 +6170,7 @@ function renderPolymarketBookTable(market, rawPoints) {
       <td colspan="5">Waiting for Rust Polymarket book recorder.</td>
     </tr>`;
   return renderCollapsiblePanel(
-    "polymarket_depth",
+    panelId,
     "paper-book-table",
     "Polymarket Up/Down Depth",
     sourceLabel,
@@ -6207,13 +6214,15 @@ function orderBookTableRows(market, rawPoints, latestRaw, latestQuote, snapshot 
 }
 
 function renderOrderBookTable(market, rawPoints, latestRaw, latestQuote) {
+  const panelId = "binance_depth";
+  const isOpen = paperPanelIsOpen(panelId, true);
   const snapshot = selectedOrderBookSnapshot(market, rawPoints, latestRaw);
   const rows = orderBookTableRows(market, rawPoints, latestRaw, latestQuote, snapshot);
   const ageText = ageMsText(snapshot.ageMs);
   const depthLabel = snapshot.waiting
     ? "waiting for Binance depth WS"
     : (snapshot.stale ? `Binance depth WS stale${ageText ? ` | ${ageText}` : ""}` : `Binance depth WS${ageText ? ` | ${ageText}` : ""}`);
-  const body = rows.length ? rows.map((row) => `
+  const body = !isOpen ? "" : rows.length ? rows.map((row) => `
     <tr class="paper-book-row is-${escapeHtml(row.sideClass || "neutral")}">
       <th scope="row">${escapeHtml(row.side)}</th>
       <td>${escapeHtml(row.limit)}</td>
@@ -6224,7 +6233,7 @@ function renderOrderBookTable(market, rawPoints, latestRaw, latestQuote) {
       <td colspan="4">Waiting for Binance depth WS.</td>
     </tr>`;
   return renderCollapsiblePanel(
-    "binance_depth",
+    panelId,
     "paper-book-table",
     "BTC Binance Depth",
     depthLabel,
@@ -6514,8 +6523,10 @@ function paperActionLogRows(market, rawPoints) {
 }
 
 function renderPaperActionLog(market, rawPoints) {
+  const panelId = "action_log";
+  const isOpen = paperPanelIsOpen(panelId, true);
   const rows = paperActionLogRows(market, rawPoints);
-  const body = rows.length
+  const body = !isOpen ? "" : rows.length
     ? rows.map((row) => {
       const buy = paperActionBuyText(row);
       const tone = buy === "yes" ? "yes" : "neutral";
@@ -6529,7 +6540,7 @@ function renderPaperActionLog(market, rawPoints) {
     }).join("")
     : `<tr><td colspan="4">No performed actions yet.</td></tr>`;
   return renderCollapsiblePanel(
-    "action_log",
+    panelId,
     "paper-action-log",
     "Algorithm Action Log",
     "latest first",
@@ -7773,6 +7784,8 @@ async function main() {
     }
     syncPaperCollapseStates(document);
     bumpPaperAuxVersion(true);
+    if (state.activeTab === "paper") renderPaperChart({ selects: false });
+    if (state.activeTab === "live") renderLiveChart();
   };
   document.addEventListener("pointerdown", (event) => {
     const button = event.target?.closest?.("[data-paper-toggle]");
