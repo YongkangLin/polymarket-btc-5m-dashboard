@@ -6,7 +6,7 @@ const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
 const ACTIVE_PAPER_EDGE_ID = "coverage_one_below_h60_edge2_tail";
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_REFRESH_MS = 30000;
-const LIVE_TICK_RENDER_THROTTLE_MS = 50;
+const LIVE_TICK_RENDER_THROTTLE_MS = 16;
 const LIVE_CHART_CLOCK_MS = 250;
 const LIVE_TICK_STALE_MS = 10000;
 const LIVE_TICK_RECONNECT_MS = 2000;
@@ -56,10 +56,10 @@ const LIVE_STEP_EPS_SECONDS = 0.0005;
 const LIVE_CHAINLINK_MAX_LINE_GAP_SECONDS = 10;
 const LIVE_BINANCE_MAX_LINE_GAP_SECONDS = 5;
 const LIVE_PAPER_RENDER_TAIL_SECONDS = 15;
-const LIVE_RENDER_MAX_SOURCE_ROWS_PER_LINE = 3000;
-const LIVE_RENDER_MIN_POINTS_PER_LINE = 240;
+const LIVE_RENDER_MAX_SOURCE_ROWS_PER_LINE = 1800;
+const LIVE_RENDER_MIN_POINTS_PER_LINE = 260;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 1200;
-const LIVE_RENDER_POINTS_PER_PIXEL = 1.4;
+const LIVE_RENDER_POINTS_PER_PIXEL = 1.75;
 const LIVE_AUX_VERSION_THROTTLE_MS = 100;
 const LIVE_CHART_SCHEMA_VERSION = "paper-live-v43-fast-paper-snapshot";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
@@ -745,9 +745,9 @@ function livePaperDollarDomain(market, samples) {
 }
 
 function liveRenderPointLimit(plotWidth, denseRenderer = false) {
-  if (denseRenderer) return LIVE_RENDER_MAX_POINTS_PER_LINE;
   const width = Number(plotWidth);
-  const target = Number.isFinite(width) ? Math.round(width * LIVE_RENDER_POINTS_PER_PIXEL) : LIVE_TICK_RENDER_MAX_POINTS;
+  const density = denseRenderer ? LIVE_RENDER_POINTS_PER_PIXEL : Math.min(1.25, LIVE_RENDER_POINTS_PER_PIXEL);
+  const target = Number.isFinite(width) ? Math.round(width * density) : LIVE_TICK_RENDER_MAX_POINTS;
   return Math.max(LIVE_RENDER_MIN_POINTS_PER_LINE, Math.min(LIVE_RENDER_MAX_POINTS_PER_LINE, target));
 }
 
@@ -5178,10 +5178,17 @@ function paperPanelOutcomeProbabilities(market, latestRaw, latestBookRaw) {
 
 function paperPanelDisplayOutcomeProbabilities(market, latestRaw, latestBookRaw) {
   if (!market) return { up: null, down: null, upNoSellers: false, downNoSellers: false, askBookObserved: false };
+  const cached = cachedOutcomeOddsForMarket(market);
   const candidates = [
+    cached,
     latestBookRaw,
     latestRaw,
     market,
+    ...sameWindowOutcomeOddsRows(market),
+    ...paperStorageKeysForMarket(market).flatMap((storageKey) => [
+      state.livePersistedMarkets.get(storageKey),
+      state.paperObservedMarkets.get(storageKey),
+    ]),
     ...paperPointsFor(market).slice(-80).reverse(),
     ...liveTickPointsForMarket(market).slice(-80).reverse(),
   ].filter(Boolean);
@@ -5822,7 +5829,12 @@ function polymarketDepthSnapshotFromRow(row) {
     upFromBook?.source,
     downFromBook?.source,
   ].filter(Boolean).join(" ").toLowerCase();
-  if (sourceText && !sourceText.includes("local_postgres_polymarket_order_books")) return null;
+  if (
+    sourceText
+    && !sourceText.includes("local_postgres_polymarket_order_books")
+    && !sourceText.includes("local_backend_polymarket_ws")
+    && !sourceText.includes("polymarket_order_books")
+  ) return null;
   const ages = [
     metricNumber(row.polymarket_book_max_age_ms),
     metricNumber(row.up_book_age_ms),
