@@ -2942,10 +2942,14 @@ function rowHasDisplayPolymarketBook(row) {
   if (isLivePriceTransportRow(row)) return false;
   const source = [
     row.polymarket_book_source,
+    row.probability_source,
+    row.market_probability_source,
     row.books?.Up?.source,
     row.books?.Down?.source,
   ].filter(Boolean).join(" ").toLowerCase();
-  return source.includes("local_postgres_polymarket_order_books");
+  return source.includes("local_postgres_polymarket_order_books")
+    || source.includes("local_backend_polymarket_ws")
+    || source.includes("polymarket_order_books");
 }
 
 function rowHasStickyPolymarketOdds(row) {
