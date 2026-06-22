@@ -75,13 +75,15 @@ const BACKEND_WS_SNAPSHOT_SECONDS = 15;
 const POLYMARKET_TRUTH_SOURCE = "chainlink_data_streams";
 const DEFAULT_PAPER_SESSION = Object.freeze({
   mode: "paper",
-  starting_capital: 100,
-  current_capital: 100,
-  total_pnl_dollars: 0,
-  realized_pnl_dollars: 0,
-  available_capital: 100,
-  committed_capital: 0,
-  market_count: 0,
+  status: "missing_session",
+  synthetic_placeholder: true,
+  starting_capital: null,
+  current_capital: null,
+  total_pnl_dollars: null,
+  realized_pnl_dollars: null,
+  available_capital: null,
+  committed_capital: null,
+  market_count: null,
   market_limit: 36,
   positions: [],
   pnl_history: [],
@@ -461,6 +463,12 @@ function formatSignedMoney(value) {
   if (number === null) return "--";
   const sign = number > 0 ? "+" : "";
   return `${sign}${moneyCents.format(number)}`;
+}
+
+function workflowAgeText() {
+  const generatedAt = Date.parse(state.workflow?.generated_at || "");
+  if (!Number.isFinite(generatedAt)) return "workflow age unknown";
+  return `updated ${ageText(new Date(generatedAt))}`;
 }
 
 function formatSignedPercent(value) {
@@ -5564,9 +5572,9 @@ function paperSessionCommittedCapital(session) {
 }
 
 function paperSessionCapital(session) {
-  const startingCapital = metricNumber(session?.starting_capital ?? session?.paper_session_starting_capital) ?? 100;
+  const startingCapital = metricNumber(session?.starting_capital ?? session?.paper_session_starting_capital);
   const realizedPnl = paperSessionRealizedPnl(session);
-  if (realizedPnl !== null) return startingCapital + realizedPnl;
+  if (startingCapital !== null && realizedPnl !== null) return startingCapital + realizedPnl;
   return metricNumber(session?.current_capital ?? session?.paper_session_current_capital);
 }
 
@@ -5774,19 +5782,20 @@ function latestSessionMetric(market, rawPoints, session, keys) {
 
 function renderPaperSessionHistory(session) {
   const history = paperSessionHistoryRows(session);
-  const startingCapital = metricNumber(session?.starting_capital ?? session?.paper_session_starting_capital) ?? 100;
+  const startingCapital = metricNumber(session?.starting_capital ?? session?.paper_session_starting_capital);
   const marketsSeen = metricNumber(session?.market_count) ?? 0;
   const marketLimit = metricNumber(session?.market_limit) ?? 36;
   let runningCapital = startingCapital;
   const chronologicalRows = history.map((row) => {
     const pnl = metricNumber(row.pnl_dollars);
-    runningCapital += pnl ?? 0;
-    return { ...row, _displayCapitalAfter: runningCapital };
+    if (runningCapital !== null) runningCapital += pnl ?? 0;
+    return { ...row, _displayCapitalAfter: metricNumber(row.capital_after) ?? runningCapital };
   });
   const rows = chronologicalRows.length ? chronologicalRows.reverse().map((row) => {
     const pnl = metricNumber(row.pnl_dollars);
     const tone = pnl === null ? "" : pnl < 0 ? "is-loss" : "is-win";
     const slug = String(row.slug || "--").replace(/^btc-updown-5m-/, "");
+    const capitalAfter = metricNumber(row._displayCapitalAfter) ?? metricNumber(row.capital_after);
     const position = row.position_label || paperPositionLabel({
       side: row.position_side || row.side,
       shares: row.position_shares,
@@ -5798,7 +5807,7 @@ function renderPaperSessionHistory(session) {
         <td>${escapeHtml(position)}</td>
         <td>${escapeHtml(row.winner || "--")}</td>
         <td>${escapeHtml(formatSignedMoney(pnl))}</td>
-        <td>${escapeHtml(moneyCents.format(metricNumber(row._displayCapitalAfter) ?? metricNumber(row.capital_after) ?? 0))}</td>
+        <td>${escapeHtml(capitalAfter === null ? "--" : moneyCents.format(capitalAfter))}</td>
       </tr>`;
   }).join("") : `
       <tr class="paper-session-row is-empty">
@@ -6954,7 +6963,7 @@ function renderStatus() {
   const makerText = makerRoi === null
     ? ""
     : ` | ${makerReady ? "paper-ready" : "not ready"} | WF ${formatPercent(makerRoi)}/${formatPercent(makerTarget)}`;
-  byId("statusText").textContent = `${fmt.format(chartMarkets || 0)} charted / ${fmt.format(validatedMarkets || 0)} validated | ${fmt.format(activeBuys)} buys | ROI ${formatPercent(activeRoi)}${makerText}`;
+  byId("statusText").textContent = `${fmt.format(chartMarkets || 0)} charted / ${fmt.format(validatedMarkets || 0)} validated | ${fmt.format(activeBuys)} buys | ROI ${formatPercent(activeRoi)} | ${workflowAgeText()}${makerText}`;
 }
 
 function currentPaperViewSelected() {

@@ -202,7 +202,7 @@ select {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 266px;
   gap: 16px;
-  min-width: 920px;
+  min-width: min(920px, 100%);
 }
 
 .paper-live-plot-wrap {
@@ -517,11 +517,14 @@ select {
   line-height: 1.2;
 }
 
-svg {
+.chart svg {
   display: block;
-  min-width: 820px;
   width: 100%;
   height: auto;
+}
+
+#backtestChart svg {
+  min-width: 820px;
 }
 
 .plot {
