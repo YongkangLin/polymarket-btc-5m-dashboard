@@ -597,6 +597,19 @@ svg {
   stroke-width: 2.6;
 }
 
+.contract-point {
+  stroke: #fff;
+  stroke-width: 1;
+}
+
+.contract-point.up-contract {
+  fill: var(--green);
+}
+
+.contract-point.down-contract {
+  fill: var(--red);
+}
+
 .signal-marker {
   stroke: #1b252c;
   stroke-dasharray: 4 5;

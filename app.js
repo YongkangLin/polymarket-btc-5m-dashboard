@@ -1,9 +1,9 @@
 const fmt = new Intl.NumberFormat("en-US");
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const moneyCents = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const ACTIVE_BACKTEST_KEY = "t91_150_d0_10_a50_70_e5_pnone_q50";
+const ACTIVE_BACKTEST_KEY = "t91_150_d2_12_a55_75_e10_pnone_q50";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
-const ACTIVE_PAPER_EDGE_ID = "t91_150_d0_10_a50_70_e5_pnone_q50_native";
+const ACTIVE_PAPER_EDGE_ID = "primary_t91_150_d2_12_a55_75_e10_q50_native";
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_STREAM_WATCHDOG_MS = 30000;
 const LIVE_TICK_RENDER_THROTTLE_MS = 16;
@@ -3899,6 +3899,14 @@ function renderSignalDecisionChart(signal, options = {}) {
     if (bid !== null && ask !== null) return (bid + ask) / 2;
     return ask ?? bid;
   };
+  const contractLinePoints = (side) => rows
+    .map((row) => ({
+      x: xFor(row),
+      y: yPrice(contractPrice(row, side)),
+    }))
+    .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+  const contractDots = (points, className) => points.map((point) => `
+    <circle class="contract-point ${className}" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="2.7"></circle>`).join("");
   const selectedOutcome = decisionOutcome(signal);
   const selectedSide = sideKey(selectedOutcome);
   const oppositeSide = oppositeSideKey(selectedOutcome);
@@ -3949,8 +3957,11 @@ function renderSignalDecisionChart(signal, options = {}) {
     ? backtestBtcPrice(signal, defaultStartPrice)
     : Number(signal.distance_bps || 0);
   const markerTopY = hasBtcPrices ? yBtc(markerTopValue) : yDistance(markerTopValue);
-  const upPricePath = linePathFor(rows, (row) => contractPrice(row, "up"), xFor, yPrice);
-  const downPricePath = linePathFor(rows, (row) => contractPrice(row, "down"), xFor, yPrice);
+  const upPricePoints = contractLinePoints("up");
+  const downPricePoints = contractLinePoints("down");
+  const upPricePath = pathFrom(upPricePoints);
+  const downPricePath = pathFrom(downPricePoints);
+  const contractSampleText = `${fmt.format(upPricePoints.length)} Up samples | ${fmt.format(downPricePoints.length)} Down samples`;
   const gateText = gateRows.map(([label, value, passed], index) => {
     const y = 88 + index * 24;
     return `
@@ -3981,12 +3992,15 @@ function renderSignalDecisionChart(signal, options = {}) {
       <circle class="dot ${markerClass}" cx="${markerX}" cy="${markerTopY}" r="6"></circle>
       <path class="line line-up-contract" d="${upPricePath}"></path>
       <path class="line line-down-contract" d="${downPricePath}"></path>
+      ${contractDots(upPricePoints, "up-contract")}
+      ${contractDots(downPricePoints, "down-contract")}
       <circle class="dot ${markerClass}" cx="${markerX}" cy="${yPrice(Number(signal.signal_ask || selectedAsk || 0))}" r="6"></circle>
       <text class="axis" x="${plot.left + plotWidth / 2}" y="${plot.top - 12}" text-anchor="middle">${hasBtcPrices ? "BTC price during this 5-minute market" : "BTC move from start"}</text>
       <text class="axis" x="${book.left + plotWidth / 2}" y="${book.top - 12}" text-anchor="middle">Up and Down contract prices</text>
       <text class="legend up-contract" x="${book.left + 8}" y="${book.top + 20}">Up</text>
       <text class="legend down-contract" x="${book.left + 52}" y="${book.top + 20}">Down</text>
       <text class="legend marker" x="${book.left + 112}" y="${book.top + 20}">${isSignal ? "buy" : "checked"}</text>
+      <text class="tick" x="${book.left + plotWidth - 8}" y="${book.top + 20}" text-anchor="end">${escapeHtml(contractSampleText)}</text>
       <text class="axis" x="${book.left + plotWidth / 2}" y="${view.height - 18}" text-anchor="middle">Seconds left</text>
       <rect class="note-box" x="686" y="36" width="274" height="238" rx="6"></rect>
       <text class="axis" x="708" y="64">${escapeHtml(noteTitle)}</text>
