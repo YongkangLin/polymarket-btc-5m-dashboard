@@ -7,6 +7,7 @@ const ACTIVE_PAPER_EDGE_ID = "consistency_t91_150_h5_q400_native";
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_REFRESH_MS = 30000;
 const LIVE_TICK_RENDER_THROTTLE_MS = 16;
+const LIVE_SIDE_RENDER_THROTTLE_MS = 100;
 const LIVE_CHART_CLOCK_MS = 250;
 const LIVE_TICK_STALE_MS = 10000;
 const LIVE_TICK_RECONNECT_MS = 2000;
@@ -15,11 +16,11 @@ const LOCAL_BACKEND_BASE_KEY = "POLYMARKET_LOCAL_BACKEND_BASE";
 const LOCAL_PAPER_EDGE_KEY = "POLYMARKET_PAPER_EDGE_ID";
 const DEFAULT_BACKEND_BASE = "http://127.0.0.1:8788";
 const LIVE_TICK_RENDER_MAX_POINTS = 900;
-const LIVE_AUX_RENDER_THROTTLE_MS = 500;
+const LIVE_AUX_RENDER_THROTTLE_MS = 1000;
 const LIVE_TICK_PERSIST_MS = 7500;
-const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 4500;
-const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 120;
-const LIVE_TICK_PERSIST_POINTS_PER_MARKET = 3500;
+const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 2600;
+const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 80;
+const LIVE_TICK_PERSIST_POINTS_PER_MARKET = 1800;
 const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v23";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
@@ -60,8 +61,8 @@ const LIVE_RENDER_MAX_SOURCE_ROWS_PER_LINE = 1800;
 const LIVE_RENDER_MIN_POINTS_PER_LINE = 260;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 1200;
 const LIVE_RENDER_POINTS_PER_PIXEL = 1.75;
-const LIVE_AUX_VERSION_THROTTLE_MS = 100;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v43-fast-paper-snapshot";
+const LIVE_AUX_VERSION_THROTTLE_MS = 250;
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v44-stable-live-dom";
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -1124,35 +1125,31 @@ function setPaperChartContent(chart, visualHtml, auxHtml = "") {
   }
   const visual = chart.querySelector(".paper-chart-visual");
   const aux = externalAux || chart.querySelector(".paper-chart-aux");
+  let visualChanged = false;
   if (visual && chart._paperVisualHtml !== visualHtml) {
     visual.innerHTML = visualHtml;
     chart._paperVisualHtml = visualHtml;
+    visualChanged = true;
   }
   if (aux && chart._paperAuxHtml !== normalizedAuxHtml) {
     patchPaperAuxContent(aux, normalizedAuxHtml);
     chart._paperAuxHtml = normalizedAuxHtml;
   }
   ensureTradeSessionPanelMounted(chart, aux);
-  dedupePaperChartSourceLabels(chart);
-  refreshPaperCountdownLabels();
+  if (visualChanged) {
+    dedupePaperChartSourceLabels(chart);
+    refreshPaperCountdownLabels();
+  }
 }
 
 function dedupePaperChartSourceLabels(chart) {
   if (!chart) return;
   chart.querySelectorAll(".u-legend").forEach((node) => node.remove());
   normalizePaperChartHeader(chart);
-  normalizeVerboseFeedText(chart);
   chart.querySelectorAll(".paper-live-line-overlay").forEach((node) => node.remove());
   chart.querySelectorAll(".paper-line-inline-label, .paper-source-card, .paper-side-source").forEach((node) => {
     node.remove();
   });
-  chart.querySelectorAll(".paper-line-key").forEach((node) => {
-    if (isLegacySourceRoleLabel(node)) {
-      node.remove();
-    }
-  });
-  removeLegacySourceRoleLabels(chart);
-  removeLegacySourceRoleLabels(document);
 }
 
 function normalizePaperChartHeader(chart) {
@@ -1282,23 +1279,8 @@ function paperLineLegendNodes() {
 }
 
 function startLegacySourceLabelScrubber() {
-  if (state.legacySourceLabelScrubberStarted || !document.body) return;
+  if (state.legacySourceLabelScrubberStarted) return;
   state.legacySourceLabelScrubberStarted = true;
-  removeLegacySourceRoleLabels(document);
-  const observer = new MutationObserver((mutations) => {
-    let shouldScrub = false;
-    mutations.forEach((mutation) => {
-      mutation.addedNodes.forEach((node) => {
-        if (node.nodeType !== Node.ELEMENT_NODE) return;
-        const text = normalizedNodeText(node);
-        if (isLegacySourceRoleLabel(node) || text.includes("chainlink data streams") || text.includes("binance wss bookticker")) {
-          shouldScrub = true;
-        }
-      });
-    });
-    if (shouldScrub) removeLegacySourceRoleLabels(document);
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
 }
 
 function canUseUPlot() {
@@ -1418,7 +1400,6 @@ function paperLineLegendHtml() {
 function renderPaperChartHeader(market) {
   const windowStart = marketWindowStartUnix(market);
   const windowEnd = marketWindowEndUnix(market);
-  const initialCountdown = countdownTextFromWindow(windowStart, windowEnd);
   return `
     <div class="paper-live-chart-head">
       <div class="paper-line-legend-html" data-paper-feed-legend="canonical" aria-label="Chart lines">
@@ -1426,7 +1407,7 @@ function renderPaperChartHeader(market) {
       </div>
       <div class="paper-market-countdown" aria-label="Time left" data-paper-countdown-start="${escapeHtml(windowStart ?? "")}" data-paper-countdown-end="${escapeHtml(windowEnd ?? "")}">
         <span>Time left</span>
-        <strong data-paper-countdown-value>${escapeHtml(initialCountdown)}</strong>
+        <strong data-paper-countdown-value>--</strong>
       </div>
     </div>`;
 }
@@ -1511,7 +1492,17 @@ function updatePaperUPlot(chart, options) {
       const data = uPlotDataFromSamples(options.truthSamples, options.externalSamples);
       const plot = new window.uPlot(makeOptions(), data, target);
       removeNativeLegend();
-      state.paperUPlotCharts.set(chart.id || "paperChart", { key, plot, dataSignature, width, height });
+      state.paperUPlotCharts.set(chart.id || "paperChart", {
+        key,
+        plot,
+        dataSignature,
+        width,
+        height,
+        xMin: options.xDomain.min,
+        xMax: options.xDomain.max,
+        yMin: options.dollarDomain.min,
+        yMax: options.dollarDomain.max,
+      });
       return true;
     }
     if (existing.width !== width || existing.height !== height) {
@@ -1524,9 +1515,16 @@ function updatePaperUPlot(chart, options) {
       existing.plot.setData(data, false);
       existing.dataSignature = dataSignature;
     }
-    existing.plot.setScale("x", { min: options.xDomain.min, max: options.xDomain.max });
-    existing.plot.setScale("y", { min: options.dollarDomain.min, max: options.dollarDomain.max });
-    removeNativeLegend();
+    if (existing.xMin !== options.xDomain.min || existing.xMax !== options.xDomain.max) {
+      existing.plot.setScale("x", { min: options.xDomain.min, max: options.xDomain.max });
+      existing.xMin = options.xDomain.min;
+      existing.xMax = options.xDomain.max;
+    }
+    if (existing.yMin !== options.dollarDomain.min || existing.yMax !== options.dollarDomain.max) {
+      existing.plot.setScale("y", { min: options.dollarDomain.min, max: options.dollarDomain.max });
+      existing.yMin = options.dollarDomain.min;
+      existing.yMax = options.dollarDomain.max;
+    }
     return true;
   } catch (error) {
     console.warn("uPlot live chart update failed", error);
@@ -6733,16 +6731,30 @@ function renderPaperDecisionGraph(options = {}) {
   if (useUPlot) {
     const fastChart = chart.querySelector(".paper-live-fast");
     if (fastChart) fastChart.setAttribute("title", `${paperMarketLabel(market)} | ${latestTitle}`);
+    const uiNow = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+    const liveUiKey = paperGraphKey(market) || paperMarketWindowKey(market) || "current";
     const sideSlot = chart.querySelector(".paper-live-side-slot");
-    if (sideSlot && sideSlot._paperSideHtml !== sideHtml) {
+    if (sideSlot && sideSlot._paperSideHtml !== sideHtml && (
+      sideSlot._paperSideKey !== liveUiKey
+      || !selectedCurrent
+      || uiNow - (sideSlot._paperSideUpdatedAt || 0) >= LIVE_SIDE_RENDER_THROTTLE_MS
+    )) {
       sideSlot.innerHTML = sideHtml;
       sideSlot._paperSideHtml = sideHtml;
+      sideSlot._paperSideKey = liveUiKey;
+      sideSlot._paperSideUpdatedAt = uiNow;
     }
     const statusSlot = chart.querySelector(".paper-live-status-slot");
     const statusHtml = `${oddsStrip}${compactInfoRows}`;
-    if (statusSlot && statusSlot._paperStatusHtml !== statusHtml) {
+    if (statusSlot && statusSlot._paperStatusHtml !== statusHtml && (
+      statusSlot._paperStatusKey !== liveUiKey
+      || !selectedCurrent
+      || uiNow - (statusSlot._paperStatusUpdatedAt || 0) >= LIVE_SIDE_RENDER_THROTTLE_MS
+    )) {
       statusSlot.innerHTML = statusHtml;
       statusSlot._paperStatusHtml = statusHtml;
+      statusSlot._paperStatusKey = liveUiKey;
+      statusSlot._paperStatusUpdatedAt = uiNow;
     }
     updatePaperUPlot(chart, {
       truthSamples: truthLineSamples,
@@ -6751,7 +6763,6 @@ function renderPaperDecisionGraph(options = {}) {
       dollarDomain,
       compact,
     });
-    dedupePaperChartSourceLabels(chart);
   }
 }
 
