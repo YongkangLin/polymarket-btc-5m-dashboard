@@ -115,7 +115,7 @@
         "algorithm_hash": "c08bc630810bf810728545231542ef476355a13ab339f1bb48357a97f38bed9c"
       },
       "expected": {
-        "strict_candidate": "docs/data/candidate_strict_directional_maker_strategy.json",
+        "strict_candidate": "public-site/data/candidate_strict_directional_maker_strategy.json",
         "requires_hash_match": false
       },
       "passed": true

@@ -1619,7 +1619,7 @@
       "selected": {
         "historical_candidate_ready": true,
         "maker_route_ready": false,
-        "path": "docs/data/candidate_coverage_one_below_h60_edge2_strategy.json",
+        "path": "public-site/data/candidate_coverage_one_below_h60_edge2_strategy.json",
         "roi_lift_vs_always_taker": null,
         "route_id": "maker_one_below_ask_h60",
         "route_label": "Quote 1c below ask for 60s",
@@ -1655,7 +1655,7 @@
         "fills": 561,
         "median_day_roi_on_planned_cost": null,
         "min_day_roi_on_planned_cost": null,
-        "path": "docs/data/candidate_coverage_one_below_h60_edge2_strategy.json",
+        "path": "public-site/data/candidate_coverage_one_below_h60_edge2_strategy.json",
         "planned_cost": 3400.0,
         "pnl_dollars": 148.33781596856178,
         "portfolio_roi_lift_vs_always_taker": null,
@@ -1695,7 +1695,7 @@
       "selected": {
         "historical_candidate_ready": true,
         "maker_route_ready": false,
-        "path": "docs/data/candidate_strict_directional_maker_strategy.json",
+        "path": "public-site/data/candidate_strict_directional_maker_strategy.json",
         "roi_lift_vs_always_taker": null,
         "route_id": "maker_improve_1c_h60",
         "route_label": "Improve by 1c for 60s",

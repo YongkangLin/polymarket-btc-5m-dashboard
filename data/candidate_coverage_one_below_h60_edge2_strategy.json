@@ -20,7 +20,7 @@
     "selected_route_mode": "one_below_ask",
     "selected_route_type": "maker",
     "selection_reason": "strict_directional_raw_trade_backtest",
-    "source": "docs/data/candidate_coverage_one_below_h60_edge2_strategy.json",
+    "source": "public-site/data/candidate_coverage_one_below_h60_edge2_strategy.json",
     "status": "paper_collecting",
     "strategy_id": "coverage_focus_one_below_h60_edge2_scan",
     "test_fills": 268,
