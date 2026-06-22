@@ -1,9 +1,9 @@
 const fmt = new Intl.NumberFormat("en-US");
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const moneyCents = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const ACTIVE_BACKTEST_KEY = "focus_tiered_a5800_8000_nearq50_minq1c_pressure100_q50";
+const ACTIVE_BACKTEST_KEY = "focus_tiered_a5500_7500_nearq50_minq1c_pressure100_q50";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
-const ACTIVE_PAPER_EDGE_ID = "focus_tiered_a5800_8000_nearq50_minq1c_pressure100_q50_native";
+const ACTIVE_PAPER_EDGE_ID = "focus_tiered_a5500_7500_nearq50_minq1c_pressure100_q50_native";
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_STREAM_WATCHDOG_MS = 30000;
 const LIVE_TICK_RENDER_THROTTLE_MS = 16;
