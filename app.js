@@ -2679,10 +2679,12 @@ function liveTickPointsForMarket(market) {
   keys.forEach((tickKey) => {
     (state.liveBtcTicksByMarket.get(tickKey) || []).forEach(addPoint);
   });
-  state.liveBtcTicksByMarket.forEach((points, tickKey) => {
-    if (keys.has(tickKey)) return;
-    (points || []).forEach(addPoint);
-  });
+  if (!rows.length) {
+    state.liveBtcTicksByMarket.forEach((points, tickKey) => {
+      if (keys.has(tickKey)) return;
+      (points || []).forEach(addPoint);
+    });
+  }
   return sortRowsIfNeeded(rows, pointTimestampMicro);
 }
 
@@ -3765,11 +3767,13 @@ function paperRouteGateCells() {
 
 function renderStrategyPanels() {
   const activeSummary = state.workflow.active_backtest?.summary || {};
+  const seriesManifest = backtestSeriesManifestSummary();
   const quoteMarkets = activeSummary.algorithm_quote_markets ?? activeSummary.quote_markets ?? signalRows().length;
   const totalPnl = activeSummary.algorithm_pnl_dollars ?? activeSummary.pnl_dollars;
   const totalRoi = activeSummary.algorithm_roi_on_filled_cost ?? activeSummary.roi_on_planned_cost;
   const validatedMarkets = activeSummary.algorithm_admitted_markets ?? activeSummary.clean_markets_scanned ?? activeSummary.admitted_markets;
-  const chartMarkets = activeSummary.complete_series_markets ?? activeSummary.admitted_markets;
+  const chartMarkets = seriesManifest.markets || activeSummary.complete_series_markets || activeSummary.admitted_markets;
+  const chartStatus = seriesManifest.complete ? "full chart series" : "charted subset";
   const policy = state.workflow.live_trade?.execution_policy || {};
   const liveStatus = policy.maker_route_ready
     ? "Disabled until manual enable"
@@ -3779,7 +3783,7 @@ function renderStrategyPanels() {
     strategyCell("Buy Rule", ruleSummaryText()),
     strategyCell(
       "Result",
-      `${fmt.format(quoteMarkets)} quotes | ${formatSignedMoney(totalPnl)} P&L | ${formatPercent(totalRoi)} return | ${fmt.format(chartMarkets || 0)} charted / ${fmt.format(validatedMarkets || 0)} validated`,
+      `${fmt.format(quoteMarkets)} quotes | ${formatSignedMoney(totalPnl)} P&L | ${formatPercent(totalRoi)} return | ${fmt.format(validatedMarkets || 0)} validated | ${fmt.format(chartMarkets || 0)} ${chartStatus}`,
     ),
   ].join("");
   const paperStrategy = byId("paperStrategy");
@@ -3833,7 +3837,7 @@ function marketDecisionSummary(row, market, isSignal) {
     : `The closest checked moment failed the rule: ${rejectReasonLabel(row.reason)}.`;
   return {
     totalHeadline: `${formatSignedMoney(totalPnl)} total P&L`,
-    totalResult: `${fmt.format(buyCount)} buys | ${formatPercent(totalRoi)} return | ${fmt.format(chartMarkets || 0)} charted / ${fmt.format(cleanMarkets || 0)} validated`,
+    totalResult: `${fmt.format(buyCount)} buys | ${formatPercent(totalRoi)} return | ${fmt.format(cleanMarkets || 0)} validated / ${fmt.format(chartMarkets || 0)} charted`,
     headline,
     result,
     reason,
@@ -3881,6 +3885,23 @@ function backtestPerformanceSummary() {
     trainRoi,
     testRoi,
   };
+}
+
+function backtestSeriesManifestSummary() {
+  const manifest = state.workflow?.backtest?.series_chunk_manifest || {};
+  const markets = metricNumber(manifest.markets) ?? metricNumber(state.workflow?.backtest?.summary?.complete_series_markets) ?? 0;
+  const chunks = metricNumber(manifest.chunks) ?? metricNumber(state.workflow?.backtest?.series_chunk_count) ?? 0;
+  const rows = metricNumber(manifest.rows) ?? metricNumber(state.workflow?.backtest?.series_shipped_rows) ?? 0;
+  const expectedRows = metricNumber(manifest.expected_rows) ?? (markets ? markets * 301 : null);
+  const complete = manifest.complete === true || (expectedRows !== null && rows === expectedRows && rows > 0);
+  return { markets, chunks, rows, expectedRows, complete };
+}
+
+function backtestSeriesManifestText() {
+  const manifest = backtestSeriesManifestSummary();
+  if (!manifest.markets) return "Chart series not loaded";
+  const status = manifest.complete ? "full 5m" : "incomplete";
+  return `${fmt.format(manifest.markets)} markets | ${status}`;
 }
 
 function renderBacktestSummary(market, row, isSignal) {
@@ -3933,6 +3954,7 @@ function noActionTitle(row, market) {
 
 function backtestRightPanelRows(signal, market, isSignal) {
   const perf = backtestPerformanceSummary();
+  const seriesManifest = backtestSeriesManifestText();
   const outcome = decisionOutcome(signal);
   const selectedSide = sideKey(outcome);
   const selectedAsk = sideField(signal, selectedSide, "ask") ?? metricNumber(signal.signal_ask);
@@ -3947,6 +3969,7 @@ function backtestRightPanelRows(signal, market, isSignal) {
     ["Total P&L", formatSignedMoney(perf.totalPnl)],
     ["Return", formatPercent(perf.totalRoi)],
     ["Bought", `${fmt.format(perf.buyCount)} of ${fmt.format(perf.cleanMarkets)} clean markets`],
+    ["Chart data", seriesManifest],
     ["Win rate", formatPercent(perf.winRate)],
     ["Walk-forward", perf.walkforwardFolds ? `${fmt.format(perf.walkforwardPositive || 0)}/${fmt.format(perf.walkforwardFolds)} profitable folds` : "--"],
     ["Train / test", `${formatPercent(perf.trainRoi)} / ${formatPercent(perf.testRoi)}`],
@@ -6952,10 +6975,11 @@ function renderStatus() {
   const b = state.workflow.backtest.summary || {};
   const active = activeCandidateStrategy();
   const activeSummary = active?.summary || state.workflow.active_backtest?.summary || {};
+  const seriesManifest = backtestSeriesManifestSummary();
   const activeBuys = Number(activeSummary.algorithm_fills || activeSummary.traded_markets || activeSummary.quoted_markets || b.signals || 0);
   const activeRoi = metricNumber(activeSummary.algorithm_roi_on_filled_cost ?? activeSummary.roi_on_filled_cost ?? b.roi_after_slippage_haircut);
   const validatedMarkets = metricNumber(activeSummary.algorithm_admitted_markets ?? q.clean_markets ?? activeSummary.clean_markets_scanned);
-  const chartMarkets = metricNumber(activeSummary.complete_series_markets ?? activeSummary.admitted_markets ?? q.complete_series_markets);
+  const chartMarkets = seriesManifest.markets || metricNumber(activeSummary.complete_series_markets ?? activeSummary.admitted_markets ?? q.complete_series_markets);
   const policy = state.workflow.live_trade?.execution_policy || {};
   const makerRoi = metricNumber(policy.walkforward_roi_on_planned_cost ?? activeSummary.maker_walkforward_roi_on_planned_cost);
   const makerTarget = metricNumber(policy.min_walkforward_roi_on_planned_cost) || 0.03;
@@ -6963,7 +6987,7 @@ function renderStatus() {
   const makerText = makerRoi === null
     ? ""
     : ` | ${makerReady ? "paper-ready" : "not ready"} | WF ${formatPercent(makerRoi)}/${formatPercent(makerTarget)}`;
-  byId("statusText").textContent = `${fmt.format(chartMarkets || 0)} charted / ${fmt.format(validatedMarkets || 0)} validated | ${fmt.format(activeBuys)} buys | ROI ${formatPercent(activeRoi)} | ${workflowAgeText()}${makerText}`;
+  byId("statusText").textContent = `${fmt.format(validatedMarkets || 0)} validated | ${fmt.format(chartMarkets || 0)} charted | ${fmt.format(activeBuys)} buys | ROI ${formatPercent(activeRoi)} | ${workflowAgeText()}${makerText}`;
 }
 
 function currentPaperViewSelected() {
