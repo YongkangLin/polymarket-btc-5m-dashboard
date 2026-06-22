@@ -1,11 +1,11 @@
 const fmt = new Intl.NumberFormat("en-US");
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const moneyCents = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const ACTIVE_BACKTEST_KEY = "consistency_t91_150_h5_q400";
+const ACTIVE_BACKTEST_KEY = "t91_150_d0_10_a50_70_e5_pnone_q50";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
-const ACTIVE_PAPER_EDGE_ID = "consistency_t91_150_h5_q400_native";
+const ACTIVE_PAPER_EDGE_ID = "t91_150_d0_10_a50_70_e5_pnone_q50_native";
 const PAPER_CURRENT_VALUE = "__current__";
-const PAPER_REFRESH_MS = 30000;
+const PAPER_STREAM_WATCHDOG_MS = 30000;
 const LIVE_TICK_RENDER_THROTTLE_MS = 16;
 const LIVE_SIDE_RENDER_THROTTLE_MS = 100;
 const LIVE_CHART_CLOCK_MS = 250;
@@ -6816,7 +6816,7 @@ function renderStatus() {
   const makerText = makerRoi === null
     ? ""
     : ` | ${makerReady ? "paper-ready" : "not ready"} | WF ${formatPercent(makerRoi)}/${formatPercent(makerTarget)}`;
-  byId("statusText").textContent = `${fmt.format(q.clean_markets || 0)} windows | ${fmt.format(activeBuys)} buys | ROI ${formatPercent(activeRoi)}${makerText}`;
+  byId("statusText").textContent = `${fmt.format(q.clean_markets || 0)} backtest markets | ${fmt.format(activeBuys)} buys | ROI ${formatPercent(activeRoi)}${makerText}`;
 }
 
 function currentPaperViewSelected() {
@@ -7501,10 +7501,8 @@ async function main() {
   window.setInterval(() => {
     if (state.activeTab === "paper" || state.activeTab === "live") {
       ensureLiveTickStream();
-    } else {
-      refreshWorkflow();
     }
-  }, PAPER_REFRESH_MS);
+  }, PAPER_STREAM_WATCHDOG_MS);
   window.addEventListener("pagehide", flushPaperTickPersist);
   window.addEventListener("beforeunload", flushPaperTickPersist);
   document.addEventListener("visibilitychange", () => {
