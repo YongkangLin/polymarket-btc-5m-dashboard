@@ -3727,41 +3727,54 @@ function renderStrategyPanels() {
 }
 
 function marketDecisionSummary(row, market, isSignal) {
+  const activeSummary = state.workflow.active_backtest?.summary || state.workflow.backtest?.summary || {};
+  const cleanMarkets = metricNumber(
+    activeSummary.complete_series_markets
+      ?? activeSummary.admitted_markets
+      ?? activeSummary.clean_markets_scanned,
+  );
+  const buyCount = metricNumber(activeSummary.fills ?? activeSummary.filled_markets ?? activeSummary.signals) ?? 0;
+  const totalPnl = metricNumber(activeSummary.pnl_dollars);
+  const totalRoi = metricNumber(activeSummary.roi_on_filled_cost ?? activeSummary.roi_on_planned_cost);
+  const winRate = metricNumber(activeSummary.win_rate_on_fills);
+  const walkforwardPositive = metricNumber(activeSummary.walkforward_positive_folds);
+  const walkforwardFolds = metricNumber(activeSummary.walkforward_folds);
+  const trainRoi = metricNumber(activeSummary.train_roi_on_filled_cost);
+  const testRoi = metricNumber(activeSummary.test_roi_on_filled_cost);
   const outcome = decisionOutcome(row);
   const selectedSide = sideKey(outcome);
-  const oppositeSide = oppositeSideKey(outcome);
   const selectedAsk = sideField(row, selectedSide, "ask") ?? metricNumber(row.signal_ask);
   const selectedBid = sideField(row, selectedSide, "bid") ?? metricNumber(row.signal_bid);
-  const selectedDepth = sideField(row, selectedSide, "ask_depth_5") ?? metricNumber(row.signal_ask_depth_5);
-  const selectedFlow = metricNumber(row[`${selectedSide}_signed_trade_notional_15s`]);
-  const oppositeFlow = metricNumber(row[`${oppositeSide}_signed_trade_notional_15s`]);
-  const flowEdge = metricNumber(row.trade_flow_edge_15s);
   const pnl = metricNumber(row.pnl_after_slippage_haircut);
   const quotePrice = metricNumber(row.quote_price ?? row.maker_quote_price);
   const filledCost = metricNumber(row.filled_cost);
+  const secondsLeft = metricNumber(row.seconds_left);
   const wasFilled = Boolean(row.traded || (filledCost !== null && filledCost > 0));
+  const marketPnl = pnl === null ? 0 : pnl;
   const headline = isSignal
     ? `BUY ${outcome} at ${formatPrice(quotePrice ?? selectedBid)}`
     : "NO BUY";
   const result = isSignal
-    ? `${wasFilled ? `Filled ${moneyCents.format(filledCost || 0)}` : "Not filled"} | ${row.winner} won | ${formatSignedMoney(pnl)}`
+    ? `${wasFilled ? `Filled ${moneyCents.format(filledCost || 0)}` : "Not filled"} | ${row.winner} won | ${formatSignedMoney(marketPnl)}`
     : `Reason: ${rejectReasonLabel(row.reason)} | ${market.winner || row.winner || "--"} won`;
   const reason = isSignal
-    ? `${outcome} matched because BTC was ${outcome === "Up" ? "above" : "below"} the start, the market price was inside our buy range, and enough visible size was available.`
+    ? `${outcome} matched because BTC was ${outcome === "Up" ? "above" : "below"} the start and the contract was cheap enough for the rule.`
     : `The closest checked moment failed the rule: ${rejectReasonLabel(row.reason)}.`;
   return {
+    totalHeadline: `${formatSignedMoney(totalPnl)} total P&L`,
+    totalResult: `${fmt.format(cleanMarkets || 0)} clean markets | ${fmt.format(buyCount)} buys | ${formatPercent(totalRoi)} return`,
     headline,
     result,
     reason,
     signals: [
-      ["Start BTC", metricNumber(row.start_price ?? market.start_price) === null ? "--" : moneyCents.format(metricNumber(row.start_price ?? market.start_price))],
-      ["Decision BTC", backtestBtcPrice(row, market.start_price) === null ? "--" : moneyCents.format(backtestBtcPrice(row, market.start_price))],
+      ["Win rate", formatPercent(winRate)],
+      ["Walk-forward", walkforwardFolds ? `${fmt.format(walkforwardPositive || 0)}/${fmt.format(walkforwardFolds)} folds won` : "--"],
+      ["Train / test", `${formatPercent(trainRoi)} / ${formatPercent(testRoi)}`],
+      ["This market P&L", isSignal ? formatSignedMoney(marketPnl) : "$0.00"],
+      ["This action", isSignal ? `Buy ${outcome}` : "No buy"],
+      ["Entry time", secondsLeft === null ? "--" : `${secondsLeft.toFixed(0)}s left`],
+      ["Entry price", isSignal ? formatPrice(quotePrice ?? selectedBid ?? selectedAsk) : "--"],
       ["BTC move", backtestMoveText(row, market)],
-      ["Bot bid", formatPrice(quotePrice ?? selectedBid)],
-      ["Market ask", formatPrice(selectedAsk)],
-      ["Visible size", money.format(selectedDepth || 0)],
-      ["Book lean", percentText(row.signal_depth_imbalance ?? row[`${selectedSide}_depth_imbalance`])],
-      ["Result", isSignal ? `${row.winner} won, ${formatSignedMoney(pnl)}` : rejectReasonLabel(row.reason)],
     ],
   };
 }
@@ -3775,14 +3788,14 @@ function renderBacktestSummary(market, row, isSignal) {
     </div>`).join("");
   byId("backtestSummary").innerHTML = `
     <div class="decision-block decision-main">
-      <span class="decision-kicker">${escapeHtml(shortDate(market.window_start))} | ${escapeHtml(market.slug || market.condition_id)}</span>
-      <strong>${escapeHtml(summary.headline)}</strong>
-      <span>${escapeHtml(summary.result)}</span>
+      <span class="decision-kicker">Backtest Result</span>
+      <strong>${escapeHtml(summary.totalHeadline)}</strong>
+      <span>${escapeHtml(summary.totalResult)}</span>
     </div>
     <div class="decision-block decision-rule">
-      <span class="decision-kicker">Algorithm Reason</span>
-      <strong>${escapeHtml(isSignal ? "Rule matched" : rejectReasonLabel(row.reason))}</strong>
-      <span>${escapeHtml(summary.reason)}</span>
+      <span class="decision-kicker">${escapeHtml(shortDate(market.window_start))} | ${escapeHtml(market.slug || market.condition_id)}</span>
+      <strong>${escapeHtml(summary.headline)}</strong>
+      <span>${escapeHtml(`${summary.result}. ${summary.reason}`)}</span>
     </div>
     <div class="decision-block decision-signals">
       ${signalItems}
