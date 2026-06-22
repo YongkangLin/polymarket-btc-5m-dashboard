@@ -121,6 +121,8 @@ const state = {
   paperObservedMarkets: new Map(),
   paperObservedPointsByMarket: new Map(),
   paperObservedMarkersByMarket: new Map(),
+  backtestSeriesChunkCache: new Map(),
+  backtestSeriesLoading: new Map(),
   latestOutcomeOddsByWindow: new Map(),
   lastDisplayedOutcomeOddsByWindow: new Map(),
   lastRenderedOutcomeOddsByWindow: new Map(),
@@ -218,9 +220,15 @@ function inflateRows(columns, rows) {
 }
 
 function normalizeWorkflow(workflow) {
+  state.backtestSeriesChunkCache.clear();
+  state.backtestSeriesLoading.clear();
   const backtest = workflow.backtest || {};
   backtest.markets = inflateRows(backtest.market_columns, backtest.markets);
   const marketByIndex = backtest.markets || [];
+  workflow._marketIndexByConditionId = new Map();
+  marketByIndex.forEach((market, index) => {
+    workflow._marketIndexByConditionId.set(market.condition_id, index);
+  });
   backtest.series = inflateRows(backtest.series_columns, backtest.series).map((row) => {
     if (row.condition_id === undefined && row.market_index !== undefined) {
       const market = marketByIndex[Number(row.market_index)];
@@ -1566,6 +1574,49 @@ function sideField(row, side, field) {
 
 function marketSeriesRows(conditionId) {
   return state.workflow?._seriesByMarket?.get(conditionId) || [];
+}
+
+function backtestSeriesChunkPath(conditionId) {
+  return state.workflow?.backtest?.series_chunk_map?.[conditionId] || "";
+}
+
+function rememberBacktestSeriesRows(rows) {
+  if (!state.workflow?._seriesByMarket) return;
+  rows.forEach((row) => {
+    if (row.condition_id === undefined && row.market_index !== undefined) {
+      const market = state.workflow.backtest.markets[Number(row.market_index)];
+      if (market) row.condition_id = market.condition_id;
+      delete row.market_index;
+    }
+    if (!row.condition_id) return;
+    if (!state.workflow._seriesByMarket.has(row.condition_id)) state.workflow._seriesByMarket.set(row.condition_id, []);
+    state.workflow._seriesByMarket.get(row.condition_id).push(row);
+  });
+  state.workflow._seriesByMarket.forEach((marketRows) => {
+    marketRows.sort((left, right) => Number(right.seconds_left || 0) - Number(left.seconds_left || 0));
+  });
+}
+
+async function ensureBacktestSeriesLoaded(conditionId) {
+  if (!conditionId || marketSeriesRows(conditionId).length) return true;
+  const path = backtestSeriesChunkPath(conditionId);
+  if (!path) return false;
+  if (state.backtestSeriesChunkCache.has(path)) {
+    rememberBacktestSeriesRows(state.backtestSeriesChunkCache.get(path));
+    return marketSeriesRows(conditionId).length > 0;
+  }
+  if (!state.backtestSeriesLoading.has(path)) {
+    state.backtestSeriesLoading.set(path, loadJson(path).then((chunk) => {
+      const rows = inflateRows(chunk.columns || state.workflow.backtest.series_chunk_columns, chunk.rows || []);
+      state.backtestSeriesChunkCache.set(path, rows);
+      rememberBacktestSeriesRows(rows);
+      return rows;
+    }).finally(() => {
+      state.backtestSeriesLoading.delete(path);
+    }));
+  }
+  await state.backtestSeriesLoading.get(path);
+  return marketSeriesRows(conditionId).length > 0;
 }
 
 function activeRule() {
@@ -3582,7 +3633,7 @@ function renderBacktestSelects() {
       : "Unknown";
     const status = signal
       ? `BUY ${signal.intended_outcome} | ${signal.winner === signal.intended_outcome ? "won" : "lost"} | ${formatSignedMoney(signal.pnl_after_slippage_haircut)}`
-      : `NO BUY | ${rejectReasonLabel(noActionDecisionRow(market)?.reason)}`;
+      : `NO BUY | ${rejectReasonLabel(market.reason)}`;
     return `<option value="${escapeHtml(market.condition_id)}">${escapeHtml(`${when} | ${status}`)}</option>`;
   }).join("");
   byId("backtestMarket").value = state.backtestMarket;
@@ -4239,12 +4290,26 @@ function renderProfileSkewChart(profileKey = "profile_skew") {
     </svg>`;
 }
 
-function renderBacktestChart() {
+async function renderBacktestChart() {
   const market = marketRows().find((row) => row.condition_id === state.backtestMarket);
   if (!market) {
     byId("backtestSummary").innerHTML = "";
     byId("backtestChart").innerHTML = svgEmpty("No market selected.");
     return;
+  }
+  if (!marketSeriesRows(market.condition_id).length && backtestSeriesChunkPath(market.condition_id)) {
+    byId("backtestChart").innerHTML = svgEmpty("Loading this market path...");
+    const selected = market.condition_id;
+    try {
+      await ensureBacktestSeriesLoaded(selected);
+    } catch (error) {
+      console.warn("backtest series chunk failed", error);
+      if (state.backtestMarket === selected) {
+        byId("backtestChart").innerHTML = svgEmpty("Could not load this market path.");
+      }
+      return;
+    }
+    if (state.backtestMarket !== selected) return;
   }
   const signal = signalForMarket(market.condition_id);
   if (signal) {
