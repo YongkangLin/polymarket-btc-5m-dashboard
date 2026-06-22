@@ -3779,6 +3779,38 @@ function marketDecisionSummary(row, market, isSignal) {
   };
 }
 
+function backtestPerformanceSummary() {
+  const activeSummary = state.workflow.active_backtest?.summary || state.workflow.backtest?.summary || {};
+  const cleanMarkets = metricNumber(
+    activeSummary.complete_series_markets
+      ?? activeSummary.admitted_markets
+      ?? activeSummary.clean_markets_scanned,
+  ) ?? 0;
+  const buyCount = metricNumber(activeSummary.fills ?? activeSummary.filled_markets ?? activeSummary.signals) ?? 0;
+  const quoteMarkets = metricNumber(activeSummary.quote_markets ?? activeSummary.quoted_markets) ?? buyCount;
+  const totalPnl = metricNumber(activeSummary.pnl_dollars);
+  const totalRoi = metricNumber(activeSummary.roi_on_filled_cost ?? activeSummary.roi_on_planned_cost);
+  const winRate = metricNumber(activeSummary.win_rate_on_fills);
+  const filledCost = metricNumber(activeSummary.filled_cost);
+  const walkforwardPositive = metricNumber(activeSummary.walkforward_positive_folds);
+  const walkforwardFolds = metricNumber(activeSummary.walkforward_folds);
+  const trainRoi = metricNumber(activeSummary.train_roi_on_filled_cost);
+  const testRoi = metricNumber(activeSummary.test_roi_on_filled_cost);
+  return {
+    cleanMarkets,
+    buyCount,
+    quoteMarkets,
+    totalPnl,
+    totalRoi,
+    winRate,
+    filledCost,
+    walkforwardPositive,
+    walkforwardFolds,
+    trainRoi,
+    testRoi,
+  };
+}
+
 function renderBacktestSummary(market, row, isSignal) {
   const summary = marketDecisionSummary(row, market, isSignal);
   const signalItems = summary.signals.map(([label, value]) => `
@@ -3827,34 +3859,56 @@ function noActionTitle(row, market) {
   ].join(" | ");
 }
 
-function decisionGateRows(row, isSignal) {
-  const rule = activeRule();
-  const absDistance = Math.abs(Number(row.abs_distance_bps || 0));
-  const edgeThreshold = rule.min_fair_edge_vs_bid ?? rule.min_fair_edge_vs_quote;
-  const fairEdgeGateEnabled = edgeThreshold !== null && edgeThreshold !== undefined;
-  const bookLeanGateEnabled = rule.min_signal_depth_imbalance !== null && rule.min_signal_depth_imbalance !== undefined;
-  const pairGateEnabled = rule.max_complement_ask_sum !== null && rule.max_complement_ask_sum !== undefined;
-  const rows = [
-    ["Time left", `${row.seconds_left}s`, inRange(row.seconds_left, rule.min_seconds_left, rule.max_seconds_left)],
-    ["BTC move", backtestMoveText(row), inRange(absDistance, rule.min_abs_distance_bps, rule.max_abs_distance_bps)],
-    ["Buy price", formatOutcomePercent(row.signal_ask), inRange(row.signal_ask, rule.min_ask, rule.max_ask)],
-    ["Visible size", money.format(row.top5_capacity_dollars || 0), Number(row.top5_capacity_dollars || 0) >= Number(rule.min_top5_capacity_dollars || 0)],
+function backtestRightPanelRows(signal, market, isSignal) {
+  const perf = backtestPerformanceSummary();
+  const outcome = decisionOutcome(signal);
+  const selectedSide = sideKey(outcome);
+  const selectedAsk = sideField(signal, selectedSide, "ask") ?? metricNumber(signal.signal_ask);
+  const selectedBid = sideField(signal, selectedSide, "bid") ?? metricNumber(signal.signal_bid);
+  const quotePrice = metricNumber(signal.quote_price ?? signal.maker_quote_price ?? selectedBid ?? selectedAsk);
+  const filledCost = metricNumber(signal.filled_cost);
+  const shares = metricNumber(signal.shares);
+  const pnl = metricNumber(signal.pnl_after_slippage_haircut);
+  const won = String(signal.winner || market?.winner || "") === outcome;
+  const secondsLeft = metricNumber(signal.seconds_left);
+  const summaryRows = [
+    ["Total P&L", formatSignedMoney(perf.totalPnl)],
+    ["Return", formatPercent(perf.totalRoi)],
+    ["Bought", `${fmt.format(perf.buyCount)} of ${fmt.format(perf.cleanMarkets)} clean markets`],
+    ["Win rate", formatPercent(perf.winRate)],
+    ["Walk-forward", perf.walkforwardFolds ? `${fmt.format(perf.walkforwardPositive || 0)}/${fmt.format(perf.walkforwardFolds)} profitable folds` : "--"],
+    ["Train / test", `${formatPercent(perf.trainRoi)} / ${formatPercent(perf.testRoi)}`],
   ];
-  if (fairEdgeGateEnabled) {
-    rows.push(["Estimated edge", formatCents(row.fair_edge_vs_signal_bid), Number(row.fair_edge_vs_signal_bid || 0) >= Number(edgeThreshold)]);
-  }
-  if (bookLeanGateEnabled) {
-    rows.push(["Book pressure", `${((Number(row.signal_depth_imbalance || 0)) * 100).toFixed(0)}%`, Number(row.signal_depth_imbalance || 0) >= Number(rule.min_signal_depth_imbalance)]);
-  }
-  if (pairGateEnabled) {
-    rows.push(["Both sides", formatPrice(row.complement_ask_sum), Number(row.complement_ask_sum || 99) <= Number(rule.max_complement_ask_sum)]);
-  }
-  rows.push(
-    isSignal
-      ? ["Result", `${row.traded ? "Filled" : "No fill"}, ${moneyCents.format(row.pnl_after_slippage_haircut || 0)}`, Number(row.pnl_after_slippage_haircut || 0) > 0]
-      : ["Decision", rejectReasonLabel(row.reason), row.reason === "selected_table_match"]
-  );
-  return rows;
+  const selectedRows = isSignal
+    ? [
+        ["Decision", `Buy ${outcome}`],
+        ["Entry", `${formatPrice(quotePrice)} with ${secondsLeft === null ? "--" : `${secondsLeft.toFixed(0)}s`} left`],
+        ["Position", `${shares === null ? "--" : fmt.format(shares)} shares for ${moneyCents.format(filledCost || 0)}`],
+        ["Winner", `${signal.winner || market?.winner || "--"} ${won ? "(won)" : "(lost)"}`],
+        ["Market P&L", formatSignedMoney(pnl)],
+        ["BTC move", backtestMoveText(signal, market)],
+      ]
+    : [
+        ["Decision", "No buy"],
+        ["Why", rejectReasonLabel(signal.reason)],
+        ["Checked", secondsLeft === null ? "--" : `${secondsLeft.toFixed(0)}s left`],
+        ["Winner", signal.winner || market?.winner || "--"],
+        ["Market P&L", "$0.00"],
+        ["BTC move", backtestMoveText(signal, market)],
+      ];
+  return { summaryRows, selectedRows };
+}
+
+function svgSideRows(rows, startY, options = {}) {
+  const labelX = options.labelX ?? 708;
+  const valueX = options.valueX ?? 948;
+  const rowGap = options.rowGap ?? 25;
+  return rows.map(([label, value, className], index) => {
+    const y = startY + index * rowGap;
+    return `
+      <text class="bar-label" x="${labelX}" y="${y}">${escapeHtml(label)}</text>
+      <text class="bar-value ${className || ""}" x="${valueX}" y="${y}" text-anchor="end">${escapeHtml(value)}</text>`;
+  }).join("");
 }
 
 function renderSignalDecisionChart(signal, options = {}) {
@@ -3922,26 +3976,9 @@ function renderSignalDecisionChart(signal, options = {}) {
     <circle class="contract-point ${className}" cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="2.7"></circle>`).join("");
   const selectedOutcome = decisionOutcome(signal);
   const selectedSide = sideKey(selectedOutcome);
-  const oppositeSide = oppositeSideKey(selectedOutcome);
   const markerX = plot.left + ((maxSec - Number(signal.seconds_left || minSec)) / spanSec) * plotWidth;
   const selectedAsk = sideField(signal, selectedSide, "ask");
-  const selectedBid = sideField(signal, selectedSide, "bid");
-  const oppositeAsk = sideField(signal, oppositeSide, "ask");
-  const selectedDepth = sideField(signal, selectedSide, "ask_depth_5");
-  const selectedFlow = metricNumber(signal[`${selectedSide}_signed_trade_notional_15s`]);
-  const oppositeFlow = metricNumber(signal[`${oppositeSide}_signed_trade_notional_15s`]);
-  const selectedImbalance = metricNumber(signal.signal_depth_imbalance ?? signal[`${selectedSide}_depth_imbalance`]);
-  const gateRows = decisionGateRows(signal, isSignal);
-  const bookRows = [
-    [`Buy ${selectedOutcome}`, `${formatPrice(selectedBid)} / ${formatPrice(selectedAsk)}`],
-    ["Other side", formatPrice(oppositeAsk)],
-    ["Bot value", formatPrice(signal.fair_probability)],
-    ["Bot edge", formatCents(signal.fair_edge_vs_signal_bid)],
-    ["Visible size", money.format(selectedDepth || 0)],
-    ["PM pressure", selectedImbalance === null ? "--" : `${(selectedImbalance * 100).toFixed(0)}%`],
-    ["PM recent flow", `${money.format(selectedFlow || 0)} vs ${money.format(oppositeFlow || 0)}`],
-    ["Both prices", formatPrice(signal.complement_ask_sum)],
-  ];
+  const rightPanel = backtestRightPanelRows(signal, market, isSignal);
   const xTicks = [maxSec, Math.round((maxSec + minSec) / 2), minSec].map((tick) => {
     const x = plot.left + ((maxSec - tick) / spanSec) * plotWidth;
     return `<line class="grid" x1="${x}" y1="${plot.top}" x2="${x}" y2="${book.top + book.height}"></line><text class="tick" x="${x}" y="${book.top + book.height + 24}" text-anchor="middle">${tick}s</text>`;
@@ -3975,21 +4012,11 @@ function renderSignalDecisionChart(signal, options = {}) {
   const upPricePath = pathFrom(upPricePoints);
   const downPricePath = pathFrom(downPricePoints);
   const contractSampleText = `${fmt.format(upPricePoints.length)} Up samples | ${fmt.format(downPricePoints.length)} Down samples`;
-  const gateText = gateRows.map(([label, value, passed], index) => {
-    const y = 88 + index * 24;
-    return `
-      <text class="bar-label" x="708" y="${y}">${escapeHtml(label)}</text>
-      <text class="bar-value ${passed ? "pass-text" : "fail-text"}" x="948" y="${y}" text-anchor="end">${escapeHtml(value)}</text>`;
-  }).join("");
-  const bookText = bookRows.map(([label, value], index) => {
-    const y = 344 + index * 24;
-    return `
-      <text class="bar-label" x="708" y="${y}">${escapeHtml(label)}</text>
-      <text class="bar-value" x="948" y="${y}" text-anchor="end">${escapeHtml(value)}</text>`;
-  }).join("");
+  const summaryText = svgSideRows(rightPanel.summaryRows, 88);
+  const selectedText = svgSideRows(rightPanel.selectedRows, 344);
   const title = isSignal ? tradeTitle(signal) : noActionTitle(signal, market);
   const markerClass = isSignal ? "signal" : "fail";
-  const noteTitle = isSignal ? "Why buy?" : "Why no buy?";
+  const selectedTitle = isSignal ? "Selected Market" : "Selected Market";
 
   byId("backtestChart").innerHTML = `
     <svg viewBox="0 0 ${view.width} ${view.height}" role="img" aria-label="Selected backtest decision context">
@@ -4016,11 +4043,11 @@ function renderSignalDecisionChart(signal, options = {}) {
       <text class="tick" x="${book.left + plotWidth - 8}" y="${book.top + 20}" text-anchor="end">${escapeHtml(contractSampleText)}</text>
       <text class="axis" x="${book.left + plotWidth / 2}" y="${view.height - 18}" text-anchor="middle">Seconds left</text>
       <rect class="note-box" x="686" y="36" width="274" height="238" rx="6"></rect>
-      <text class="axis" x="708" y="64">${escapeHtml(noteTitle)}</text>
-      ${gateText}
+      <text class="axis" x="708" y="64">Backtest Totals</text>
+      ${summaryText}
       <rect class="note-box" x="686" y="300" width="274" height="202" rx="6"></rect>
-      <text class="axis" x="708" y="324">Book snapshot</text>
-      ${bookText}
+      <text class="axis" x="708" y="324">${escapeHtml(selectedTitle)}</text>
+      ${selectedText}
     </svg>`;
 }
 
