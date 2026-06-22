@@ -120,6 +120,8 @@ const state = {
   liveBtcTickKeysByMarket: new Map(),
   liveBtcTicksByWindowStart: new Map(),
   liveBtcTickKeysByWindowStart: new Map(),
+  liveTickVersion: 0,
+  liveTickPointsCache: new Map(),
   paperLiveChartScales: new Map(),
   livePersistedMarkets: new Map(),
   paperObservedMarkets: new Map(),
@@ -1762,15 +1764,24 @@ function isCurrentBtcWindowMarket(market) {
   return marketWindowStartUnix(market) === currentWindowStartUnixNow();
 }
 
+function invalidateLiveTickPointCache() {
+  state.liveTickVersion += 1;
+  state.liveTickPointsCache.clear();
+}
+
 function pruneNonCurrentPaperState() {
   const currentStart = currentWindowStartUnixNow();
   const keepMarket = (market) => marketWindowStartUnix(market) === currentStart;
+  let changed = false;
   [
     state.livePersistedMarkets,
     state.paperObservedMarkets,
   ].forEach((map) => {
     [...map.entries()].forEach(([key, market]) => {
-      if (!keepMarket(market)) map.delete(key);
+      if (!keepMarket(market)) {
+        map.delete(key);
+        changed = true;
+      }
     });
   });
   [
@@ -1782,7 +1793,10 @@ function pruneNonCurrentPaperState() {
     [...map.entries()].forEach(([key, rows]) => {
       const firstRow = Array.isArray(rows) ? rows.find((row) => marketWindowStartUnix(row) !== null) : null;
       const rowStart = marketWindowStartUnix(firstRow || { market_key: key, slug: key, condition_id: key });
-      if (rowStart !== currentStart) map.delete(key);
+      if (rowStart !== currentStart) {
+        map.delete(key);
+        changed = true;
+      }
     });
   });
   [
@@ -1790,13 +1804,22 @@ function pruneNonCurrentPaperState() {
     state.liveBtcTickKeysByWindowStart,
   ].forEach((map) => {
     [...map.keys()].forEach((key) => {
-      if (metricNumber(key) !== currentStart) map.delete(key);
+      if (metricNumber(key) !== currentStart) {
+        map.delete(key);
+        changed = true;
+      }
     });
   });
   [...state.paperLiveChartScales.keys()].forEach((key) => {
-    if (!key.includes(String(currentStart))) state.paperLiveChartScales.delete(key);
+    if (!key.includes(String(currentStart))) {
+      state.paperLiveChartScales.delete(key);
+      changed = true;
+    }
   });
-  state.paperAuxRenderCache.clear();
+  if (changed) {
+    state.paperAuxRenderCache.clear();
+    invalidateLiveTickPointCache();
+  }
 }
 
 function paperMarketWindowKey(market) {
@@ -2682,6 +2705,10 @@ function liveTickPointsForMarket(market) {
     if (!samePaperWindow(market, candidate)) return;
     liveTickStorageKeysForMarket(candidate).forEach((key) => keys.add(key));
   });
+  const start = marketWindowStartUnix(market);
+  const cacheKey = `${state.liveTickVersion}:${start ?? "na"}:${[...keys].sort().join("|")}`;
+  const cached = state.liveTickPointsCache.get(cacheKey);
+  if (cached) return cached;
   const seen = new Set();
   const rows = [];
   const addPoint = (point) => {
@@ -2701,7 +2728,9 @@ function liveTickPointsForMarket(market) {
       (points || []).forEach(addPoint);
     });
   }
-  return sortRowsIfNeeded(rows, pointTimestampMicro);
+  const output = sortRowsIfNeeded(rows, pointTimestampMicro);
+  state.liveTickPointsCache.set(cacheKey, output);
+  return output;
 }
 
 function latestLiveTickForMarket(market) {
@@ -5387,7 +5416,7 @@ function paperPanelDisplayOutcomeProbabilities(market, latestRaw, latestBookRaw)
       down: resolved.down,
       upNoSellers: false,
       downNoSellers: false,
-      askBookObserved: true,
+      askBookObserved: false,
     };
   }
   return { up: null, down: null, upNoSellers: false, downNoSellers: false, askBookObserved: false };
@@ -5948,17 +5977,26 @@ function startSourceLabel(source) {
 
 function preferredPaperStartMetadata(market) {
   const keys = paperStorageKeysForMarket(market);
-  const keySet = new Set(keys);
+  const marketStart = marketWindowStartUnix(market);
   const liveMarketCandidates = [
     ...state.livePersistedMarkets.values(),
     ...state.paperObservedMarkets.values(),
   ].filter((candidate) => samePaperWindow(market, candidate));
   const liveTickCandidates = [];
-  state.liveBtcTicksByMarket.forEach((points, key) => {
-    (points || []).forEach((row) => {
-      if (keySet.has(key) || samePaperWindow(market, row)) liveTickCandidates.push(row);
-    });
+  const liveTickSeen = new Set();
+  const addLiveTickCandidate = (row) => {
+    if (!row) return;
+    const key = liveBtcPointKey(row);
+    if (liveTickSeen.has(key)) return;
+    liveTickSeen.add(key);
+    liveTickCandidates.push(row);
+  };
+  keys.forEach((key) => {
+    (state.liveBtcTicksByMarket.get(key) || []).forEach(addLiveTickCandidate);
   });
+  if (marketStart !== null) {
+    (state.liveBtcTicksByWindowStart.get(String(marketStart)) || []).forEach(addLiveTickCandidate);
+  }
   const candidates = [
     market,
     ...liveMarketCandidates,
@@ -7124,6 +7162,7 @@ function rebuildLiveBtcWindowIndex() {
   state.liveBtcTicksByWindowStart.clear();
   state.liveBtcTickKeysByWindowStart.clear();
   state.liveBtcTicksByMarket.forEach((rows) => appendLiveBtcWindowIndex(null, rows || []));
+  invalidateLiveTickPointCache();
 }
 
 function appendLiveBtcPoints(market, incomingPoints) {
@@ -7159,6 +7198,7 @@ function appendLiveBtcPoints(market, incomingPoints) {
     state.liveBtcTicksByMarket.set(key, points);
   });
   appendLiveBtcWindowIndex(market, pointsToAppend);
+  invalidateLiveTickPointCache();
   if (auxChanged) {
     bumpPaperAuxVersion();
   }
