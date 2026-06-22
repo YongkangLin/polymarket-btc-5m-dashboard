@@ -3893,6 +3893,12 @@ function renderSignalDecisionChart(signal, options = {}) {
     const number = Number(value);
     return Number.isFinite(number) && number >= 0 ? book.top + ((1 - Math.max(0, Math.min(1, number))) * book.height) : Number.NaN;
   };
+  const contractPrice = (row, side) => {
+    const bid = sideField(row, side, "bid");
+    const ask = sideField(row, side, "ask");
+    if (bid !== null && ask !== null) return (bid + ask) / 2;
+    return ask ?? bid;
+  };
   const selectedOutcome = decisionOutcome(signal);
   const selectedSide = sideKey(selectedOutcome);
   const oppositeSide = oppositeSideKey(selectedOutcome);
@@ -3943,9 +3949,8 @@ function renderSignalDecisionChart(signal, options = {}) {
     ? backtestBtcPrice(signal, defaultStartPrice)
     : Number(signal.distance_bps || 0);
   const markerTopY = hasBtcPrices ? yBtc(markerTopValue) : yDistance(markerTopValue);
-  const selectedAskPath = linePathFor(rows, (row) => sideField(row, selectedSide, "ask"), xFor, yPrice);
-  const selectedBidPath = linePathFor(rows, (row) => sideField(row, selectedSide, "bid"), xFor, yPrice);
-  const oppositeAskPath = linePathFor(rows, (row) => sideField(row, oppositeSide, "ask"), xFor, yPrice);
+  const upPricePath = linePathFor(rows, (row) => contractPrice(row, "up"), xFor, yPrice);
+  const downPricePath = linePathFor(rows, (row) => contractPrice(row, "down"), xFor, yPrice);
   const gateText = gateRows.map(([label, value, passed], index) => {
     const y = 88 + index * 24;
     return `
@@ -3974,15 +3979,14 @@ function renderSignalDecisionChart(signal, options = {}) {
       <path class="line ${hasBtcPrices ? "line-chainlink" : "line-distance"}" d="${topPath}"></path>
       <line class="signal-marker" x1="${markerX}" y1="${plot.top}" x2="${markerX}" y2="${book.top + book.height}"></line>
       <circle class="dot ${markerClass}" cx="${markerX}" cy="${markerTopY}" r="6"></circle>
-      <path class="line line-ask" d="${selectedAskPath}"></path>
-      <path class="line line-bid" d="${selectedBidPath}"></path>
-      <path class="line line-other" d="${oppositeAskPath}"></path>
+      <path class="line line-up-contract" d="${upPricePath}"></path>
+      <path class="line line-down-contract" d="${downPricePath}"></path>
       <circle class="dot ${markerClass}" cx="${markerX}" cy="${yPrice(Number(signal.signal_ask || selectedAsk || 0))}" r="6"></circle>
       <text class="axis" x="${plot.left + plotWidth / 2}" y="${plot.top - 12}" text-anchor="middle">${hasBtcPrices ? "BTC price during this 5-minute market" : "BTC move from start"}</text>
-      <text class="axis" x="${book.left + plotWidth / 2}" y="${book.top - 12}" text-anchor="middle">${selectedOutcome} contract price</text>
-      <text class="legend ask" x="${book.left + 8}" y="${book.top + 20}">ask</text>
-      <text class="legend bid" x="${book.left + 52}" y="${book.top + 20}">bid</text>
-      <text class="legend other" x="${book.left + 92}" y="${book.top + 20}">other ask</text>
+      <text class="axis" x="${book.left + plotWidth / 2}" y="${book.top - 12}" text-anchor="middle">Up and Down contract prices</text>
+      <text class="legend up-contract" x="${book.left + 8}" y="${book.top + 20}">Up</text>
+      <text class="legend down-contract" x="${book.left + 52}" y="${book.top + 20}">Down</text>
+      <text class="legend marker" x="${book.left + 112}" y="${book.top + 20}">${isSignal ? "buy" : "checked"}</text>
       <text class="axis" x="${book.left + plotWidth / 2}" y="${view.height - 18}" text-anchor="middle">Seconds left</text>
       <rect class="note-box" x="686" y="36" width="274" height="238" rx="6"></rect>
       <text class="axis" x="708" y="64">${escapeHtml(noteTitle)}</text>

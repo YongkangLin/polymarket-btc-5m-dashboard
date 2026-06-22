@@ -587,6 +587,16 @@ svg {
   stroke-dasharray: 5 5;
 }
 
+.line-up-contract {
+  stroke: var(--green);
+  stroke-width: 2.6;
+}
+
+.line-down-contract {
+  stroke: var(--red);
+  stroke-width: 2.6;
+}
+
 .signal-marker {
   stroke: #1b252c;
   stroke-dasharray: 4 5;
@@ -715,6 +725,18 @@ svg {
 
 .legend.external {
   fill: var(--blue);
+}
+
+.legend.up-contract {
+  fill: var(--green);
+}
+
+.legend.down-contract {
+  fill: var(--red);
+}
+
+.legend.marker {
+  fill: var(--ink);
 }
 
 .paper-move-label {
