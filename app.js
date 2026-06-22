@@ -3755,7 +3755,7 @@ function renderStrategyPanels() {
   const quoteMarkets = activeSummary.algorithm_quote_markets ?? activeSummary.quote_markets ?? signalRows().length;
   const totalPnl = activeSummary.algorithm_pnl_dollars ?? activeSummary.pnl_dollars;
   const totalRoi = activeSummary.algorithm_roi_on_filled_cost ?? activeSummary.roi_on_planned_cost;
-  const policy = state.workflow.live_trade.execution_policy || {};
+  const policy = state.workflow.live_trade?.execution_policy || {};
   const liveStatus = policy.maker_route_ready
     ? "Disabled until manual enable"
     : "Disabled";
@@ -4347,11 +4347,11 @@ function gateRow(id, label, actual, target, passed, detail, title) {
 }
 
 function liveStatusRows() {
-  const policy = state.workflow.live_trade.execution_policy || {};
-  const paperChecks = (state.workflow.paper_trade.checks || [])
+  const policy = state.workflow.live_trade?.execution_policy || {};
+  const paperChecks = (state.workflow.paper_trade?.checks || [])
     .filter((row) => row.group === "live_paper")
     .map((row) => ({ ...row, detail: `${formatActual(row.actual)} / ${formatActual(row.target)}` }));
-  const manualChecks = (state.workflow.live_trade.checks || [])
+  const manualChecks = (state.workflow.live_trade?.checks || [])
     .filter((row) => row.group === state.liveGate && row.id === "manual_live_enable")
     .map((row) => ({ ...row, detail: `${formatActual(row.actual)} / ${formatActual(row.target)}` }));
   const fillRate = metricNumber(policy.test_fill_rate);
@@ -6937,7 +6937,7 @@ function renderStatus() {
   const activeSummary = active?.summary || state.workflow.active_backtest?.summary || {};
   const activeBuys = Number(activeSummary.algorithm_fills || activeSummary.traded_markets || activeSummary.quoted_markets || b.signals || 0);
   const activeRoi = metricNumber(activeSummary.algorithm_roi_on_filled_cost ?? activeSummary.roi_on_filled_cost ?? b.roi_after_slippage_haircut);
-  const policy = state.workflow.live_trade.execution_policy || {};
+  const policy = state.workflow.live_trade?.execution_policy || {};
   const makerRoi = metricNumber(policy.walkforward_roi_on_planned_cost ?? activeSummary.maker_walkforward_roi_on_planned_cost);
   const makerTarget = metricNumber(policy.min_walkforward_roi_on_planned_cost) || 0.03;
   const makerReady = Boolean(policy.maker_route_ready);
