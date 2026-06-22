@@ -1,9 +1,9 @@
 const fmt = new Intl.NumberFormat("en-US");
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const moneyCents = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const ACTIVE_BACKTEST_KEY = "t91_150_d2_12_a55_75_e10_pnone_q50";
+const ACTIVE_BACKTEST_KEY = "focus_tiered_a5800_8000_nearq50_minq1c_pressure100_q50";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
-const ACTIVE_PAPER_EDGE_ID = "primary_t91_150_d2_12_a55_75_e10_q50_native";
+const ACTIVE_PAPER_EDGE_ID = "focus_tiered_a5800_8000_nearq50_minq1c_pressure100_q50_native";
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_STREAM_WATCHDOG_MS = 30000;
 const LIVE_TICK_RENDER_THROTTLE_MS = 16;
@@ -1582,6 +1582,7 @@ function backtestSeriesChunkPath(conditionId) {
 
 function rememberBacktestSeriesRows(rows) {
   if (!state.workflow?._seriesByMarket) return;
+  const touchedConditionIds = new Set();
   rows.forEach((row) => {
     if (row.condition_id === undefined && row.market_index !== undefined) {
       const market = state.workflow.backtest.markets[Number(row.market_index)];
@@ -1591,8 +1592,11 @@ function rememberBacktestSeriesRows(rows) {
     if (!row.condition_id) return;
     if (!state.workflow._seriesByMarket.has(row.condition_id)) state.workflow._seriesByMarket.set(row.condition_id, []);
     state.workflow._seriesByMarket.get(row.condition_id).push(row);
+    touchedConditionIds.add(row.condition_id);
   });
-  state.workflow._seriesByMarket.forEach((marketRows) => {
+  touchedConditionIds.forEach((conditionId) => {
+    const marketRows = state.workflow._seriesByMarket.get(conditionId);
+    if (!marketRows) return;
     marketRows.sort((left, right) => Number(right.seconds_left || 0) - Number(left.seconds_left || 0));
   });
 }
@@ -3181,6 +3185,7 @@ function backendBaseUrl() {
 
 function activePaperEdgeId() {
   return configuredPaperEdgeId()
+    || state.workflow?.active_paper_edge_id
     || state.workflow?.paper_trade?.recommended_dashboard_edge_id
     || state.workflow?.paper_trade?.paper_health?.recommended_dashboard_edge_id
     || state.workflow?.paper_trade?.source_edge_id
@@ -3755,6 +3760,8 @@ function renderStrategyPanels() {
   const quoteMarkets = activeSummary.algorithm_quote_markets ?? activeSummary.quote_markets ?? signalRows().length;
   const totalPnl = activeSummary.algorithm_pnl_dollars ?? activeSummary.pnl_dollars;
   const totalRoi = activeSummary.algorithm_roi_on_filled_cost ?? activeSummary.roi_on_planned_cost;
+  const validatedMarkets = activeSummary.algorithm_admitted_markets ?? activeSummary.clean_markets_scanned ?? activeSummary.admitted_markets;
+  const chartMarkets = activeSummary.complete_series_markets ?? activeSummary.admitted_markets;
   const policy = state.workflow.live_trade?.execution_policy || {};
   const liveStatus = policy.maker_route_ready
     ? "Disabled until manual enable"
@@ -3764,7 +3771,7 @@ function renderStrategyPanels() {
     strategyCell("Buy Rule", ruleSummaryText()),
     strategyCell(
       "Result",
-      `${fmt.format(quoteMarkets)} historical quotes | ${formatSignedMoney(totalPnl)} P&L | ${formatPercent(totalRoi)} return`,
+      `${fmt.format(quoteMarkets)} quotes | ${formatSignedMoney(totalPnl)} P&L | ${formatPercent(totalRoi)} return | ${fmt.format(chartMarkets || 0)} charted / ${fmt.format(validatedMarkets || 0)} validated`,
     ),
   ].join("");
   const paperStrategy = byId("paperStrategy");
@@ -3789,6 +3796,7 @@ function marketDecisionSummary(row, market, isSignal) {
       ?? activeSummary.clean_markets_scanned,
   );
   const buyCount = metricNumber(activeSummary.algorithm_fills ?? activeSummary.fills ?? activeSummary.filled_markets ?? activeSummary.signals) ?? 0;
+  const chartMarkets = metricNumber(activeSummary.complete_series_markets ?? activeSummary.admitted_markets);
   const totalPnl = metricNumber(activeSummary.algorithm_pnl_dollars ?? activeSummary.pnl_dollars);
   const totalRoi = metricNumber(activeSummary.algorithm_roi_on_filled_cost ?? activeSummary.roi_on_filled_cost ?? activeSummary.roi_on_planned_cost);
   const winRate = metricNumber(activeSummary.algorithm_win_rate_on_fills ?? activeSummary.win_rate_on_fills);
@@ -3817,7 +3825,7 @@ function marketDecisionSummary(row, market, isSignal) {
     : `The closest checked moment failed the rule: ${rejectReasonLabel(row.reason)}.`;
   return {
     totalHeadline: `${formatSignedMoney(totalPnl)} total P&L`,
-    totalResult: `${fmt.format(cleanMarkets || 0)} clean markets | ${fmt.format(buyCount)} buys | ${formatPercent(totalRoi)} return`,
+    totalResult: `${fmt.format(buyCount)} buys | ${formatPercent(totalRoi)} return | ${fmt.format(chartMarkets || 0)} charted / ${fmt.format(cleanMarkets || 0)} validated`,
     headline,
     result,
     reason,
@@ -6937,6 +6945,8 @@ function renderStatus() {
   const activeSummary = active?.summary || state.workflow.active_backtest?.summary || {};
   const activeBuys = Number(activeSummary.algorithm_fills || activeSummary.traded_markets || activeSummary.quoted_markets || b.signals || 0);
   const activeRoi = metricNumber(activeSummary.algorithm_roi_on_filled_cost ?? activeSummary.roi_on_filled_cost ?? b.roi_after_slippage_haircut);
+  const validatedMarkets = metricNumber(activeSummary.algorithm_admitted_markets ?? q.clean_markets ?? activeSummary.clean_markets_scanned);
+  const chartMarkets = metricNumber(activeSummary.complete_series_markets ?? activeSummary.admitted_markets ?? q.complete_series_markets);
   const policy = state.workflow.live_trade?.execution_policy || {};
   const makerRoi = metricNumber(policy.walkforward_roi_on_planned_cost ?? activeSummary.maker_walkforward_roi_on_planned_cost);
   const makerTarget = metricNumber(policy.min_walkforward_roi_on_planned_cost) || 0.03;
@@ -6944,7 +6954,7 @@ function renderStatus() {
   const makerText = makerRoi === null
     ? ""
     : ` | ${makerReady ? "paper-ready" : "not ready"} | WF ${formatPercent(makerRoi)}/${formatPercent(makerTarget)}`;
-  byId("statusText").textContent = `${fmt.format(q.clean_markets || 0)} backtest markets | ${fmt.format(activeBuys)} buys | ROI ${formatPercent(activeRoi)}${makerText}`;
+  byId("statusText").textContent = `${fmt.format(chartMarkets || 0)} charted / ${fmt.format(validatedMarkets || 0)} validated | ${fmt.format(activeBuys)} buys | ROI ${formatPercent(activeRoi)}${makerText}`;
 }
 
 function currentPaperViewSelected() {
@@ -7108,16 +7118,16 @@ function recomputeLiveTickDistances(market) {
 function scheduleLiveTickRender() {
   if (!["paper", "live"].includes(state.activeTab) || !currentPaperViewSelected()) return;
   if (liveTickRenderFrame) return;
-  liveTickRenderFrame = window.requestAnimationFrame((timestamp) => {
+  const now = performance.now();
+  const waitMs = Math.max(0, LIVE_TICK_RENDER_THROTTLE_MS - (now - liveTickLastRenderAt));
+  liveTickRenderFrame = window.setTimeout(() => {
     liveTickRenderFrame = null;
-    if (timestamp - liveTickLastRenderAt < LIVE_TICK_RENDER_THROTTLE_MS) {
-      scheduleLiveTickRender();
-      return;
-    }
-    liveTickLastRenderAt = timestamp;
-    if (state.activeTab === "paper" && currentPaperViewSelected()) renderPaperChart({ selects: false });
-    if (state.activeTab === "live" && currentPaperViewSelected()) renderLiveChart();
-  });
+    window.requestAnimationFrame((timestamp) => {
+      liveTickLastRenderAt = timestamp;
+      if (state.activeTab === "paper" && currentPaperViewSelected()) renderPaperChart({ selects: false });
+      if (state.activeTab === "live" && currentPaperViewSelected()) renderLiveChart();
+    });
+  }, waitMs);
 }
 
 function liveChartClockShouldRun() {
@@ -7163,7 +7173,7 @@ function closeLiveTickStream() {
     liveTickSocket = null;
   }
   if (liveTickRenderFrame) {
-    window.cancelAnimationFrame(liveTickRenderFrame);
+    window.clearTimeout(liveTickRenderFrame);
     liveTickRenderFrame = null;
   }
   state.liveTickStatus.state = "idle";
