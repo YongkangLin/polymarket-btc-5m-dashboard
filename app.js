@@ -118,6 +118,8 @@ const state = {
   paperGraph: PAPER_CURRENT_VALUE,
   liveBtcTicksByMarket: new Map(),
   liveBtcTickKeysByMarket: new Map(),
+  liveBtcTicksByWindowStart: new Map(),
+  liveBtcTickKeysByWindowStart: new Map(),
   paperLiveChartScales: new Map(),
   livePersistedMarkets: new Map(),
   paperObservedMarkets: new Map(),
@@ -1783,6 +1785,14 @@ function pruneNonCurrentPaperState() {
       if (rowStart !== currentStart) map.delete(key);
     });
   });
+  [
+    state.liveBtcTicksByWindowStart,
+    state.liveBtcTickKeysByWindowStart,
+  ].forEach((map) => {
+    [...map.keys()].forEach((key) => {
+      if (metricNumber(key) !== currentStart) map.delete(key);
+    });
+  });
   [...state.paperLiveChartScales.keys()].forEach((key) => {
     if (!key.includes(String(currentStart))) state.paperLiveChartScales.delete(key);
   });
@@ -2440,6 +2450,11 @@ function rowBelongsToMarketWindow(row, market) {
 function liveTickPointsForCurrentWindow(market, predicate = null) {
   const start = marketWindowStartUnix(market);
   if (start === null) return [];
+  const indexedRows = state.liveBtcTicksByWindowStart.get(String(start)) || [];
+  if (indexedRows.length) {
+    const rows = predicate ? indexedRows.filter(predicate) : indexedRows;
+    return mergePaperChartRows(rows, []);
+  }
   const windowMarket = { window_start_unix: start, window_end_unix: start + 300 };
   const rows = [];
   state.liveBtcTicksByMarket.forEach((points) => {
@@ -2516,6 +2531,7 @@ function loadPersistedPaperTicks() {
     state.liveBtcTickKeysByMarket = new Map(
       [...state.liveBtcTicksByMarket.entries()].map(([key, rows]) => [key, new Set((rows || []).map(liveBtcPointKey))]),
     );
+    rebuildLiveBtcWindowIndex();
     const restoredMarkets = new Set([
       ...state.livePersistedMarkets.keys(),
       ...state.paperObservedMarkets.keys(),
@@ -3017,6 +3033,7 @@ function rowHasDisplayPolymarketBook(row) {
 
 function rowHasStickyPolymarketOdds(row) {
   if (!row || isActionOnlyPaperOddsRow(row)) return false;
+  if (row._odds_sticky_only === true) return false;
   const source = [
     row.polymarket_book_source,
     row.probability_source,
@@ -5222,7 +5239,7 @@ function rememberOutcomeOddsForWindow(anchor, candidates = []) {
     window_end_unix: numericKey + 300,
     slug: `btc-updown-5m-${numericKey}`,
     market_key: `btc-updown-5m-${numericKey}`,
-    _odds_updated_micro: incomingTime || existingTime || Date.now() * 1000,
+    _odds_updated_micro: incomingTime || existingTime || null,
   };
   copyLocalOutcomeBookFields(odds, source);
   if (up !== null) {
@@ -5483,20 +5500,33 @@ function stickyOutcomeOddsForMarket(market, odds) {
     rowHasDisplayedOutcomeOdds,
   )[0] || null;
   const cached = cachedOutcomeOddsForMarket(market);
-  const fallback = [
+  const fallbackRow = [
     previouslyDisplayed,
     cached,
     ...outcomeOddsMapRowsForMarket(state.latestOutcomeOddsByWindow, market, rowHasDisplayedOutcomeOdds),
     ...outcomeOddsMapRowsForMarket(state.lastDisplayedOutcomeOddsByWindow, market, rowHasDisplayedOutcomeOdds),
     ...outcomeOddsMapRowsForMarket(state.lastRenderedOutcomeOddsByWindow, market, rowHasDisplayedOutcomeOdds),
   ]
-    .map(outcomeOddsPairFromRow)
-    .find((row) => row.up !== null || row.down !== null) || null;
+    .find((row) => {
+      const pair = outcomeOddsPairFromRow(row);
+      return pair.up !== null || pair.down !== null;
+    }) || null;
+  const fallback = fallbackRow ? outcomeOddsPairFromRow(fallbackRow) : null;
   const resolved = completeOutcomeOdds(
     odds,
     fallback,
   );
   if (resolved.up !== null || resolved.down !== null) {
+    const inputHasOdds = metricNumber(odds?.up) !== null || metricNumber(odds?.down) !== null;
+    const sourceRow = inputHasOdds ? { ...(market || {}), ...(odds || {}) } : fallbackRow;
+    const sourceTime = outcomeOddsTimestampMicro(sourceRow)
+      ?? outcomeOddsTimestampMicro(fallbackRow)
+      ?? outcomeOddsTimestampMicro(market);
+    const sourceName = sourceRow?.probability_source
+      || sourceRow?.market_probability_source
+      || sourceRow?.polymarket_book_source
+      || (inputHasOdds ? "local_postgres_polymarket_order_books" : "cached_polymarket_odds");
+    const stickyOnly = !inputHasOdds || sourceTime === null;
     const stored = {
       up: resolved.up,
       down: resolved.down,
@@ -5510,15 +5540,19 @@ function stickyOutcomeOddsForMarket(market, odds) {
       window_end_unix: start === null ? null : start + 300,
       slug: start === null ? paperGraphKey(market) : `btc-updown-5m-${start}`,
       market_key: start === null ? paperGraphKey(market) : `btc-updown-5m-${start}`,
-      polymarket_book_source: "local_postgres_polymarket_order_books",
-      probability_source: "local_postgres_polymarket_order_books",
-      market_probability_source: "local_postgres_polymarket_order_books",
-      _odds_updated_micro: Date.now() * 1000,
+      polymarket_book_source: sourceRow?.polymarket_book_source || sourceName,
+      probability_source: sourceName,
+      market_probability_source: sourceName,
+      market_odds_fetched_at: sourceRow?.market_odds_fetched_at,
+      market_odds_stale: stickyOnly ? true : sourceRow?.market_odds_stale,
+      market_odds_error: sourceRow?.market_odds_error,
+      _odds_updated_micro: sourceTime,
+      _odds_sticky_only: stickyOnly,
     };
     keys.forEach((key) => {
       state.lastDisplayedOutcomeOddsByWindow.set(key, stored);
       state.lastRenderedOutcomeOddsByWindow.set(key, stored);
-      state.latestOutcomeOddsByWindow.set(key, stored);
+      if (!stickyOnly) state.latestOutcomeOddsByWindow.set(key, stored);
     });
   }
   return resolved;
@@ -7044,6 +7078,54 @@ function trimLiveBtcPointsForKey(key, points) {
   return trimmed;
 }
 
+function liveTickWindowKeyForStart(start) {
+  const number = metricNumber(start);
+  return number === null ? "" : String(Math.floor(number));
+}
+
+function liveTickWindowKeyForPoint(point, market = null) {
+  return liveTickWindowKeyForStart(marketWindowStartUnix(point) ?? marketWindowStartUnix(market));
+}
+
+function liveTickKeySetForWindow(key, points) {
+  let keySet = state.liveBtcTickKeysByWindowStart.get(key);
+  if (!keySet) {
+    keySet = new Set((points || []).map(liveBtcPointKey));
+    state.liveBtcTickKeysByWindowStart.set(key, keySet);
+  }
+  return keySet;
+}
+
+function trimLiveBtcPointsForWindowKey(key, points) {
+  if (!Array.isArray(points) || !points.length) return [];
+  const maxRows = LIVE_TICK_STORE_MAX_POINTS_PER_MARKET + LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET;
+  const recentPoints = sourceBalancedRecentLiveTickRows(points);
+  const trimmed = recentPoints.length > maxRows ? balancedLiveTickRows(recentPoints, maxRows) : recentPoints;
+  state.liveBtcTickKeysByWindowStart.set(key, new Set(trimmed.map(liveBtcPointKey)));
+  return trimmed;
+}
+
+function appendLiveBtcWindowIndex(market, pointsToAppend) {
+  (pointsToAppend || []).forEach((point) => {
+    const key = liveTickWindowKeyForPoint(point, market);
+    if (!key) return;
+    let rows = state.liveBtcTicksByWindowStart.get(key) || [];
+    const keySet = liveTickKeySetForWindow(key, rows);
+    const pointKey = liveBtcPointKey(point);
+    if (keySet.has(pointKey)) return;
+    keySet.add(pointKey);
+    rows.push(point);
+    rows = trimLiveBtcPointsForWindowKey(key, rows);
+    state.liveBtcTicksByWindowStart.set(key, rows);
+  });
+}
+
+function rebuildLiveBtcWindowIndex() {
+  state.liveBtcTicksByWindowStart.clear();
+  state.liveBtcTickKeysByWindowStart.clear();
+  state.liveBtcTicksByMarket.forEach((rows) => appendLiveBtcWindowIndex(null, rows || []));
+}
+
 function appendLiveBtcPoints(market, incomingPoints) {
   const keys = liveTickStorageKeysForMarket(market);
   const pointsToAppend = (incomingPoints || []).filter((point) => isBinanceLivePoint(point) || isChainlinkPriceRow(point));
@@ -7076,6 +7158,7 @@ function appendLiveBtcPoints(market, incomingPoints) {
     points = trimLiveBtcPointsForKey(key, points);
     state.liveBtcTicksByMarket.set(key, points);
   });
+  appendLiveBtcWindowIndex(market, pointsToAppend);
   if (auxChanged) {
     bumpPaperAuxVersion();
   }
