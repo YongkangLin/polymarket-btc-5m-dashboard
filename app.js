@@ -3701,6 +3701,9 @@ function paperRouteGateCells() {
 
 function renderStrategyPanels() {
   const activeSummary = state.workflow.active_backtest?.summary || {};
+  const quoteMarkets = activeSummary.algorithm_quote_markets ?? activeSummary.quote_markets ?? signalRows().length;
+  const totalPnl = activeSummary.algorithm_pnl_dollars ?? activeSummary.pnl_dollars;
+  const totalRoi = activeSummary.algorithm_roi_on_filled_cost ?? activeSummary.roi_on_planned_cost;
   const policy = state.workflow.live_trade.execution_policy || {};
   const liveStatus = policy.maker_route_ready
     ? "Disabled until manual enable"
@@ -3710,7 +3713,7 @@ function renderStrategyPanels() {
     strategyCell("Buy Rule", ruleSummaryText()),
     strategyCell(
       "Result",
-      `${fmt.format(activeSummary.quote_markets || signalRows().length)} historical quotes | ${formatSignedMoney(activeSummary.pnl_dollars)} P&L | ${formatPercent(activeSummary.roi_on_planned_cost)} return`,
+      `${fmt.format(quoteMarkets)} historical quotes | ${formatSignedMoney(totalPnl)} P&L | ${formatPercent(totalRoi)} return`,
     ),
   ].join("");
   const paperStrategy = byId("paperStrategy");
@@ -3729,18 +3732,19 @@ function renderStrategyPanels() {
 function marketDecisionSummary(row, market, isSignal) {
   const activeSummary = state.workflow.active_backtest?.summary || state.workflow.backtest?.summary || {};
   const cleanMarkets = metricNumber(
-    activeSummary.complete_series_markets
+    activeSummary.algorithm_admitted_markets
+      ?? activeSummary.complete_series_markets
       ?? activeSummary.admitted_markets
       ?? activeSummary.clean_markets_scanned,
   );
-  const buyCount = metricNumber(activeSummary.fills ?? activeSummary.filled_markets ?? activeSummary.signals) ?? 0;
-  const totalPnl = metricNumber(activeSummary.pnl_dollars);
-  const totalRoi = metricNumber(activeSummary.roi_on_filled_cost ?? activeSummary.roi_on_planned_cost);
-  const winRate = metricNumber(activeSummary.win_rate_on_fills);
-  const walkforwardPositive = metricNumber(activeSummary.walkforward_positive_folds);
-  const walkforwardFolds = metricNumber(activeSummary.walkforward_folds);
-  const trainRoi = metricNumber(activeSummary.train_roi_on_filled_cost);
-  const testRoi = metricNumber(activeSummary.test_roi_on_filled_cost);
+  const buyCount = metricNumber(activeSummary.algorithm_fills ?? activeSummary.fills ?? activeSummary.filled_markets ?? activeSummary.signals) ?? 0;
+  const totalPnl = metricNumber(activeSummary.algorithm_pnl_dollars ?? activeSummary.pnl_dollars);
+  const totalRoi = metricNumber(activeSummary.algorithm_roi_on_filled_cost ?? activeSummary.roi_on_filled_cost ?? activeSummary.roi_on_planned_cost);
+  const winRate = metricNumber(activeSummary.algorithm_win_rate_on_fills ?? activeSummary.win_rate_on_fills);
+  const walkforwardPositive = metricNumber(activeSummary.algorithm_walkforward_positive_folds ?? activeSummary.walkforward_positive_folds);
+  const walkforwardFolds = metricNumber(activeSummary.algorithm_walkforward_folds ?? activeSummary.walkforward_folds);
+  const trainRoi = metricNumber(activeSummary.algorithm_train_roi_on_filled_cost ?? activeSummary.train_roi_on_filled_cost);
+  const testRoi = metricNumber(activeSummary.algorithm_test_roi_on_filled_cost ?? activeSummary.test_roi_on_filled_cost);
   const outcome = decisionOutcome(row);
   const selectedSide = sideKey(outcome);
   const selectedAsk = sideField(row, selectedSide, "ask") ?? metricNumber(row.signal_ask);
@@ -3782,20 +3786,21 @@ function marketDecisionSummary(row, market, isSignal) {
 function backtestPerformanceSummary() {
   const activeSummary = state.workflow.active_backtest?.summary || state.workflow.backtest?.summary || {};
   const cleanMarkets = metricNumber(
-    activeSummary.complete_series_markets
+    activeSummary.algorithm_admitted_markets
+      ?? activeSummary.complete_series_markets
       ?? activeSummary.admitted_markets
       ?? activeSummary.clean_markets_scanned,
   ) ?? 0;
-  const buyCount = metricNumber(activeSummary.fills ?? activeSummary.filled_markets ?? activeSummary.signals) ?? 0;
-  const quoteMarkets = metricNumber(activeSummary.quote_markets ?? activeSummary.quoted_markets) ?? buyCount;
-  const totalPnl = metricNumber(activeSummary.pnl_dollars);
-  const totalRoi = metricNumber(activeSummary.roi_on_filled_cost ?? activeSummary.roi_on_planned_cost);
-  const winRate = metricNumber(activeSummary.win_rate_on_fills);
-  const filledCost = metricNumber(activeSummary.filled_cost);
-  const walkforwardPositive = metricNumber(activeSummary.walkforward_positive_folds);
-  const walkforwardFolds = metricNumber(activeSummary.walkforward_folds);
-  const trainRoi = metricNumber(activeSummary.train_roi_on_filled_cost);
-  const testRoi = metricNumber(activeSummary.test_roi_on_filled_cost);
+  const buyCount = metricNumber(activeSummary.algorithm_fills ?? activeSummary.fills ?? activeSummary.filled_markets ?? activeSummary.signals) ?? 0;
+  const quoteMarkets = metricNumber(activeSummary.algorithm_quote_markets ?? activeSummary.quote_markets ?? activeSummary.quoted_markets) ?? buyCount;
+  const totalPnl = metricNumber(activeSummary.algorithm_pnl_dollars ?? activeSummary.pnl_dollars);
+  const totalRoi = metricNumber(activeSummary.algorithm_roi_on_filled_cost ?? activeSummary.roi_on_filled_cost ?? activeSummary.roi_on_planned_cost);
+  const winRate = metricNumber(activeSummary.algorithm_win_rate_on_fills ?? activeSummary.win_rate_on_fills);
+  const filledCost = metricNumber(activeSummary.algorithm_filled_cost ?? activeSummary.filled_cost);
+  const walkforwardPositive = metricNumber(activeSummary.algorithm_walkforward_positive_folds ?? activeSummary.walkforward_positive_folds);
+  const walkforwardFolds = metricNumber(activeSummary.algorithm_walkforward_folds ?? activeSummary.walkforward_folds);
+  const trainRoi = metricNumber(activeSummary.algorithm_train_roi_on_filled_cost ?? activeSummary.train_roi_on_filled_cost);
+  const testRoi = metricNumber(activeSummary.algorithm_test_roi_on_filled_cost ?? activeSummary.test_roi_on_filled_cost);
   return {
     cleanMarkets,
     buyCount,
@@ -6865,8 +6870,8 @@ function renderStatus() {
   const b = state.workflow.backtest.summary || {};
   const active = activeCandidateStrategy();
   const activeSummary = active?.summary || state.workflow.active_backtest?.summary || {};
-  const activeBuys = Number(activeSummary.traded_markets || activeSummary.quoted_markets || b.signals || 0);
-  const activeRoi = metricNumber(activeSummary.roi_on_filled_cost ?? b.roi_after_slippage_haircut);
+  const activeBuys = Number(activeSummary.algorithm_fills || activeSummary.traded_markets || activeSummary.quoted_markets || b.signals || 0);
+  const activeRoi = metricNumber(activeSummary.algorithm_roi_on_filled_cost ?? activeSummary.roi_on_filled_cost ?? b.roi_after_slippage_haircut);
   const policy = state.workflow.live_trade.execution_policy || {};
   const makerRoi = metricNumber(policy.walkforward_roi_on_planned_cost ?? activeSummary.maker_walkforward_roi_on_planned_cost);
   const makerTarget = metricNumber(policy.min_walkforward_roi_on_planned_cost) || 0.03;
