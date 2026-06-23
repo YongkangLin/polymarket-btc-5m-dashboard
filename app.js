@@ -3185,8 +3185,7 @@ function isExternalDepthPricePoint(row) {
 
 function isExternalGraphPricePoint(row) {
   return isExternalBookTickerPricePoint(row)
-    || isExternalDepthPricePoint(row)
-    || isExternalTradePricePoint(row);
+    || isExternalDepthPricePoint(row);
 }
 
 function priceChangingRows(rows, minDollarChange = 0.01) {
