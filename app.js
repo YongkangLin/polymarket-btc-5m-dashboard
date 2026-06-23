@@ -21,7 +21,7 @@ const LIVE_TICK_PERSIST_MS = 7500;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 2600;
 const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 80;
 const LIVE_TICK_PERSIST_POINTS_PER_MARKET = 1800;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v23";
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v24";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
   "polymarketPaperLiveTicks.v3",
@@ -44,6 +44,7 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v20",
   "polymarketPaperLiveTicks.v21",
   "polymarketPaperLiveTicks.v22",
+  "polymarketPaperLiveTicks.v23",
 ];
 const LIVE_PAPER_X_WINDOW_SECONDS = 15;
 const LIVE_PAPER_X_LEAD_SECONDS = 2;
@@ -3183,8 +3184,22 @@ function isExternalDepthPricePoint(row) {
   return isExternalBookPricePoint(row) && row?.backend_event_kind === "depth";
 }
 
+function externalGraphPrice(row) {
+  if (!isExternalBookPricePoint(row)) return null;
+  const bid = metricNumber(row?.book_bid);
+  const ask = metricNumber(row?.book_ask);
+  if (bid === null || ask === null || bid <= 0 || ask <= 0 || ask < bid) return null;
+  const mid = metricNumber(row?.book_mid) ?? ((bid + ask) / 2);
+  if (!Number.isFinite(mid) || mid <= 0) return null;
+  const spreadBps = ((ask - bid) / mid) * 10000;
+  if (!Number.isFinite(spreadBps) || spreadBps > 25) return null;
+  const micro = metricNumber(row?.book_microprice);
+  if (micro !== null && micro > 0 && micro >= bid && micro <= ask) return micro;
+  return mid;
+}
+
 function isExternalGraphPricePoint(row) {
-  const price = metricNumber(row?.btc_price);
+  const price = externalGraphPrice(row);
   return price !== null
     && price > 0
     && (isExternalBookTickerPricePoint(row) || isExternalDepthPricePoint(row));
@@ -3425,8 +3440,9 @@ function paperGraphElapsedSeconds(row, index, total, source) {
 
 function paperGraphSample(row, index, total, startPrice, source) {
   const elapsedSeconds = paperGraphElapsedSeconds(row, index, total, source);
-  const dollarMove = paperDollarMoveFromStart(row, startPrice);
-  const btcPrice = metricNumber(row?.btc_price);
+  const btcPrice = source === "binance" ? externalGraphPrice(row) : metricNumber(row?.btc_price);
+  const start = metricNumber(startPrice);
+  const dollarMove = btcPrice !== null && start !== null ? btcPrice - start : null;
   if (!Number.isFinite(elapsedSeconds) || !Number.isFinite(dollarMove)) return null;
   return {
     row,
@@ -3445,7 +3461,7 @@ function graphBaselineItem(rows, source, maxElapsedSeconds = 5, allowFirstFallba
       row,
       index,
       elapsedSeconds: paperGraphElapsedSeconds(row, index, rows.length, source),
-      price: metricNumber(row?.btc_price),
+      price: source === "binance" ? externalGraphPrice(row) : metricNumber(row?.btc_price),
     }))
     .filter((item) => item.price !== null && item.price > 0 && Number.isFinite(item.elapsedSeconds))
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds || left.index - right.index);
