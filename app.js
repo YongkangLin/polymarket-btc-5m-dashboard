@@ -67,7 +67,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 120;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 600;
 const LIVE_RENDER_POINTS_PER_PIXEL = 0.85;
 const LIVE_AUX_VERSION_THROTTLE_MS = 750;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v48-fast-uplot";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v49-fast-odds-slot";
 const LIVE_BINANCE_MAX_RENDER_JUMP_DOLLARS = 60;
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
@@ -5571,10 +5571,17 @@ function paperOutcomeProbabilities(market, latestRaw, latestBookRaw) {
   return odds;
 }
 
+function resolvedPaperOddsMarket(market) {
+  if (market) return market;
+  const shell = currentBackendLiveMarketShell();
+  return cachedOutcomeOddsForMarket(shell) ? shell : null;
+}
+
 function renderPaperOddsStrip(market, latestRaw, latestBookRaw, odds = null) {
-  if (!market) return "";
-  const displayOdds = odds || paperPanelDisplayOutcomeProbabilities(market, latestRaw, latestBookRaw);
-  const sticky = stickyOutcomeOddsForMarket(market, displayOdds);
+  const oddsMarket = resolvedPaperOddsMarket(market);
+  if (!oddsMarket) return "";
+  const displayOdds = odds || paperPanelDisplayOutcomeProbabilities(oddsMarket, latestRaw, latestBookRaw);
+  const sticky = stickyOutcomeOddsForMarket(oddsMarket, displayOdds);
   const resolved = {
     ...displayOdds,
     up: sticky.up,
@@ -5590,7 +5597,20 @@ function renderPaperOddsStrip(market, latestRaw, latestBookRaw, odds = null) {
         <span>DOWN</span>
         <strong class="move-down">${escapeHtml(formatOutcomePercent(resolved.down, resolved.downNoSellers ? "No sellers" : "Waiting"))}</strong>
       </div>
-    </div>`;
+      </div>`;
+}
+
+function refreshVisiblePaperOddsSlots(market = null) {
+  const oddsMarket = resolvedPaperOddsMarket(market) || selectedPaperMarket() || currentBackendLiveMarketShell();
+  const html = renderPaperOddsStrip(oddsMarket, null, null);
+  if (!html) return;
+  ["paperChart", "liveChart"].forEach((chartId) => {
+    const chart = byId(chartId);
+    const slot = chart?.querySelector?.(".paper-live-odds-slot, .paper-live-status-slot");
+    if (!slot || slot._paperOddsHtml === html) return;
+    slot.innerHTML = html;
+    slot._paperOddsHtml = html;
+  });
 }
 
 function stickyOutcomeOddsForMarket(market, odds) {
@@ -7021,6 +7041,7 @@ function renderPaperDecisionGraph(options = {}) {
         </div>
         <div class="paper-live-side-slot"></div>
       </div>
+      <div class="paper-live-odds-slot"></div>
       <div class="paper-live-status-slot"></div>`;
   } else {
     visualHtml = `${liveNotice}
@@ -7066,7 +7087,12 @@ function renderPaperDecisionGraph(options = {}) {
       sideSlot._paperSideUpdatedAt = uiNow;
     }
     const statusSlot = chart.querySelector(".paper-live-status-slot");
-    const statusHtml = `${oddsStrip}${compactInfoRows}`;
+    const oddsSlot = chart.querySelector(".paper-live-odds-slot");
+    if (oddsSlot && oddsSlot._paperOddsHtml !== oddsStrip) {
+      oddsSlot.innerHTML = oddsStrip;
+      oddsSlot._paperOddsHtml = oddsStrip;
+    }
+    const statusHtml = `${compactInfoRows}`;
     if (statusSlot && statusSlot._paperStatusHtml !== statusHtml && (
       statusSlot._paperStatusKey !== liveUiKey
       || !selectedCurrent
@@ -7616,7 +7642,8 @@ function handleBackendStreamMessage(payload) {
       lastStreamAt: new Date(),
       url: backendWebSocketUrl(),
     };
-    bumpPaperAuxVersion();
+    bumpPaperAuxVersion(true);
+    refreshVisiblePaperOddsSlots(market || payload.market);
     flushPaperTickPersist();
     scheduleLiveTickRender();
     return;
