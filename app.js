@@ -21,7 +21,7 @@ const LIVE_TICK_PERSIST_MS = 7500;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 2600;
 const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 80;
 const LIVE_TICK_PERSIST_POINTS_PER_MARKET = 1800;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v25";
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v26";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
   "polymarketPaperLiveTicks.v3",
@@ -46,6 +46,7 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v22",
   "polymarketPaperLiveTicks.v23",
   "polymarketPaperLiveTicks.v24",
+  "polymarketPaperLiveTicks.v25",
 ];
 const LIVE_PAPER_X_WINDOW_SECONDS = 15;
 const LIVE_PAPER_X_LEAD_SECONDS = 2;
@@ -64,7 +65,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 260;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 1200;
 const LIVE_RENDER_POINTS_PER_PIXEL = 1.75;
 const LIVE_AUX_VERSION_THROTTLE_MS = 250;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v45-spot-book-line";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v46-normalized-book-line";
 const LIVE_BINANCE_MAX_RENDER_JUMP_DOLLARS = 60;
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
@@ -1385,7 +1386,7 @@ function uPlotDataFromSamples(truthSamples, externalSamples) {
     chainlinkValues.push(current.chainlink);
     binanceValues.push(current.binance);
   }
-  return [x, chainlinkValues, binanceValues];
+  return [x, binanceValues, chainlinkValues];
 }
 
 function liveSampleSignature(sample) {
@@ -1512,8 +1513,8 @@ function updatePaperUPlot(chart, options) {
       ],
       series: [
         {},
-        { label: "Chainlink", stroke: "#148256", width: 2, spanGaps: false, points: { show: false } },
         { label: "Binance", stroke: "#005bff", width: 2, spanGaps: false, points: { show: false } },
+        { label: "Chainlink", stroke: "#148256", width: 2, spanGaps: false, points: { show: false } },
       ],
     });
     const existing = state.paperUPlotCharts.get(chart.id || "paperChart");
@@ -2402,8 +2403,8 @@ function balancedLiveTickRows(rows, maxRows) {
   if (currentRows.length <= maxRows) return currentRows;
   const first = currentRows[0];
   const chainlinkRows = currentRows.filter(isChainlinkPriceRow);
-  const binanceRows = currentRows.filter(isBinanceLivePoint);
-  const otherRows = currentRows.filter((row) => !isChainlinkPriceRow(row) && !isBinanceLivePoint(row));
+  const binanceRows = currentRows.filter(isBinanceDashboardPoint);
+  const otherRows = currentRows.filter((row) => !isChainlinkPriceRow(row) && !isBinanceDashboardPoint(row));
   if (!chainlinkRows.length || !binanceRows.length) {
     return [first, ...currentRows.slice(-(maxRows - 1))];
   }
@@ -2456,8 +2457,8 @@ function sourceBalancedRecentLiveTickRows(rows) {
   const currentRows = sortRowsIfNeeded((rows || []).filter((row) => currentWindowRow(row)), pointTimestampMicro);
   if (!currentRows.length) return [];
   const chainlinkRows = currentRows.filter(isChainlinkPriceRow);
-  const binanceRows = currentRows.filter(isBinanceLivePoint);
-  const otherRows = currentRows.filter((row) => !isChainlinkPriceRow(row) && !isBinanceLivePoint(row));
+  const binanceRows = currentRows.filter(isBinanceDashboardPoint);
+  const otherRows = currentRows.filter((row) => !isChainlinkPriceRow(row) && !isBinanceDashboardPoint(row));
   const seen = new Set();
   const selected = [];
   [
@@ -2690,6 +2691,10 @@ function isBinanceLivePoint(point) {
   return ["trade", "book", "depth"].includes(point?.backend_event_kind);
 }
 
+function isBinanceDashboardPoint(point) {
+  return isBinanceLivePoint(point) && ["book", "depth"].includes(point?.backend_event_kind);
+}
+
 function isBackendLivePoint(point) {
   const venue = String(point?.btc_price_venue || "");
   return venue.startsWith("local_backend_binance_ws");
@@ -2706,7 +2711,7 @@ function isPaperEventPoint(point) {
 }
 
 function shouldPersistLivePoint(point) {
-  return isBinanceLivePoint(point) || isChainlinkPriceRow(point);
+  return isBinanceDashboardPoint(point) || isChainlinkPriceRow(point);
 }
 
 function liveTickPointsForMarket(market) {
@@ -2725,7 +2730,7 @@ function liveTickPointsForMarket(market) {
   const seen = new Set();
   const rows = [];
   const addPoint = (point) => {
-    if (!isBinanceLivePoint(point) && !isChainlinkPriceRow(point)) return;
+    if (!isBinanceDashboardPoint(point) && !isChainlinkPriceRow(point)) return;
     if (!rowBelongsToMarketWindow(point, market)) return;
     const pointKey = point.point_id || `${point.decision}:${pointTimestampMicro(point)}:${point.btc_price}`;
     if (seen.has(pointKey)) return;
@@ -3479,6 +3484,28 @@ function graphBaselineItem(rows, source, maxElapsedSeconds = 5, allowFirstFallba
 
 function graphBaselinePrice(rows, source, fallbackPrice = null, allowFirstFallback = false) {
   return graphBaselineItem(rows, source, 5, allowFirstFallback)?.price ?? metricNumber(fallbackPrice);
+}
+
+function sourceBaselinePriceForMarket(market, source, rows, fallbackPrice = null) {
+  const fallback = metricNumber(fallbackPrice);
+  const nearOpen = graphBaselineItem(rows, source, 5, false);
+  const firstObserved = nearOpen || graphBaselineItem(rows, source, 300, true);
+  const candidate = metricNumber(nearOpen?.price ?? firstObserved?.price ?? fallback);
+  if (candidate === null || candidate <= 0) return null;
+  const key = paperLiveScaleKey(market);
+  const cached = state.paperLiveChartScales.get(key) || {};
+  const priceField = `${source}BaselinePrice`;
+  const reliableField = `${source}BaselineNearOpen`;
+  const cachedPrice = metricNumber(cached[priceField]);
+  const cachedNearOpen = cached[reliableField] === true;
+  const candidateNearOpen = Boolean(nearOpen);
+  if (cachedPrice !== null && cachedPrice > 0 && (cachedNearOpen || !candidateNearOpen)) return cachedPrice;
+  state.paperLiveChartScales.set(key, {
+    ...cached,
+    [priceField]: candidate,
+    [reliableField]: candidateNearOpen,
+  });
+  return candidate;
 }
 
 function paperGraphSamples(rows, startPrice, source) {
@@ -6645,10 +6672,10 @@ function renderPaperDecisionGraph(options = {}) {
       .filter((row) => rowBelongsToMarketWindow(row, market))
       .filter((row) => isExternalPricePoint(row) && !isPolymarketTruthPoint(row)),
   );
-  const externalStartPrice = metricNumber(startMeta?.price);
   const externalSampleRows = fullWindowExternalRows.length ? fullWindowExternalRows : externalRows;
-  const rawExternalSamples = externalStartPrice === null ? [] : [
-    ...paperGraphSamples(externalSampleRows, externalStartPrice, "binance"),
+  const externalBaselinePrice = sourceBaselinePriceForMarket(market, "binance", externalSampleRows, startMeta?.price);
+  const rawExternalSamples = externalBaselinePrice === null ? [] : [
+    ...paperGraphSamples(externalSampleRows, externalBaselinePrice, "binance"),
   ].sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
   const startAnchorSample = chainlinkStartAnchorSample(market, startMeta);
   const rawTruthSamples = (startMeta ? [
@@ -6817,11 +6844,11 @@ function renderPaperDecisionGraph(options = {}) {
       </circle>
 	      <text class="paper-marker-label" x="${x + 8}" y="${y - 8}">${escapeHtml(paperMarkerLabel(row))}</text>`;
   }).join("");
-  const truthPath = truthLinePoints.length
-    ? `<path class="line line-chainlink" d="${pathFrom(truthLinePoints, LIVE_CHAINLINK_MAX_LINE_GAP_SECONDS)}"></path>`
-    : "";
   const externalPath = externalLinePoints.length
     ? `<path class="line line-external" d="${pathFrom(externalLinePoints, LIVE_BINANCE_MAX_LINE_GAP_SECONDS)}"></path>`
+    : "";
+  const truthPath = truthLinePoints.length
+    ? `<path class="line line-chainlink" d="${pathFrom(truthLinePoints, LIVE_CHAINLINK_MAX_LINE_GAP_SECONDS)}"></path>`
     : "";
   const truthLabel = chainlinkLineLabel(truthSampleRows);
   const externalLabel = externalLineLabel(externalRows);
@@ -6986,8 +7013,8 @@ function renderPaperDecisionGraph(options = {}) {
         ${xMinorTicks}
         ${xTicks}
         ${yTicks}
-        ${truthPath}
         ${externalPath}
+        ${truthPath}
         ${chainlinkStartDot}
         ${externalStartDot}
         ${eventDots}
@@ -7201,7 +7228,7 @@ function rebuildLiveBtcWindowIndex() {
 
 function appendLiveBtcPoints(market, incomingPoints) {
   const keys = liveTickStorageKeysForMarket(market);
-  const pointsToAppend = (incomingPoints || []).filter((point) => isBinanceLivePoint(point) || isChainlinkPriceRow(point));
+  const pointsToAppend = (incomingPoints || []).filter((point) => isBinanceDashboardPoint(point) || isChainlinkPriceRow(point));
   if (!keys.length || !pointsToAppend.length) return;
   const startMeta = preferredPaperStartMetadata(market);
   const startPrice = startMeta?.price ?? null;
@@ -7436,12 +7463,12 @@ function chainlinkReasonFromMarket(market) {
 function rememberBackendStreamPoints(market, allPoints) {
   const points = Array.isArray(allPoints)
     ? allPoints.map((point) => {
-        if (isPolymarketTruthPoint(point) || isBinanceLivePoint(point)) return point;
+        if (isPolymarketTruthPoint(point) || isBinanceDashboardPoint(point)) return point;
         return enrichPointWithMarketOutcomeOdds(point, market);
       })
     : [];
   const truthPoints = points.filter(isPolymarketTruthPoint);
-  const externalPoints = points.filter(isBinanceLivePoint);
+  const externalPoints = points.filter(isBinanceDashboardPoint);
   if (truthPoints.length) {
     rememberObservedPaperMarket(market || truthPoints[0], truthPoints, []);
     truthPoints.forEach((point) => appendLiveBtcPoint(market || point, point));
@@ -7455,7 +7482,7 @@ function handleBackendTickBatch(messages) {
   const binanceMessages = [];
   const otherMessages = [];
   rows.forEach((message) => {
-    if (message?.type === "tick" && message?.point && isBinanceLivePoint(message.point)) {
+    if (message?.type === "tick" && message?.point && isBinanceDashboardPoint(message.point)) {
       binanceMessages.push(message);
     } else {
       otherMessages.push(message);
@@ -7467,7 +7494,7 @@ function handleBackendTickBatch(messages) {
     const batchPoints = [];
     binanceMessages.forEach((message) => {
       if (Array.isArray(message.points)) {
-        batchPoints.push(...message.points.filter(isBinanceLivePoint));
+        batchPoints.push(...message.points.filter(isBinanceDashboardPoint));
       }
       batchPoints.push(message.point);
     });
@@ -7593,7 +7620,7 @@ function handleBackendStreamMessage(payload) {
     scheduleLiveTickRender();
     return;
   }
-  if (!isBinanceLivePoint(point)) return;
+  if (!isBinanceDashboardPoint(point)) return;
   const market = rememberBackendStreamMarket(payload.market || point, { addTruthPoint: false }) || point;
   rememberBackendStreamPoints(market, payload.points);
   appendLiveBtcPoint(market, point);
