@@ -21,7 +21,7 @@ const LIVE_TICK_PERSIST_MS = 7500;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 2600;
 const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 80;
 const LIVE_TICK_PERSIST_POINTS_PER_MARKET = 1800;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v26";
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v27";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
   "polymarketPaperLiveTicks.v3",
@@ -47,6 +47,7 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v23",
   "polymarketPaperLiveTicks.v24",
   "polymarketPaperLiveTicks.v25",
+  "polymarketPaperLiveTicks.v26",
 ];
 const LIVE_PAPER_X_WINDOW_SECONDS = 15;
 const LIVE_PAPER_X_LEAD_SECONDS = 2;
@@ -65,7 +66,7 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 260;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 1200;
 const LIVE_RENDER_POINTS_PER_PIXEL = 1.75;
 const LIVE_AUX_VERSION_THROTTLE_MS = 250;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v46-normalized-book-line";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v47-binance-book-depth-line";
 const LIVE_BINANCE_MAX_RENDER_JUMP_DOLLARS = 60;
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
@@ -3214,7 +3215,7 @@ function isExternalGraphPricePoint(row) {
   const price = externalGraphPrice(row);
   return price !== null
     && price > 0
-    && isExternalBookTickerPricePoint(row);
+    && isExternalBookPricePoint(row);
 }
 
 function priceChangingRows(rows, minDollarChange = 0.01) {
