@@ -3098,6 +3098,7 @@ function rowHasDisplayPolymarketBook(row) {
 function rowHasStickyPolymarketOdds(row) {
   if (!row || isActionOnlyPaperOddsRow(row)) return false;
   if (row._odds_sticky_only === true) return false;
+  if (row.market_odds_stale === true || row.polymarket_book_stale === true) return false;
   const source = [
     row.polymarket_book_source,
     row.probability_source,
@@ -5076,6 +5077,8 @@ function rowHasOutcomeOdds(row) {
 
 function rowHasUsableOutcomeOdds(row) {
   if (!row) return false;
+  if (row._odds_sticky_only === true) return false;
+  if (row.market_odds_stale === true || row.polymarket_book_stale === true) return false;
   return outcomeDirectProbability(row, "up") !== null
     || outcomeDirectProbability(row, "down") !== null
     || outcomeBookProbability(row, "up") !== null
@@ -5483,11 +5486,12 @@ function paperPanelDisplayOutcomeProbabilities(market, latestRaw, latestBookRaw)
   if (bookOdds.askBookObserved) {
     rememberOutcomeOddsForWindow(market, candidates);
     const resolved = stickyOutcomeOddsForMarket(market, bookOdds);
-    return { ...bookOdds, up: resolved.up, down: resolved.down };
+    return { ...bookOdds, ...resolved, up: resolved.up, down: resolved.down };
   }
   const resolved = stickyOutcomeOddsForMarket(market, bookOdds);
   if (resolved.up !== null || resolved.down !== null) {
     return {
+      ...resolved,
       up: resolved.up,
       down: resolved.down,
       upNoSellers: false,
@@ -5586,15 +5590,18 @@ function renderPaperOddsStrip(market, latestRaw, latestBookRaw, odds = null) {
     ...displayOdds,
     up: sticky.up,
     down: sticky.down,
+    market_odds_stale: sticky.market_odds_stale ?? displayOdds.market_odds_stale,
+    _odds_sticky_only: sticky._odds_sticky_only ?? displayOdds._odds_sticky_only,
   };
+  const staleLabel = resolved._odds_sticky_only || resolved.market_odds_stale ? " stale" : "";
   return `
     <div class="paper-odds-strip" role="status" aria-label="Current Polymarket odds">
       <div>
-        <span>UP</span>
+        <span>${escapeHtml(`UP${staleLabel}`)}</span>
         <strong class="move-up">${escapeHtml(formatOutcomePercent(resolved.up, resolved.upNoSellers ? "No sellers" : "Waiting"))}</strong>
       </div>
       <div>
-        <span>DOWN</span>
+        <span>${escapeHtml(`DOWN${staleLabel}`)}</span>
         <strong class="move-down">${escapeHtml(formatOutcomePercent(resolved.down, resolved.downNoSellers ? "No sellers" : "Waiting"))}</strong>
       </div>
       </div>`;
@@ -5642,7 +5649,8 @@ function stickyOutcomeOddsForMarket(market, odds) {
     fallback,
   );
   if (resolved.up !== null || resolved.down !== null) {
-    const inputHasOdds = metricNumber(odds?.up) !== null || metricNumber(odds?.down) !== null;
+    const inputHasOdds = odds?._odds_sticky_only !== true
+      && (metricNumber(odds?.up) !== null || metricNumber(odds?.down) !== null);
     const sourceRow = inputHasOdds ? { ...(market || {}), ...(odds || {}) } : fallbackRow;
     const sourceTime = outcomeOddsTimestampMicro(sourceRow)
       ?? outcomeOddsTimestampMicro(fallbackRow)
@@ -5652,6 +5660,7 @@ function stickyOutcomeOddsForMarket(market, odds) {
       || sourceRow?.polymarket_book_source
       || (inputHasOdds ? "local_postgres_polymarket_order_books" : "cached_polymarket_odds");
     const stickyOnly = !inputHasOdds || sourceTime === null;
+    const staleOdds = stickyOnly || Boolean(sourceRow?.market_odds_stale) || Boolean(sourceRow?.polymarket_book_stale);
     const stored = {
       up: resolved.up,
       down: resolved.down,
@@ -5669,7 +5678,7 @@ function stickyOutcomeOddsForMarket(market, odds) {
       probability_source: sourceName,
       market_probability_source: sourceName,
       market_odds_fetched_at: sourceRow?.market_odds_fetched_at,
-      market_odds_stale: stickyOnly ? true : sourceRow?.market_odds_stale,
+      market_odds_stale: staleOdds,
       market_odds_error: sourceRow?.market_odds_error,
       _odds_updated_micro: sourceTime,
       _odds_sticky_only: stickyOnly,
@@ -5677,8 +5686,15 @@ function stickyOutcomeOddsForMarket(market, odds) {
     keys.forEach((key) => {
       state.lastDisplayedOutcomeOddsByWindow.set(key, stored);
       state.lastRenderedOutcomeOddsByWindow.set(key, stored);
-      if (!stickyOnly) state.latestOutcomeOddsByWindow.set(key, stored);
+      if (!stickyOnly && !staleOdds) state.latestOutcomeOddsByWindow.set(key, stored);
     });
+    return {
+      ...resolved,
+      market_odds_stale: staleOdds,
+      market_odds_error: sourceRow?.market_odds_error,
+      _odds_updated_micro: sourceTime,
+      _odds_sticky_only: stickyOnly,
+    };
   }
   return resolved;
 }
@@ -7626,7 +7642,7 @@ function handleBackendStreamMessage(payload) {
     if (payload.type === "window") {
       rememberOutcomeOddsForWindow(market, [payload.market, ...(payload.points || [])]);
       bumpPaperAuxVersion();
-      flushPaperTickPersist();
+      schedulePaperTickPersist();
     }
     scheduleLiveTickRender();
     return;
@@ -7643,7 +7659,7 @@ function handleBackendStreamMessage(payload) {
     };
     bumpPaperAuxVersion(true);
     refreshVisiblePaperOddsSlots(market || payload.market);
-    flushPaperTickPersist();
+    schedulePaperTickPersist();
     scheduleLiveTickRender();
     return;
   }
