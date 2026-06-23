@@ -429,8 +429,8 @@ function formatMicroTimestamp(value) {
 }
 
 function liveFeedLabel(row) {
-  if (row?.decision === "live_book_tick" && ["depth", "book"].includes(row?.backend_event_kind)) return "Binance";
-  if (String(row?.btc_price_venue || "").startsWith("local_backend_binance_ws")) return "Binance";
+  if (row?.decision === "live_book_tick" && ["depth", "book"].includes(backendEventKind(row))) return "Binance";
+  if (isBinanceLivePoint(row)) return "Binance";
   if (String(row?.btc_price_venue || row?.btc_price_source || "").includes("chainlink_data_streams")) return "Chainlink";
   if (row?.decision === "live_tick" || row?.decision === "live_book_tick") return "Binance";
   const raw = compactFeedSourceLabel(row?.btc_price_venue || row?.btc_price_source || row?.reason);
@@ -2692,29 +2692,29 @@ function currentDisplayPaperMarket() {
   return currentPaperMarket();
 }
 
+function backendEventKind(row) {
+  const kind = String(row?.backend_event_kind || "").toLowerCase();
+  if (kind === "bookticker" || kind === "book_ticker" || kind === "ticker") return "book";
+  return kind;
+}
+
 function isBinanceLivePoint(point) {
-  const venue = String(point?.btc_price_venue || "");
-  const source = [
-    point?.external_btc_source,
-    point?.external_btc_venue,
-    point?.price_role,
-    point?.reason,
-  ].filter(Boolean).join(" ").toLowerCase();
-  const isLocalBinanceVenue = venue.startsWith("local_backend_binance_ws");
+  const source = rowPriceSourceText(point);
+  const kind = backendEventKind(point);
+  const isLocalBinanceVenue = source.includes("local_backend_binance_ws");
   const isCompactBinanceRow = source.includes("binance")
-    && ["trade", "book", "depth"].includes(point?.backend_event_kind);
+    && ["trade", "book", "depth"].includes(kind);
   if (!isLocalBinanceVenue && !isCompactBinanceRow) return false;
   if (["live_tick", "live_book_tick"].includes(point?.decision)) return true;
-  return ["trade", "book", "depth"].includes(point?.backend_event_kind);
+  return ["trade", "book", "depth"].includes(kind);
 }
 
 function isBinanceDashboardPoint(point) {
-  return isBinanceLivePoint(point) && ["book", "depth"].includes(point?.backend_event_kind);
+  return isBinanceLivePoint(point) && ["book", "depth"].includes(backendEventKind(point));
 }
 
 function isBackendLivePoint(point) {
-  const venue = String(point?.btc_price_venue || "");
-  return venue.startsWith("local_backend_binance_ws");
+  return rowPriceSourceText(point).includes("local_backend_binance_ws");
 }
 
 function isPaperEventPoint(point) {
@@ -2829,8 +2829,8 @@ function liveChartTickPointsForMarket(market) {
 function liveTradePointsForMarket(market) {
   return liveTickPointsForMarket(market).filter((point) => (
     point.decision === "live_tick" &&
-    point.backend_event_kind !== "book" &&
-    point.backend_event_kind !== "depth"
+    backendEventKind(point) !== "book" &&
+    backendEventKind(point) !== "depth"
   ));
 }
 
@@ -2857,7 +2857,7 @@ function rowUsesExternalBinancePrice(row) {
     || text.includes("binance")
     || text.includes("external_live_estimate")
     || ["live_tick", "live_book_tick"].includes(row?.decision)
-    || ["trade", "depth", "book"].includes(row?.backend_event_kind);
+    || ["trade", "depth", "book"].includes(backendEventKind(row));
 }
 
 function hasStrictPolymarketTruthPrice(row) {
@@ -3075,7 +3075,7 @@ function rowHasOutcomeBookQuote(row) {
 }
 
 function isLivePriceTransportRow(row) {
-  return ["chainlink", "trade", "depth", "book"].includes(row?.backend_event_kind)
+  return ["chainlink", "trade", "depth", "book"].includes(backendEventKind(row))
     || ["chainlink_tick", "live_tick", "live_book_tick"].includes(row?.decision)
     || isBinanceLivePoint(row);
 }
@@ -3200,20 +3200,20 @@ function isExternalPricePoint(row) {
 
 function isExternalBookPricePoint(row) {
   return isExternalPricePoint(row)
-    && (row?.decision === "live_book_tick" || ["book", "depth"].includes(row?.backend_event_kind));
+    && (row?.decision === "live_book_tick" || ["book", "depth"].includes(backendEventKind(row)));
 }
 
 function isExternalTradePricePoint(row) {
   return isExternalPricePoint(row)
-    && (row?.decision === "live_tick" || row?.backend_event_kind === "trade");
+    && (row?.decision === "live_tick" || backendEventKind(row) === "trade");
 }
 
 function isExternalBookTickerPricePoint(row) {
-  return isExternalBookPricePoint(row) && row?.backend_event_kind === "book";
+  return isExternalBookPricePoint(row) && backendEventKind(row) === "book";
 }
 
 function isExternalDepthPricePoint(row) {
-  return isExternalBookPricePoint(row) && row?.backend_event_kind === "depth";
+  return isExternalBookPricePoint(row) && backendEventKind(row) === "depth";
 }
 
 function externalGraphPrice(row) {
@@ -5009,7 +5009,7 @@ function latestBookRowForMarket(market, rawPoints) {
 function externalDepthSnapshotFromRow(row) {
   const bids = normalizeBookLevels(row?.book_bids);
   const asks = normalizeBookLevels(row?.book_asks);
-  if (row?.backend_event_kind !== "depth" || !isExternalBookPricePoint(row) || !bids.length || !asks.length) return null;
+  if (backendEventKind(row) !== "depth" || !isExternalBookPricePoint(row) || !bids.length || !asks.length) return null;
   return { row, bids, asks, source: "Binance depth WS", sourceKind: "binance_depth_ws" };
 }
 
@@ -5034,7 +5034,7 @@ function labelExternalDepthSnapshot(snapshot) {
 }
 
 function latestExternalDepthSnapshotForMarket(market, rawPoints) {
-  const snapshots = liveTickPointsForCurrentWindow(market, (row) => row?.backend_event_kind === "depth")
+  const snapshots = liveTickPointsForCurrentWindow(market, (row) => backendEventKind(row) === "depth")
     .map(externalDepthSnapshotFromRow)
     .filter(Boolean)
     .sort((left, right) => externalDepthSnapshotTimeMicro(right) - externalDepthSnapshotTimeMicro(left));
@@ -7179,8 +7179,7 @@ function renderStatus() {
 }
 
 function currentPaperViewSelected() {
-  state.paperGraph = PAPER_CURRENT_VALUE;
-  return true;
+  return (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE;
 }
 
 function liveMarketForTicks() {
@@ -7299,7 +7298,7 @@ function appendLiveBtcPoints(market, incomingPoints) {
       point.distance_bps = distanceBps;
       point.side = distanceBps > 0 ? "Up" : (distanceBps < 0 ? "Down" : null);
     }
-    if (point?.backend_event_kind === "depth" || point?.books || point?.pm_up_bids || point?.pm_down_bids) auxChanged = true;
+    if (backendEventKind(point) === "depth" || point?.books || point?.pm_up_bids || point?.pm_down_bids) auxChanged = true;
   });
   keys.forEach((key) => {
     let points = state.liveBtcTicksByMarket.get(key) || [];
