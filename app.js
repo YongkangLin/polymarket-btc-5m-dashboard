@@ -6801,6 +6801,9 @@ function renderPaperDecisionGraph(options = {}) {
   const externalLineSamples = selectedCurrent
     ? stableLiveLineSamples(visibleExternalSamples, LIVE_BINANCE_RENDER_BUCKET_SECONDS, maxLinePoints, xDomain)
     : visibleExternalSamples;
+  const truthLabel = chainlinkLineLabel(truthSampleRows);
+  const externalLabel = externalLineLabel(externalRows);
+  const chartHeaderHtml = renderPaperChartHeader(market);
   const xForElapsed = (elapsedSeconds) => {
     const clamped = Math.max(xDomain.min, Math.min(xDomain.max, Number(elapsedSeconds)));
     return plot.left + ((clamped - xDomain.min) / (xDomain.max - xDomain.min)) * plotWidth;
@@ -7056,9 +7059,6 @@ function renderPaperDecisionGraph(options = {}) {
   const truthPath = truthLinePoints.length
     ? `<path class="line line-chainlink" d="${pathFrom(truthLinePoints, LIVE_CHAINLINK_MAX_LINE_GAP_SECONDS)}"></path>`
     : "";
-  const truthLabel = chainlinkLineLabel(truthSampleRows);
-  const externalLabel = externalLineLabel(externalRows);
-  const chartHeaderHtml = renderPaperChartHeader(market);
   const anchorDot = (points, className, label) => {
     const point = points[0];
     if (!point) return "";
