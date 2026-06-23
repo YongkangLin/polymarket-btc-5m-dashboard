@@ -3105,7 +3105,10 @@ function rowHasStickyPolymarketOdds(row) {
     row.books?.Up?.source,
     row.books?.Down?.source,
   ].filter(Boolean).join(" ").toLowerCase();
-  if (!source.includes("local_postgres_polymarket_order_books")) return false;
+  if (
+    !source.includes("local_postgres_polymarket_order_books")
+    && !source.includes("local_backend_polymarket_ws")
+  ) return false;
   return rowHasOutcomeBookQuote(row)
     || rowHasUsableOutcomeOdds(row)
     || metricNumber(row.up) !== null
@@ -7600,6 +7603,21 @@ function handleBackendStreamMessage(payload) {
       bumpPaperAuxVersion();
       flushPaperTickPersist();
     }
+    scheduleLiveTickRender();
+    return;
+  }
+  if (payload.type === "market_odds") {
+    const market = rememberBackendStreamMarket(payload.market, { addTruthPoint: false });
+    rememberOutcomeOddsForWindow(market || payload.market, [payload.market, ...(payload.points || [])]);
+    state.backendStatus = {
+      ...state.backendStatus,
+      state: "open",
+      lastError: null,
+      lastStreamAt: new Date(),
+      url: backendWebSocketUrl(),
+    };
+    bumpPaperAuxVersion();
+    flushPaperTickPersist();
     scheduleLiveTickRender();
     return;
   }
