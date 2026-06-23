@@ -6,22 +6,22 @@ const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
 const ACTIVE_PAPER_EDGE_ID = "portfolio_sleeves_active_frontq5800q10_nearq50_sharedcap10_native";
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_STREAM_WATCHDOG_MS = 30000;
-const LIVE_TICK_RENDER_THROTTLE_MS = 16;
-const LIVE_SIDE_RENDER_THROTTLE_MS = 100;
-const LIVE_CHART_CLOCK_MS = 250;
+const LIVE_TICK_RENDER_THROTTLE_MS = 50;
+const LIVE_SIDE_RENDER_THROTTLE_MS = 250;
+const LIVE_CHART_CLOCK_MS = 500;
 const LIVE_TICK_STALE_MS = 10000;
 const LIVE_TICK_RECONNECT_MS = 2000;
 const LIVE_SOCKET_CONNECT_TIMEOUT_MS = 3500;
 const LOCAL_BACKEND_BASE_KEY = "POLYMARKET_LOCAL_BACKEND_BASE";
 const LOCAL_PAPER_EDGE_KEY = "POLYMARKET_PAPER_EDGE_ID";
 const DEFAULT_BACKEND_BASE = "http://127.0.0.1:8788";
-const LIVE_TICK_RENDER_MAX_POINTS = 900;
-const LIVE_AUX_RENDER_THROTTLE_MS = 1000;
-const LIVE_TICK_PERSIST_MS = 7500;
-const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 2600;
-const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 80;
-const LIVE_TICK_PERSIST_POINTS_PER_MARKET = 1800;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v27";
+const LIVE_TICK_RENDER_MAX_POINTS = 520;
+const LIVE_AUX_RENDER_THROTTLE_MS = 1500;
+const LIVE_TICK_PERSIST_MS = 5000;
+const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 1400;
+const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 48;
+const LIVE_TICK_PERSIST_POINTS_PER_MARKET = 900;
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v28";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
   "polymarketPaperLiveTicks.v3",
@@ -48,6 +48,7 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v24",
   "polymarketPaperLiveTicks.v25",
   "polymarketPaperLiveTicks.v26",
+  "polymarketPaperLiveTicks.v27",
 ];
 const LIVE_PAPER_X_WINDOW_SECONDS = 15;
 const LIVE_PAPER_X_LEAD_SECONDS = 2;
@@ -61,12 +62,12 @@ const LIVE_STEP_EPS_SECONDS = 0.0005;
 const LIVE_CHAINLINK_MAX_LINE_GAP_SECONDS = 10;
 const LIVE_BINANCE_MAX_LINE_GAP_SECONDS = 5;
 const LIVE_PAPER_RENDER_TAIL_SECONDS = 15;
-const LIVE_RENDER_MAX_SOURCE_ROWS_PER_LINE = 1800;
-const LIVE_RENDER_MIN_POINTS_PER_LINE = 260;
-const LIVE_RENDER_MAX_POINTS_PER_LINE = 1200;
-const LIVE_RENDER_POINTS_PER_PIXEL = 1.75;
-const LIVE_AUX_VERSION_THROTTLE_MS = 250;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v47-binance-book-depth-line";
+const LIVE_RENDER_MAX_SOURCE_ROWS_PER_LINE = 700;
+const LIVE_RENDER_MIN_POINTS_PER_LINE = 120;
+const LIVE_RENDER_MAX_POINTS_PER_LINE = 600;
+const LIVE_RENDER_POINTS_PER_PIXEL = 0.85;
+const LIVE_AUX_VERSION_THROTTLE_MS = 750;
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v48-fast-uplot";
 const LIVE_BINANCE_MAX_RENDER_JUMP_DOLLARS = 60;
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
@@ -74,9 +75,10 @@ const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const BINANCE_DEPTH_TABLE_STALE_MS = 15000;
 const LOCAL_BACKEND_BASE = configuredBackendBase();
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
-const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 1200;
-const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 1200;
+const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 600;
+const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 600;
 const BACKEND_WS_SNAPSHOT_SECONDS = 15;
+const PAPER_AUX_RENDER_CACHE_MAX_ENTRIES = 16;
 const POLYMARKET_TRUTH_SOURCE = "chainlink_data_streams";
 const DEFAULT_PAPER_SESSION = Object.freeze({
   mode: "paper",
@@ -174,6 +176,8 @@ let liveTickRenderFrame = null;
 let liveTickLastRenderAt = 0;
 let liveTickPersistTimer = null;
 let liveChartClockTimer = null;
+let paperMetaLastRenderAt = 0;
+let liveMetaLastRenderAt = 0;
 
 function byId(id) {
   return document.getElementById(id);
@@ -184,7 +188,16 @@ function bumpPaperAuxVersion(force = false) {
   if (!force && now - state.paperAuxVersionBumpedAt < LIVE_AUX_VERSION_THROTTLE_MS) return false;
   state.paperAuxVersion += 1;
   state.paperAuxVersionBumpedAt = now;
+  trimPaperAuxRenderCache();
   return true;
+}
+
+function trimPaperAuxRenderCache() {
+  while (state.paperAuxRenderCache.size > PAPER_AUX_RENDER_CACHE_MAX_ENTRIES) {
+    const firstKey = state.paperAuxRenderCache.keys().next().value;
+    if (firstKey === undefined) break;
+    state.paperAuxRenderCache.delete(firstKey);
+  }
 }
 
 function isCompactPaperChart() {
@@ -936,7 +949,10 @@ function renderPaperAuxHtml({ chartId, selectedCurrent, market, rawPoints, lates
     renderPolymarketBookTable(market, rawPoints),
     renderOrderBookTable(market, rawPoints, latestBookRaw || latestRaw || null, latestQuote || null),
   ].join("");
-  if (cacheable) state.paperAuxRenderCache.set(cacheKey, { renderedAt: now, html });
+  if (cacheable) {
+    state.paperAuxRenderCache.set(cacheKey, { renderedAt: now, html });
+    trimPaperAuxRenderCache();
+  }
   return html;
 }
 
@@ -7070,9 +7086,14 @@ function renderPaperDecisionGraph(options = {}) {
 
 function renderPaperChart(options = {}) {
   if (options.selects === false) {
-    renderPaperMeta();
+    const now = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+    if (!paperMetaLastRenderAt || now - paperMetaLastRenderAt >= LIVE_SIDE_RENDER_THROTTLE_MS) {
+      renderPaperMeta();
+      paperMetaLastRenderAt = now;
+    }
   } else {
     renderPaperSelects();
+    paperMetaLastRenderAt = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
   }
   if (allPaperMarkets().length || selectedPaperMarket()) {
     renderPaperDecisionGraph();
@@ -7094,7 +7115,11 @@ function renderLiveMeta() {
 }
 
 function renderLiveChart() {
-  renderLiveMeta();
+  const now = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+  if (!liveMetaLastRenderAt || now - liveMetaLastRenderAt >= LIVE_SIDE_RENDER_THROTTLE_MS) {
+    renderLiveMeta();
+    liveMetaLastRenderAt = now;
+  }
   if (allPaperMarkets().length || selectedPaperMarket()) {
     renderPaperDecisionGraph({ chartId: "liveChart", mode: "live" });
     return;
@@ -7572,7 +7597,7 @@ function handleBackendStreamMessage(payload) {
     };
     if (payload.type === "window") {
       rememberOutcomeOddsForWindow(market, [payload.market, ...(payload.points || [])]);
-      bumpPaperAuxVersion(true);
+      bumpPaperAuxVersion();
       flushPaperTickPersist();
     }
     scheduleLiveTickRender();
