@@ -3184,8 +3184,10 @@ function isExternalDepthPricePoint(row) {
 }
 
 function isExternalGraphPricePoint(row) {
-  return isExternalBookTickerPricePoint(row)
-    || isExternalDepthPricePoint(row);
+  const price = metricNumber(row?.btc_price);
+  return price !== null
+    && price > 0
+    && (isExternalBookTickerPricePoint(row) || isExternalDepthPricePoint(row));
 }
 
 function priceChangingRows(rows, minDollarChange = 0.01) {
@@ -6632,10 +6634,9 @@ function renderPaperDecisionGraph(options = {}) {
   ] : [])
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
   const latestElapsedSeed = newestElapsedSeconds(rawTruthSamples, rawExternalSamples);
-  const latestTruthElapsed = newestElapsedSeconds(rawTruthSamples);
-  const latestExternalElapsed = newestElapsedSeconds(rawExternalSamples);
-  const truthSamples = selectedCurrent ? limitLiveSamplesForRender(rawTruthSamples, latestTruthElapsed ?? latestElapsedSeed) : rawTruthSamples;
-  const externalSamples = selectedCurrent ? limitLiveSamplesForRender(rawExternalSamples, latestExternalElapsed ?? latestElapsedSeed) : rawExternalSamples;
+  const sharedRenderElapsed = selectedCurrent ? latestElapsedSeed : null;
+  const truthSamples = selectedCurrent ? limitLiveSamplesForRender(rawTruthSamples, sharedRenderElapsed) : rawTruthSamples;
+  const externalSamples = selectedCurrent ? limitLiveSamplesForRender(rawExternalSamples, sharedRenderElapsed) : rawExternalSamples;
   const allSamples = [...truthSamples, ...externalSamples]
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
 
@@ -6794,10 +6795,10 @@ function renderPaperDecisionGraph(options = {}) {
 	      <text class="paper-marker-label" x="${x + 8}" y="${y - 8}">${escapeHtml(paperMarkerLabel(row))}</text>`;
   }).join("");
   const truthPath = truthLinePoints.length
-    ? `<path class="line line-chainlink" d="${selectedCurrent ? stepPathFrom(truthLinePoints, LIVE_CHAINLINK_MAX_LINE_GAP_SECONDS) : pathFrom(truthLinePoints, LIVE_CHAINLINK_MAX_LINE_GAP_SECONDS)}"></path>`
+    ? `<path class="line line-chainlink" d="${pathFrom(truthLinePoints, LIVE_CHAINLINK_MAX_LINE_GAP_SECONDS)}"></path>`
     : "";
   const externalPath = externalLinePoints.length
-    ? `<path class="line line-external" d="${selectedCurrent ? stepPathFrom(externalLinePoints, LIVE_BINANCE_MAX_LINE_GAP_SECONDS) : pathFrom(externalLinePoints, LIVE_BINANCE_MAX_LINE_GAP_SECONDS)}"></path>`
+    ? `<path class="line line-external" d="${pathFrom(externalLinePoints, LIVE_BINANCE_MAX_LINE_GAP_SECONDS)}"></path>`
     : "";
   const truthLabel = chainlinkLineLabel(truthSampleRows);
   const externalLabel = externalLineLabel(externalRows);
