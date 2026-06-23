@@ -18,11 +18,11 @@ const DEFAULT_BACKEND_BASE = "http://127.0.0.1:8788";
 const LIVE_TICK_RENDER_MAX_POINTS = 520;
 const LIVE_AUX_RENDER_THROTTLE_MS = 1500;
 const LIVE_TICK_PERSIST_MS = 5000;
-const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 1400;
-const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 48;
-const LIVE_TICK_STORE_TRIM_SLACK = 160;
-const LIVE_TICK_PERSIST_POINTS_PER_MARKET = 900;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v28";
+const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 720;
+const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 36;
+const LIVE_TICK_STORE_TRIM_SLACK = 80;
+const LIVE_TICK_PERSIST_POINTS_PER_MARKET = 520;
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v29";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
   "polymarketPaperLiveTicks.v3",
@@ -50,6 +50,7 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v25",
   "polymarketPaperLiveTicks.v26",
   "polymarketPaperLiveTicks.v27",
+  "polymarketPaperLiveTicks.v28",
 ];
 const LIVE_PAPER_X_WINDOW_SECONDS = 15;
 const LIVE_PAPER_X_LEAD_SECONDS = 2;
@@ -7305,6 +7306,13 @@ function pointTimestampMicro(point) {
 }
 
 function liveBtcPointKey(point) {
+  if (isChainlinkPriceRow(point) || isBinanceDashboardPoint(point)) {
+    const source = isChainlinkPriceRow(point) ? "chainlink" : `binance:${backendEventKind(point) || "tick"}`;
+    const windowKey = liveTickWindowKeyForPoint(point) || marketWindowStartUnix(point) || "";
+    const eventMicro = pointTimestampMicro(point) || "";
+    const price = metricNumber(point?.btc_price ?? point?.book_mid ?? point?.book_microprice);
+    return `${source}:${windowKey}:${eventMicro}:${price === null ? "" : price}`;
+  }
   return String(point?.point_id || `${point?.decision || "tick"}:${pointTimestampMicro(point) || ""}:${point?.btc_price ?? ""}`);
 }
 
@@ -7674,11 +7682,19 @@ function handleBackendTickBatch(messages) {
     const latestMessage = binanceMessages[binanceMessages.length - 1];
     const market = rememberBackendStreamMarket(latestMessage.market || latestMessage.point, { addTruthPoint: false }) || latestMessage.point;
     const batchPoints = [];
+    const seenPointKeys = new Set();
+    const pushPoint = (point) => {
+      if (!point || !isBinanceDashboardPoint(point)) return;
+      const key = liveBtcPointKey(point);
+      if (seenPointKeys.has(key)) return;
+      seenPointKeys.add(key);
+      batchPoints.push(point);
+    };
     binanceMessages.forEach((message) => {
       if (Array.isArray(message.points)) {
-        batchPoints.push(...message.points.filter(isBinanceDashboardPoint));
+        message.points.forEach(pushPoint);
       }
-      batchPoints.push(message.point);
+      pushPoint(message.point);
     });
     batchPoints.sort((left, right) => (pointTimestampMicro(left) || 0) - (pointTimestampMicro(right) || 0));
     appendLiveBtcPoints(market, batchPoints);
