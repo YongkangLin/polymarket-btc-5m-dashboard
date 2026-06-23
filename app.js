@@ -1393,14 +1393,29 @@ function uPlotDataFromSamples(truthSamples, externalSamples) {
   const chainlinkValues = [];
   const binanceValues = [];
   const current = { chainlink: null, binance: null };
+  const lastFreshAt = { chainlink: null, binance: null };
+  const applySourceEvent = (source, value, elapsedSeconds) => {
+    if (!Object.prototype.hasOwnProperty.call(current, source)) return;
+    current[source] = Number.isFinite(value) ? value : null;
+    lastFreshAt[source] = Number.isFinite(value) ? elapsedSeconds : null;
+  };
+  const expireStaleSources = (elapsedSeconds) => {
+    ["chainlink", "binance"].forEach((source) => {
+      if (current[source] === null || !Number.isFinite(lastFreshAt[source])) return;
+      if (elapsedSeconds - lastFreshAt[source] > sourceLineGapSeconds(source)) {
+        current[source] = null;
+        lastFreshAt[source] = null;
+      }
+    });
+  };
   let index = 0;
   while (index < events.length) {
     const elapsedSeconds = events[index].elapsedSeconds;
     while (index < events.length && Math.abs(events[index].elapsedSeconds - elapsedSeconds) < 0.000001) {
-      if (events[index].source === "chainlink") current.chainlink = events[index].dollarMove;
-      if (events[index].source === "binance") current.binance = events[index].dollarMove;
+      applySourceEvent(events[index].source, events[index].dollarMove, elapsedSeconds);
       index += 1;
     }
+    expireStaleSources(elapsedSeconds);
     x.push(elapsedSeconds);
     chainlinkValues.push(current.chainlink);
     binanceValues.push(current.binance);
@@ -8002,7 +8017,7 @@ function renderActiveTab() {
 async function main() {
   startLegacySourceLabelScrubber();
   loadPersistedPaperTicks();
-  state.workflow = normalizeWorkflow(await loadJson("data/workflow.json"));
+  state.workflow = normalizeWorkflow({});
   renderStatus();
   renderStrategyPanels();
   ensureTradeSessionPanelsMounted();
@@ -8010,6 +8025,7 @@ async function main() {
   renderActiveTab();
   refreshBackendPaperFeeds({ render: false });
   refreshLivePaperFeeds();
+  refreshWorkflow();
 
   document.querySelectorAll(".tab").forEach((button) => {
     button.addEventListener("click", () => {
