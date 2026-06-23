@@ -21,7 +21,7 @@ const LIVE_TICK_PERSIST_MS = 7500;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 2600;
 const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 80;
 const LIVE_TICK_PERSIST_POINTS_PER_MARKET = 1800;
-const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v24";
+const LIVE_TICK_STORE_KEY = "polymarketPaperLiveTicks.v25";
 const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v2",
   "polymarketPaperLiveTicks.v3",
@@ -45,6 +45,7 @@ const LEGACY_LIVE_TICK_STORE_KEYS = [
   "polymarketPaperLiveTicks.v21",
   "polymarketPaperLiveTicks.v22",
   "polymarketPaperLiveTicks.v23",
+  "polymarketPaperLiveTicks.v24",
 ];
 const LIVE_PAPER_X_WINDOW_SECONDS = 15;
 const LIVE_PAPER_X_LEAD_SECONDS = 2;
@@ -63,7 +64,8 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 260;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 1200;
 const LIVE_RENDER_POINTS_PER_PIXEL = 1.75;
 const LIVE_AUX_VERSION_THROTTLE_MS = 250;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v44-stable-live-dom";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v45-spot-book-line";
+const LIVE_BINANCE_MAX_RENDER_JUMP_DOLLARS = 60;
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -1324,13 +1326,17 @@ function steppedPlotEvents(samples, source) {
       ? Math.max(sample.elapsedSeconds, previous.elapsedSeconds + LIVE_STEP_EPS_SECONDS)
       : sample.elapsedSeconds;
     const gap = previous ? elapsedSeconds - previous.elapsedSeconds : 0;
-    if (previous && gap > LIVE_STEP_EPS_SECONDS * 2 && gap <= maxGapSeconds) {
+    const jump = previous && Number.isFinite(previous.dollarMove) && Number.isFinite(sample.dollarMove)
+      ? Math.abs(sample.dollarMove - previous.dollarMove)
+      : 0;
+    const shouldBreakJump = source === "binance" && jump > LIVE_BINANCE_MAX_RENDER_JUMP_DOLLARS;
+    if (previous && gap > LIVE_STEP_EPS_SECONDS * 2 && gap <= maxGapSeconds && !shouldBreakJump) {
       events.push({
         elapsedSeconds: elapsedSeconds - LIVE_STEP_EPS_SECONDS,
         dollarMove: previous.dollarMove,
         source,
       });
-    } else if (previous && gap > maxGapSeconds) {
+    } else if (previous && (gap > maxGapSeconds || shouldBreakJump)) {
       events.push({
         elapsedSeconds: previous.elapsedSeconds + LIVE_STEP_EPS_SECONDS,
         dollarMove: null,
@@ -1985,6 +1991,7 @@ const PERSISTED_ROW_FIELDS = new Set([
   "book_microprice",
   "book_spread_bps",
   "book_depth_source_point_id",
+  "binance_market_type",
   "external_book_support",
   "external_book_imbalance",
   "external_book_spread_bps",
@@ -3202,7 +3209,7 @@ function isExternalGraphPricePoint(row) {
   const price = externalGraphPrice(row);
   return price !== null
     && price > 0
-    && (isExternalBookTickerPricePoint(row) || isExternalDepthPricePoint(row));
+    && isExternalBookTickerPricePoint(row);
 }
 
 function priceChangingRows(rows, minDollarChange = 0.01) {
