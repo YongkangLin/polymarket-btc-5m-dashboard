@@ -211,6 +211,49 @@ select {
   height: 392px;
 }
 
+.paper-live-placeholder {
+  min-height: 100%;
+  display: grid;
+  align-content: center;
+  gap: 10px;
+  border: 1px dashed #bcc8cf;
+  border-radius: 6px;
+  background: #fbfcfd;
+  color: var(--muted);
+  padding: 24px;
+}
+
+.paper-live-placeholder span {
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.paper-live-placeholder strong {
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.paper-live-placeholder p {
+  max-width: 680px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.paper-live-placeholder.is-blocked {
+  border-color: #ddb6b6;
+  background: #fffafa;
+}
+
+.paper-live-placeholder.is-blocked span {
+  color: var(--red);
+}
+
 .paper-live-uplot {
   position: relative;
   min-width: 0;

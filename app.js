@@ -1520,6 +1520,130 @@ function renderPaperLiveSideHtml(marketMetrics, accountMetrics, positionRows) {
     </aside>`;
 }
 
+function paperStartupStatus(market, rawPoints = []) {
+  const issue = backendConnectionIssue();
+  if (issue) return issue;
+  const hasStartPrice = verifiedPaperStartPrice(market) !== null;
+  const hasChainlink = Boolean(chainlinkPointFromMarket(market)) || rawPoints.some(isPolymarketTruthPoint);
+  const hasBinance = rawPoints.some(isBinanceDashboardPoint) || liveTickPointsForCurrentWindow(market, isBinanceDashboardPoint).length > 0;
+  if (!market) {
+    return {
+      label: "Waiting for market",
+      tone: "waiting",
+      detail: backendConnectionText(),
+    };
+  }
+  if (!hasStartPrice) {
+    return {
+      label: "Waiting for Chainlink",
+      tone: "waiting",
+      detail: `No Chainlink Data Streams start price has arrived for this 5m window. ${backendConnectionText()}.`,
+    };
+  }
+  if (!hasChainlink) {
+    return {
+      label: "Waiting for Chainlink",
+      tone: "waiting",
+      detail: `The paper tab will not use Binance as truth; waiting for Chainlink Data Streams ticks. ${backendConnectionText()}.`,
+    };
+  }
+  if (!hasBinance) {
+    return {
+      label: "Waiting for Binance",
+      tone: "waiting",
+      detail: "Chainlink truth is present; waiting for Binance external signal/depth rows.",
+    };
+  }
+  return {
+    label: "Preparing chart",
+    tone: "waiting",
+    detail: "Current paper trade rows are available, but no plottable points were produced yet.",
+  };
+}
+
+function renderPaperStartupChart({ chart, market, rawPoints = [], selectedCurrent, isLiveView }) {
+  if (!chart) return;
+  const status = paperStartupStatus(market, rawPoints);
+  const statusClass = status.tone === "blocked" ? "is-blocked" : "is-waiting";
+  const truthPoint = chainlinkPointFromMarket(market);
+  const startPrice = verifiedPaperStartPrice(market);
+  const currentPrice = metricNumber(truthPoint?.btc_price);
+  const priceDifference = currentPrice !== null && startPrice !== null ? currentPrice - startPrice : null;
+  const session = tradeViewSession(isLiveView);
+  const currentPositions = isLiveView ? [] : paperPositionsForMarket(market, rawPoints);
+  const positionRows = isLiveView
+    ? [{ label: "No live positions", value: "Live disabled", detail: "Manual enable required", tone: "move-flat" }]
+    : paperPositionPanelRows(currentPositions);
+  const displayedPositionRows = positionRows.length ? positionRows : [paperNoPositionPanelRow()];
+  const sessionCapital = isLiveView
+    ? null
+    : paperSessionCapital(session)
+      ?? latestSessionMetric(market, rawPoints, session, ["paper_session_current_capital", "current_capital"]);
+  const sessionPnl = isLiveView
+    ? null
+    : paperSessionRealizedPnl(session)
+      ?? latestSessionMetric(market, rawPoints, session, ["paper_session_total_pnl", "paper_session_total_pnl_dollars", "total_pnl_dollars", "realized_pnl_dollars"]);
+  const marketMetrics = [
+    { label: "Start price", value: startPrice === null ? "Waiting" : formatBookMoney(startPrice) },
+    { label: "Current price", value: currentPrice === null ? "Waiting" : formatBookMoney(currentPrice) },
+    { label: "Difference", value: priceDifference === null ? "Waiting" : formatDollarMove(priceDifference), tone: moveToneClass(priceDifference) },
+    { label: "Backend", value: status.label, tone: status.tone === "blocked" ? "move-down" : "move-flat" },
+  ];
+  const accountMetrics = isLiveView
+    ? [
+        { label: "Real balance", value: "Disabled" },
+        { label: "Live P&L", value: "--" },
+      ]
+    : [
+        { label: "Capital", value: sessionCapital === null ? "--" : moneyCents.format(sessionCapital) },
+        { label: "Session P&L", value: formatSignedMoney(sessionPnl), tone: sessionPnl === null ? "" : sessionPnl < 0 ? "move-down" : "move-up" },
+      ];
+  const mobileMetrics = [
+    ...marketMetrics,
+    ...accountMetrics,
+    { label: "Positions", value: displayedPositionRows.map((row) => `${row.label}: ${row.value}`).join(" | "), compact: true },
+  ];
+  const compactInfoRows = isCompactPaperChart()
+    ? `<div class="paper-mobile-stats">${mobileMetrics.map((row) => `
+        <div class="paper-mobile-stat">
+          <span>${escapeHtml(row.label)}</span>
+          <strong class="${escapeHtml(row.tone || "")}">${escapeHtml(String(row.value))}</strong>
+        </div>`).join("")}</div>`
+    : "";
+  const latestBookRaw = latestBookRowForMarket(market, rawPoints) || market || null;
+  const oddsStrip = renderPaperOddsStrip(market, truthPoint || null, latestBookRaw);
+  const auxHtml = renderPaperAuxHtml({
+    chartId: chart.id || "paperChart",
+    selectedCurrent,
+    market,
+    rawPoints,
+    latestRaw: truthPoint || market || null,
+    latestBookRaw,
+    latestQuote: null,
+    session,
+    isLiveView,
+  });
+  const liveNotice = isLiveView
+    ? `<div class="live-mode-strip">Live trading is disabled. This is the same current-market view; real balance, orders, fills, and positions plug in here only after manual live approval.</div>`
+    : "";
+  const visualHtml = `${liveNotice}
+    ${renderPaperChartHeader(market)}
+    <div class="paper-live-fast is-empty" role="img" aria-label="${escapeHtml(isLiveView ? "Live trade backend status" : "Paper trade backend status")}">
+      <div class="paper-live-plot-wrap">
+        <div class="paper-live-placeholder ${statusClass}" role="status">
+          <span>${escapeHtml(status.label)}</span>
+          <strong>${escapeHtml(status.tone === "blocked" ? "Backend connection blocked" : "Current market data pending")}</strong>
+          <p>${escapeHtml(status.detail)}</p>
+          <p>Chainlink remains the truth source. Binance remains an external signal.</p>
+        </div>
+      </div>
+      <div class="paper-live-side-slot">${renderPaperLiveSideHtml(marketMetrics, accountMetrics, displayedPositionRows)}</div>
+    </div>
+    <div class="paper-live-odds-slot">${oddsStrip}</div>
+    <div class="paper-live-status-slot">${compactInfoRows}</div>`;
+  setPaperChartContent(chart, visualHtml, auxHtml);
+}
+
 function updatePaperUPlot(chart, options) {
   try {
     if (!canUseUPlot() || !chart) return false;
@@ -3376,6 +3500,56 @@ function securePageInsecureBackendReason(url) {
   return "public_https_requires_wss_backend";
 }
 
+function backendConnectionUrl() {
+  return state.backendStatus.url || state.liveTickStatus.url || backendWebSocketUrl();
+}
+
+function backendConnectionIssue() {
+  const error = state.backendStatus.lastError || state.liveTickStatus.lastError || "";
+  if (!error) return null;
+  const url = backendConnectionUrl();
+  if (error === "public_https_requires_wss_backend") {
+    return {
+      label: "Backend blocked",
+      tone: "blocked",
+      detail: `GitHub Pages is HTTPS, but the configured paper backend is ${url || "ws://"}; browsers block ws:// from HTTPS pages. Use a wss:// backend or open this dashboard locally over http://.`,
+    };
+  }
+  if (error === "backend_ws_connect_timeout") {
+    return {
+      label: "Backend timeout",
+      tone: "waiting",
+      detail: `No paper backend answered at ${url || "the configured WebSocket URL"}. Start the backend or pass ?backend=http://host:8788 for local testing.`,
+    };
+  }
+  if (error === "backend_ws_error" || error === "backend_ws_closed") {
+    return {
+      label: "Backend unreachable",
+      tone: "waiting",
+      detail: `The paper backend WebSocket is not open at ${url || "the configured URL"}. Start the backend or pass ?backend=http://host:8788.`,
+    };
+  }
+  return {
+    label: "Backend issue",
+    tone: "waiting",
+    detail: `${error}${url ? ` at ${url}` : ""}`,
+  };
+}
+
+function backendConnectionText() {
+  const issue = backendConnectionIssue();
+  if (issue) return `${issue.label}: ${issue.detail}`;
+  const url = backendConnectionUrl();
+  const status = state.backendStatus.state || state.liveTickStatus.state || "idle";
+  if (status === "open") return `Backend connected${url ? ` at ${url}` : ""}`;
+  if (status === "connecting" || status === "reconnecting") return `Connecting to paper backend${url ? ` at ${url}` : ""}`;
+  return `Waiting for paper backend${url ? ` at ${url}` : ""}`;
+}
+
+function backendMetaDetail(maxLength = 72) {
+  return compactNote(backendConnectionText(), maxLength);
+}
+
 function refreshBackendPaperFeeds(options = {}) {
   ensureLiveTickStream();
   if (options.render && state.activeTab === "paper") renderPaperChart();
@@ -4949,16 +5123,12 @@ function renderPaperMeta() {
   if (!meta) return;
   const market = selectedPaperMarket();
   const selectedCurrent = (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE;
-  if (selectedCurrent && market) {
-    refreshBackendPaperFeeds();
-    ensureLiveTickStream();
-  }
   const points = market ? paperChartPointsFor(market) : [];
   if (selectedCurrent && market && !points.length && !verifiedPaperStartPrice(market)) {
     const startStatus = market.start_price_status || liveStartMetadata(market).start_price_status || "loading";
     const startError = market.start_price_error || liveStartMetadata(market).start_price_error || "";
     const backendError = state.backendStatus.lastError || state.liveTickStatus.lastError;
-    const backendDetail = backendError ? ` | ${compactNote(backendError, 72)}` : "";
+    const backendDetail = backendError ? ` | ${backendMetaDetail(96)}` : "";
     const message = startStatus === "error"
       ? `Start error${startError ? `: ${startError}` : ""}`
       : "Loading start";
@@ -4967,7 +5137,7 @@ function renderPaperMeta() {
   }
   if (selectedCurrent && market && !points.length) {
     const backendError = state.backendStatus.lastError || state.liveTickStatus.lastError;
-    const backendDetail = backendError ? ` ${compactNote(backendError, 72)}` : "";
+    const backendDetail = backendError ? ` ${backendMetaDetail(96)}` : "";
     meta.innerHTML = `<span class="live-chip is-waiting">${escapeHtml(backendError ? "Blocked" : "Loading")}</span>${escapeHtml(backendDetail + paperStorageWarningText())}`;
     return;
   }
@@ -4975,7 +5145,7 @@ function renderPaperMeta() {
   const statusClass = selectedCurrent && market && isCurrentPaperMarket(market) ? "is-live" : "is-past";
   const statusText = selectedCurrent && market && isCurrentPaperMarket(market) ? "Live" : (selectedCurrent ? "Latest" : "Past");
   const backendError = state.backendStatus.lastError || state.liveTickStatus.lastError;
-  const detail = backendError ? ` | ${compactNote(backendError, 42)}` : "";
+  const detail = backendError ? ` | ${backendMetaDetail(54)}` : "";
   meta.innerHTML = `<span class="live-chip ${statusClass}">${escapeHtml(statusText)}</span> ${escapeHtml(ageText(updatedAt) + detail + paperStorageWarningText())}`;
 }
 
@@ -6745,19 +6915,13 @@ function renderPaperDecisionGraph(options = {}) {
   });
   if (!market || !rawPoints.length) {
     if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) {
-      const loadingExtras = [
-        renderPaperOddsStrip(market, null, null),
-        emptyAuxHtml,
-      ].join("");
-      if (market && !verifiedPaperStartPrice(market)) {
-        const startStatus = market.start_price_status || liveStartMetadata(market).start_price_status || "loading";
-        const startError = market.start_price_error || liveStartMetadata(market).start_price_error || "";
-        setPaperChartContent(chart, svgEmpty(startStatus === "error"
-          ? `Start error${startError ? `: ${startError}` : ""}.`
-          : "Loading start."), loadingExtras);
-        return;
-      }
-      setPaperChartContent(chart, svgEmpty("Loading ticks."), loadingExtras);
+      renderPaperStartupChart({
+        chart,
+        market: market || currentBackendLiveMarketShell(),
+        rawPoints,
+        selectedCurrent,
+        isLiveView,
+      });
       return;
     }
     setPaperChartContent(chart, svgEmpty("No path."), emptyAuxHtml);
@@ -6815,6 +6979,16 @@ function renderPaperDecisionGraph(options = {}) {
       renderPaperOddsStrip(market, null, null),
       emptyAuxHtml,
     ].join("");
+    if (selectedCurrent) {
+      renderPaperStartupChart({
+        chart,
+        market,
+        rawPoints,
+        selectedCurrent,
+        isLiveView,
+      });
+      return;
+    }
     setPaperChartContent(chart, svgEmpty(hasPrices && !startMeta ? "Waiting for Polymarket start." : "No usable points."), waitingExtras);
     return;
   }
@@ -7300,7 +7474,7 @@ function renderLiveMeta() {
   const market = selectedPaperMarket();
   const updatedAt = market ? paperDisplayUpdatedAt(market) : null;
   const backendError = state.backendStatus.lastError || state.liveTickStatus.lastError;
-  const detail = backendError ? ` | ${compactNote(backendError, 42)}` : "";
+  const detail = backendError ? ` | ${backendMetaDetail(54)}` : "";
   meta.innerHTML = `<span class="live-chip is-waiting">Live disabled</span> ${escapeHtml(`same market view, ${ageText(updatedAt)}${detail}`)}`;
 }
 
