@@ -1,9 +1,9 @@
 const fmt = new Intl.NumberFormat("en-US");
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const moneyCents = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const ACTIVE_BACKTEST_KEY = "portfolio_ranked_gate8318_then_bookmom_sharedcap10";
+const ACTIVE_BACKTEST_KEY = "portfolio_ranked_then_a4070_sharedcap10";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
-const ACTIVE_PAPER_EDGE_ID = "portfolio_ranked_gate8318_then_bookmom_sharedcap10_native";
+const ACTIVE_PAPER_EDGE_ID = "portfolio_ranked_then_a4070_sharedcap10_native";
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_STREAM_WATCHDOG_MS = 30000;
 const LIVE_TICK_RENDER_THROTTLE_MS = 33;
@@ -16,7 +16,7 @@ const LOCAL_BACKEND_BASE_KEY = "POLYMARKET_LOCAL_BACKEND_BASE";
 const LOCAL_PAPER_EDGE_KEY = "POLYMARKET_PAPER_EDGE_ID";
 const DEFAULT_BACKEND_BASE = "http://127.0.0.1:8788";
 const PUBLIC_BACKEND_BASE = "https://incorporated-oscar-ent-sheer.trycloudflare.com";
-const LIVE_TICK_RENDER_MAX_POINTS = 520;
+const LIVE_TICK_RENDER_MAX_POINTS = 260;
 const LIVE_AUX_RENDER_THROTTLE_MS = 250;
 const LIVE_TICK_PERSIST_MS = 5000;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 720;
@@ -66,11 +66,11 @@ const LIVE_CHAINLINK_MAX_LINE_GAP_SECONDS = 10;
 const LIVE_BINANCE_MAX_LINE_GAP_SECONDS = 5;
 const LIVE_PAPER_RENDER_TAIL_SECONDS = 15;
 const LIVE_RENDER_MAX_SOURCE_ROWS_PER_LINE = 700;
-const LIVE_RENDER_MIN_POINTS_PER_LINE = 120;
-const LIVE_RENDER_MAX_POINTS_PER_LINE = 600;
-const LIVE_RENDER_POINTS_PER_PIXEL = 0.85;
+const LIVE_RENDER_MIN_POINTS_PER_LINE = 80;
+const LIVE_RENDER_MAX_POINTS_PER_LINE = 320;
+const LIVE_RENDER_POINTS_PER_PIXEL = 0.45;
 const LIVE_AUX_VERSION_THROTTLE_MS = 250;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v51-public-paper-tab";
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v52-ranked-a4070";
 const LIVE_BINANCE_MAX_RENDER_JUMP_DOLLARS = 35;
 const LIVE_CHAINLINK_MAX_RENDER_SPIKE_DOLLARS = 80;
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
@@ -4119,6 +4119,7 @@ function routeKeyFromEdge(edgeId) {
 function paperSleeveCount(edgeId) {
   const route = routeKeyFromEdge(edgeId);
   const counts = {
+    portfolio_ranked_then_a4070_sharedcap10: 12,
     portfolio_ranked_gate8318_then_bookmom_sharedcap10: 4,
     portfolio_auto_highroi3_then_a55_sharedcap10: 4,
     portfolio_auto_highroi3_then_bookmom_a4565_e200_p50_q50_then_a55_sharedcap10: 5,
@@ -4135,6 +4136,68 @@ function paperSleeveCount(edgeId) {
 function paperStrategySleeves(edgeId) {
   const route = routeKeyFromEdge(edgeId);
   const strategies = {
+    portfolio_ranked_then_a4070_sharedcap10: [
+      {
+        name: "58-80c pressure",
+        window: "91-150s left",
+        rule: "First priority: buy the side BTC already favors when Polymarket ask is 58-80c, Binance pressure is strong, and visible queue is not too deep.",
+      },
+      {
+        name: "55-75c pressure",
+        window: "91-150s left",
+        rule: "Cheaper pressure sleeve with a tighter near-strike queue check, used only if the first sleeve leaves room under the market cap.",
+      },
+      {
+        name: "60-80c near-strike",
+        window: "91-150s left",
+        rule: "Higher-confidence near-strike sleeve that requires stronger queue quality before it quotes.",
+      },
+      {
+        name: "Book momentum",
+        window: "61-120s left",
+        rule: "Uses Polymarket repricing momentum plus Binance pressure to catch lag before the market fully catches up.",
+      },
+      {
+        name: "Front queue",
+        window: "91-150s left",
+        rule: "Add-on sleeve: quote only when we can be near the front of the queue and BTC pressure supports the selected side.",
+      },
+      {
+        name: "55-75c pressure 100k",
+        window: "91-150s left",
+        rule: "Add-on sleeve for the leading side when Binance pressure is at least 100k and Polymarket visible size is favorable.",
+      },
+      {
+        name: "55-75c pressure 150k",
+        window: "91-150s left",
+        rule: "Same add-on idea, but only when Binance pressure is stronger.",
+      },
+      {
+        name: "Wide book momentum",
+        window: "61-120s left",
+        rule: "Looks for Polymarket momentum in a wider 40-70c ask band while Binance is not fighting the trade.",
+      },
+      {
+        name: "Focus 55-80c",
+        window: "91-150s left",
+        rule: "Coverage sleeve for ordinary favorable-price maker quotes.",
+      },
+      {
+        name: "Near strike bucket",
+        window: "91-150s left",
+        rule: "Small edge near the start price where queue quality matters most.",
+      },
+      {
+        name: "Expensive ask bucket",
+        window: "91-150s left",
+        rule: "Only buys higher-priced contracts when edge and pressure are strong enough to justify the risk.",
+      },
+      {
+        name: "Mid expensive bucket",
+        window: "91-150s left",
+        rule: "Middle band between near-strike and expensive-ask behavior.",
+      },
+    ],
     portfolio_ranked_gate8318_then_bookmom_sharedcap10: [
       {
         name: "58-80c pressure",
