@@ -3370,6 +3370,12 @@ function backendWebSocketUrl() {
   return url.toString();
 }
 
+function securePageInsecureBackendReason(url) {
+  if (window.location.protocol !== "https:") return "";
+  if (!String(url || "").startsWith("ws://")) return "";
+  return "public_https_requires_wss_backend";
+}
+
 function refreshBackendPaperFeeds(options = {}) {
   ensureLiveTickStream();
   if (options.render && state.activeTab === "paper") renderPaperChart();
@@ -4951,14 +4957,18 @@ function renderPaperMeta() {
   if (selectedCurrent && market && !points.length && !verifiedPaperStartPrice(market)) {
     const startStatus = market.start_price_status || liveStartMetadata(market).start_price_status || "loading";
     const startError = market.start_price_error || liveStartMetadata(market).start_price_error || "";
+    const backendError = state.backendStatus.lastError || state.liveTickStatus.lastError;
+    const backendDetail = backendError ? ` | ${compactNote(backendError, 72)}` : "";
     const message = startStatus === "error"
       ? `Start error${startError ? `: ${startError}` : ""}`
       : "Loading start";
-    meta.innerHTML = `<span class="live-chip is-waiting">${escapeHtml(startStatus === "error" ? "Blocked" : "Loading")}</span> ${escapeHtml(message + paperStorageWarningText())}`;
+    meta.innerHTML = `<span class="live-chip is-waiting">${escapeHtml(startStatus === "error" || backendError ? "Blocked" : "Loading")}</span> ${escapeHtml(message + backendDetail + paperStorageWarningText())}`;
     return;
   }
   if (selectedCurrent && market && !points.length) {
-    meta.innerHTML = `<span class="live-chip is-waiting">Loading</span>${escapeHtml(paperStorageWarningText())}`;
+    const backendError = state.backendStatus.lastError || state.liveTickStatus.lastError;
+    const backendDetail = backendError ? ` ${compactNote(backendError, 72)}` : "";
+    meta.innerHTML = `<span class="live-chip is-waiting">${escapeHtml(backendError ? "Blocked" : "Loading")}</span>${escapeHtml(backendDetail + paperStorageWarningText())}`;
     return;
   }
   const updatedAt = market ? paperDisplayUpdatedAt(market) : null;
@@ -7901,6 +7911,23 @@ function ensureLiveTickStream() {
   if (liveTickReconnectTimer) return;
   const url = backendWebSocketUrl();
   if (!url) return;
+  const blockedReason = securePageInsecureBackendReason(url);
+  if (blockedReason) {
+    state.liveTickStatus = {
+      ...state.liveTickStatus,
+      state: "error",
+      lastError: blockedReason,
+      url,
+    };
+    state.backendStatus = {
+      ...state.backendStatus,
+      state: "error",
+      lastError: blockedReason,
+      url,
+    };
+    scheduleLiveTickRender();
+    return;
+  }
   state.liveTickStatus = {
     ...state.liveTickStatus,
     state: "connecting",
