@@ -77,8 +77,9 @@ const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
 const BINANCE_DEPTH_TABLE_STALE_MS = 15000;
 const LOCAL_BACKEND_BASE = configuredBackendBase();
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
-const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 600;
-const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 600;
+const DASHBOARD_DATA_VERSION = window.POLYMARKET_DASHBOARD_DATA_VERSION || LIVE_CHART_SCHEMA_VERSION;
+const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 240;
+const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 360;
 const BACKEND_WS_SNAPSHOT_SECONDS = 15;
 const PAPER_AUX_RENDER_CACHE_MAX_ENTRIES = 16;
 const POLYMARKET_TRUTH_SOURCE = "chainlink_data_streams";
@@ -232,7 +233,10 @@ function configuredPaperEdgeId() {
 }
 
 function loadJson(path) {
-  return fetch(`${path}?_=${Date.now()}`).then((response) => {
+  const separator = String(path).includes("?") ? "&" : "?";
+  return fetch(`${path}${separator}v=${encodeURIComponent(DASHBOARD_DATA_VERSION)}`, {
+    cache: "default",
+  }).then((response) => {
     if (!response.ok) throw new Error(`${path} returned ${response.status}`);
     return response.json();
   });
@@ -7800,10 +7804,8 @@ function handleBackendStreamMessage(payload) {
       lastStreamAt: new Date(),
       url: backendWebSocketUrl(),
     };
-    bumpPaperAuxVersion(true);
     refreshVisiblePaperOddsSlots(market || payload.market);
     schedulePaperTickPersist();
-    scheduleLiveTickRender();
     return;
   }
   if (payload.type === "paper_event") {
