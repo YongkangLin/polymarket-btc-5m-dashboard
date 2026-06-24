@@ -121,12 +121,14 @@ function configuredInitialTab() {
   return ["backtest", "paper", "live"].includes(requested) ? requested : "backtest";
 }
 
+const BACKTEST_ALL_VALUE = "__all_backtests__";
+
 const state = {
   workflow: null,
   paperSqlSession: null,
   activeTab: configuredInitialTab(),
   marketFilter: "all",
-  backtestMarket: "",
+  backtestMarket: BACKTEST_ALL_VALUE,
   paperGraph: PAPER_CURRENT_VALUE,
   liveBtcTicksByMarket: new Map(),
   liveBtcTickKeysByMarket: new Map(),
@@ -4025,23 +4027,25 @@ function renderBacktestSelects() {
   const allMarkets = marketRows();
   const boughtCount = allMarkets.filter((market) => market.has_signal).length;
   const noActionCount = allMarkets.length - boughtCount;
-  const filteredMarkets = state.marketFilter === "bought"
-    ? allMarkets.filter((market) => market.has_signal)
-    : state.marketFilter === "no_action"
-      ? allMarkets.filter((market) => !market.has_signal)
-      : allMarkets;
+  const filteredMarkets = backtestFilteredMarkets();
   byId("marketFilter").innerHTML = [
     ["all", `All markets (${fmt.format(allMarkets.length)})`],
     ["bought", `Bought (${fmt.format(boughtCount)})`],
     ["no_action", `No buy (${fmt.format(noActionCount)})`],
   ].map(([value, label]) => `<option value="${value}">${escapeHtml(label)}</option>`).join("");
   byId("marketFilter").value = state.marketFilter;
-  const allowed = new Set(filteredMarkets.map((market) => market.condition_id));
+  const allowed = new Set([BACKTEST_ALL_VALUE, ...filteredMarkets.map((market) => market.condition_id)]);
   if (!allowed.has(state.backtestMarket)) {
-    const preferred = filteredMarkets.find((market) => market.has_signal) || filteredMarkets[0];
-    state.backtestMarket = preferred?.condition_id || "";
+    state.backtestMarket = BACKTEST_ALL_VALUE;
   }
-  byId("backtestMarket").innerHTML = filteredMarkets.map((market) => {
+  const aggregateLabel = state.marketFilter === "bought"
+    ? `All bought markets (${fmt.format(filteredMarkets.length)})`
+    : state.marketFilter === "no_action"
+      ? `All no-buy markets (${fmt.format(filteredMarkets.length)})`
+      : `All backtests (${fmt.format(filteredMarkets.length)})`;
+  byId("backtestMarket").innerHTML = [
+    `<option value="${BACKTEST_ALL_VALUE}">${escapeHtml(aggregateLabel)}</option>`,
+    ...filteredMarkets.map((market) => {
     const signal = signalForMarket(market.condition_id);
     const when = market.window_start
       ? new Date(market.window_start).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
@@ -4050,8 +4054,16 @@ function renderBacktestSelects() {
       ? `BUY ${signal.intended_outcome} | ${signal.winner === signal.intended_outcome ? "won" : "lost"} | ${formatSignedMoney(signal.pnl_after_slippage_haircut)}`
       : `NO BUY | ${rejectReasonLabel(market.reason)}`;
     return `<option value="${escapeHtml(market.condition_id)}">${escapeHtml(`${when} | ${status}`)}</option>`;
-  }).join("");
+    }),
+  ].join("");
   byId("backtestMarket").value = state.backtestMarket;
+}
+
+function backtestFilteredMarkets() {
+  const allMarkets = marketRows();
+  if (state.marketFilter === "bought") return allMarkets.filter((market) => market.has_signal);
+  if (state.marketFilter === "no_action") return allMarkets.filter((market) => !market.has_signal);
+  return allMarkets;
 }
 
 function ruleLine() {
@@ -4097,6 +4109,19 @@ function strategyCell(title, body) {
     </div>`;
 }
 
+function activeSleeves() {
+  const summary = state.workflow?.active_backtest?.summary || state.workflow?.backtest?.summary || {};
+  return Array.isArray(summary.sleeves) ? summary.sleeves : [];
+}
+
+function activeStrategyLabel(edgeId) {
+  const sleeves = activeSleeves();
+  if (sleeves.length > 1) return `Multi-strat portfolio (${fmt.format(sleeves.length)} sleeves)`;
+  if (edgeId && edgeId.includes("portfolio")) return "Multi-strat portfolio";
+  if (edgeId) return compactNote(humanReason(edgeId), 44);
+  return "Paper strategy";
+}
+
 function routePromotionDecisionText(value) {
   if (value === "stand_down") return "Stand down";
   if (value === "keep_active") return "Keep active";
@@ -4113,11 +4138,12 @@ function paperRouteGateCells() {
     || paperHealth.recommended_dashboard_edge_id
     || activePaperEdgeId();
   const healthEdge = (paperHealth.edges || []).find((edge) => edge.edge_id === recommendedEdge) || {};
+  const routeLabel = activeStrategyLabel(recommendedEdge);
   const healthCells = recommendedEdge ? [
-    strategyCell("Paper Edge", recommendedEdge),
+    strategyCell("Paper Algo", routeLabel),
     strategyCell(
       "Paper Result",
-      `${fmt.format(healthEdge.maker_fills || 0)} fills / ${fmt.format(healthEdge.maker_settlements || 0)} settled | ${formatSignedMoney(healthEdge.realized_pnl)} | ROI ${formatPercent(healthEdge.roi_on_filled_cost)}`,
+      `${fmt.format(healthEdge.maker_fills || 0)} fills | ${fmt.format(healthEdge.maker_settlements || 0)} settled | ${formatSignedMoney(healthEdge.realized_pnl)} | ${formatPercent(healthEdge.roi_on_filled_cost)} ROI`,
     ),
   ] : [];
   const typedDecisions = healthEdge.typed_decisions || {};
@@ -4139,7 +4165,7 @@ function paperRouteGateCells() {
     .slice(0, 2)
     .map((row) => `${humanReason(row.reason)} (${fmt.format(row.markets || 0)} markets)`);
   if (recommendedEdge && blockers.length) {
-    healthCells.push(strategyCell("Main Blockers", blockers.join(" | ")));
+    healthCells.push(strategyCell("Main Blockers", compactNote(blockers.join(" | "), 64)));
   }
   if (!decision.decision && !routePromotion.typed_paper) return healthCells;
   const activeSummary = routePromotion.typed_paper?.active?.summary || {};
@@ -4608,6 +4634,149 @@ function renderTradePnlChart(signals) {
     </svg>`;
 }
 
+function backtestMarketPnl(row) {
+  if (!row?.has_signal && !row?.traded && !Number(row?.filled_quotes || 0)) return 0;
+  return metricNumber(row.pnl_after_slippage_haircut ?? row.pnl_dollars) ?? 0;
+}
+
+function sortedBacktestRows(rows) {
+  return [...(rows || [])].sort((left, right) => {
+    const leftTs = Date.parse(left.window_start || "");
+    const rightTs = Date.parse(right.window_start || "");
+    if (Number.isFinite(leftTs) && Number.isFinite(rightTs) && leftTs !== rightTs) return leftTs - rightTs;
+    return String(left.condition_id || "").localeCompare(String(right.condition_id || ""));
+  });
+}
+
+function backtestFilterTitle() {
+  if (state.marketFilter === "bought") return "Bought markets";
+  if (state.marketFilter === "no_action") return "No-buy markets";
+  return "All backtests";
+}
+
+function renderAllBacktestsSummary(rows) {
+  const perf = backtestPerformanceSummary();
+  const activeSummary = state.workflow.active_backtest?.summary || state.workflow.backtest?.summary || {};
+  const chartPnl = rows.reduce((sum, row) => sum + backtestMarketPnl(row), 0);
+  const boughtRows = rows.filter((row) => row.has_signal || row.traded || Number(row.filled_quotes || 0) > 0);
+  const wonRows = boughtRows.filter((row) => row.outcome_win);
+  const chartCost = boughtRows.reduce((sum, row) => sum + (metricNumber(row.filled_cost) ?? 0), 0);
+  const chartRoi = chartCost > 0 ? chartPnl / chartCost : null;
+  const signalItems = [
+    ["Charted markets", fmt.format(rows.length)],
+    ["Bought", fmt.format(boughtRows.length)],
+    ["Wins", boughtRows.length ? `${fmt.format(wonRows.length)} / ${fmt.format(boughtRows.length)}` : "--"],
+    ["Chart P&L", formatSignedMoney(chartPnl)],
+    ["Chart return", formatPercent(chartRoi)],
+    ["Walk-forward", perf.walkforwardFolds ? `${fmt.format(perf.walkforwardPositive || 0)}/${fmt.format(perf.walkforwardFolds)} folds won` : "--"],
+    ["Train / test", `${formatPercent(perf.trainRoi)} / ${formatPercent(perf.testRoi)}`],
+    ["Gate", activeSummary.algorithm_gate_passed || activeSummary.passes_strict_gate ? "Passed" : "Not passed yet"],
+  ].map(([label, value]) => `
+    <div class="signal-cell">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+    </div>`).join("");
+  byId("backtestSummary").innerHTML = `
+    <div class="decision-block decision-main">
+      <span class="decision-kicker">Backtest Result</span>
+      <strong>${escapeHtml(formatSignedMoney(perf.totalPnl))} total P&L</strong>
+      <span>${escapeHtml(`${fmt.format(perf.buyCount)} buys | ${formatPercent(perf.totalRoi)} return | ${fmt.format(perf.cleanMarkets)} validated`)}</span>
+    </div>
+    <div class="decision-block decision-rule">
+      <span class="decision-kicker">${escapeHtml(backtestFilterTitle())}</span>
+      <strong>${escapeHtml(`${fmt.format(rows.length)} charted markets`)}</strong>
+      <span>${escapeHtml("Top line is cumulative profit. Bottom strip is each 5-minute market: green won, red lost, gray no buy.")}</span>
+    </div>
+    <div class="decision-block decision-signals">
+      ${signalItems}
+    </div>`;
+}
+
+function renderAllBacktestsChart() {
+  const rows = sortedBacktestRows(backtestFilteredMarkets());
+  if (!rows.length) {
+    byId("backtestSummary").innerHTML = "";
+    byId("backtestChart").innerHTML = svgEmpty("No backtests for this filter.");
+    return;
+  }
+  renderAllBacktestsSummary(rows);
+  const view = { width: 980, height: 560, left: 74, right: 306, top: 34, bottom: 64 };
+  const equity = { top: view.top, height: 260 };
+  const strip = { top: 350, height: 92 };
+  const plotWidth = view.width - view.left - view.right;
+  let running = 0;
+  const plotted = rows.map((row, index) => {
+    const pnl = backtestMarketPnl(row);
+    running += pnl;
+    return { row, index, pnl, cumulative: running };
+  });
+  const pnlValues = plotted.map((point) => point.pnl);
+  const cumulativeValues = plotted.map((point) => point.cumulative);
+  const [minY, maxY] = profitDomain([0, ...pnlValues, ...cumulativeValues]);
+  const xFor = (index) => view.left + (rows.length === 1 ? plotWidth / 2 : (index / (rows.length - 1)) * plotWidth);
+  const yFor = (value) => equity.top + ((maxY - value) / Math.max(maxY - minY, 1)) * equity.height;
+  const barWidth = Math.max(0.7, plotWidth / rows.length * 0.82);
+  const grid = [minY, 0, (minY + maxY) / 2, maxY].map((tick) => {
+    const y = yFor(tick);
+    return `<line class="${Math.abs(tick) < 0.001 ? "axis-zero" : "grid"}" x1="${view.left}" y1="${y}" x2="${view.left + plotWidth}" y2="${y}"></line><text class="tick" x="${view.left - 10}" y="${y + 4}" text-anchor="end">${formatPnl(tick)}</text>`;
+  }).join("");
+  const dateTicks = [0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+    const index = Math.min(rows.length - 1, Math.max(0, Math.round(ratio * (rows.length - 1))));
+    const x = xFor(index);
+    const label = rows[index]?.window_start
+      ? new Date(rows[index].window_start).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+      : `${index + 1}`;
+    return `<line class="grid-minor" x1="${x}" y1="${equity.top}" x2="${x}" y2="${strip.top + strip.height}"></line><text class="tick" x="${x}" y="${view.height - 24}" text-anchor="middle">${escapeHtml(label)}</text>`;
+  }).join("");
+  const equityLine = pathFrom(plotted.map((point) => ({ x: xFor(point.index), y: yFor(point.cumulative) })));
+  const marketBars = plotted.map((point) => {
+    const x = xFor(point.index) - barWidth / 2;
+    const didBuy = point.row.has_signal || point.row.traded || Number(point.row.filled_quotes || 0) > 0;
+    const className = !didBuy ? "none" : point.pnl >= 0 ? "pass" : "fail";
+    const magnitude = didBuy ? Math.min(1, Math.abs(point.pnl) / 1.1) : 0.25;
+    const height = Math.max(4, strip.height * magnitude);
+    const y = strip.top + strip.height - height;
+    const title = didBuy
+      ? tradeTitle(point.row)
+      : `${point.row.slug || point.row.condition_id}: no buy`;
+    return `<rect class="pnl-bar market-strip ${className}" x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${barWidth.toFixed(2)}" height="${height.toFixed(2)}"><title>${escapeHtml(title)}</title></rect>`;
+  }).join("");
+  const boughtRows = rows.filter((row) => row.has_signal || row.traded || Number(row.filled_quotes || 0) > 0);
+  const wonRows = boughtRows.filter((row) => row.outcome_win);
+  const chartPnl = plotted[plotted.length - 1]?.cumulative ?? 0;
+  const chartCost = boughtRows.reduce((sum, row) => sum + (metricNumber(row.filled_cost) ?? 0), 0);
+  const noteRows = [
+    ["Chart", backtestFilterTitle()],
+    ["Markets", fmt.format(rows.length)],
+    ["Buys", fmt.format(boughtRows.length)],
+    ["Won buys", boughtRows.length ? `${fmt.format(wonRows.length)} (${formatPercent(wonRows.length / boughtRows.length)})` : "--"],
+    ["Chart P&L", formatSignedMoney(chartPnl)],
+    ["Chart return", formatPercent(chartCost > 0 ? chartPnl / chartCost : null)],
+    ["Full paths", backtestSeriesManifestText()],
+    ["Algo", activeStrategyLabel(state.workflow?.active_backtest_key || ACTIVE_BACKTEST_KEY)],
+  ];
+  const notes = svgSideRows(noteRows, 92, { labelX: 704, valueX: 944, rowGap: 28 });
+  byId("backtestChart").innerHTML = `
+    <svg viewBox="0 0 ${view.width} ${view.height}" role="img" aria-label="All backtests aggregate chart">
+      <rect class="plot" x="${view.left}" y="${equity.top}" width="${plotWidth}" height="${equity.height}"></rect>
+      <rect class="plot" x="${view.left}" y="${strip.top}" width="${plotWidth}" height="${strip.height}"></rect>
+      ${dateTicks}
+      ${grid}
+      <path class="line" d="${equityLine}"></path>
+      <circle class="dot latest" cx="${xFor(plotted.length - 1)}" cy="${yFor(chartPnl)}" r="5"></circle>
+      ${marketBars}
+      <text class="axis" x="${view.left + plotWidth / 2}" y="${equity.top - 12}" text-anchor="middle">Cumulative P&L across charted 5-minute backtests</text>
+      <text class="axis" x="${view.left + plotWidth / 2}" y="${strip.top - 12}" text-anchor="middle">Each market result</text>
+      <text class="legend up-contract" x="${view.left + 8}" y="${strip.top + 20}">green = winning buy</text>
+      <text class="legend down-contract" x="${view.left + 150}" y="${strip.top + 20}">red = losing buy</text>
+      <text class="legend" x="${view.left + 286}" y="${strip.top + 20}">gray = no buy</text>
+      <text class="axis" x="${view.left + plotWidth / 2}" y="${view.height - 18}" text-anchor="middle">Chronological markets</text>
+      <rect class="note-box" x="684" y="42" width="276" height="284" rx="6"></rect>
+      <text class="axis" x="704" y="68">Backtest Totals</text>
+      ${notes}
+    </svg>`;
+}
+
 function profileMarketTitle(row) {
   const pnl = Number(row.pnl_dollars || 0);
   const cost = Number(row.total_cost || 0);
@@ -4730,6 +4899,10 @@ function renderProfileSkewChart(profileKey = "profile_skew") {
 }
 
 async function renderBacktestChart() {
+  if (state.backtestMarket === BACKTEST_ALL_VALUE) {
+    renderAllBacktestsChart();
+    return;
+  }
   const market = marketRows().find((row) => row.condition_id === state.backtestMarket);
   if (!market) {
     byId("backtestSummary").innerHTML = "";
@@ -8349,6 +8522,7 @@ async function main() {
   });
   byId("marketFilter").addEventListener("change", (event) => {
     state.marketFilter = event.target.value;
+    state.backtestMarket = BACKTEST_ALL_VALUE;
     renderBacktestSelects();
     renderBacktestChart();
   });
