@@ -248,9 +248,16 @@ function inflateRows(columns, rows) {
 }
 
 function normalizeWorkflow(workflow) {
+  workflow = workflow && typeof workflow === "object" ? workflow : {};
   state.backtestSeriesChunkCache.clear();
   state.backtestSeriesLoading.clear();
-  const backtest = workflow.backtest || {};
+  const backtest = workflow.backtest && typeof workflow.backtest === "object" ? workflow.backtest : {};
+  workflow.backtest = backtest;
+  workflow.data_quality = workflow.data_quality && typeof workflow.data_quality === "object" ? workflow.data_quality : {};
+  workflow.active_backtest = workflow.active_backtest && typeof workflow.active_backtest === "object" ? workflow.active_backtest : {};
+  workflow.live_trade = workflow.live_trade && typeof workflow.live_trade === "object" ? workflow.live_trade : {};
+  workflow.candidate_strategies = Array.isArray(workflow.candidate_strategies) ? workflow.candidate_strategies : [];
+  backtest.summary = backtest.summary && typeof backtest.summary === "object" ? backtest.summary : {};
   backtest.markets = inflateRows(backtest.market_columns, backtest.markets);
   const marketByIndex = backtest.markets || [];
   workflow._marketIndexByConditionId = new Map();
@@ -268,9 +275,11 @@ function normalizeWorkflow(workflow) {
   backtest.signals = backtest.signal_source === "markets" && !(backtest.signals || []).length
     ? backtest.markets
     : inflateRows(backtest.signal_columns, backtest.signals);
-  const profileSkew = workflow.profile_skew || {};
+  const profileSkew = workflow.profile_skew && typeof workflow.profile_skew === "object" ? workflow.profile_skew : {};
+  workflow.profile_skew = profileSkew;
   profileSkew.markets = inflateRows(profileSkew.market_columns, profileSkew.markets);
-  const profileCheapPair = workflow.profile_cheap_pair || {};
+  const profileCheapPair = workflow.profile_cheap_pair && typeof workflow.profile_cheap_pair === "object" ? workflow.profile_cheap_pair : {};
+  workflow.profile_cheap_pair = profileCheapPair;
   profileCheapPair.markets = inflateRows(profileCheapPair.market_columns, profileCheapPair.markets);
   (workflow.candidate_strategies || []).forEach((strategy) => {
     strategy.markets = inflateRows(strategy.market_columns, strategy.markets);
@@ -3177,10 +3186,8 @@ function isResolvedBookPrice(value) {
 function outcomeDisplayBookOddsFromCandidates(candidates) {
   const rows = displayPolymarketBookRows(candidates);
   const row = rows[0] || null;
-  let up = row ? outcomeDisplayBookProbability(row, "up") : null;
-  let down = row ? outcomeDisplayBookProbability(row, "down") : null;
-  if (up === null && down !== null) up = complementDisplayProbability(down);
-  if (down === null && up !== null) down = complementDisplayProbability(up);
+  const up = row ? outcomeDisplayBookProbability(row, "up") : null;
+  const down = row ? outcomeDisplayBookProbability(row, "down") : null;
   const upBookSeen = row ? outcomeSideBookSeen(row, "up") : false;
   const downBookSeen = row ? outcomeSideBookSeen(row, "down") : false;
   return {
@@ -5042,6 +5049,22 @@ function externalDepthSnapshotFromRow(row) {
   return { row, bids, asks, source: "Binance depth WS", sourceKind: "binance_depth_ws" };
 }
 
+function externalTopBookSnapshotFromRow(row) {
+  if (!isExternalBookPricePoint(row)) return null;
+  const bid = metricNumber(row?.book_bid);
+  const ask = metricNumber(row?.book_ask);
+  if (bid === null || ask === null || bid <= 0 || ask <= 0 || ask < bid) return null;
+  const bidQty = metricNumber(row?.book_bid_qty) ?? 0;
+  const askQty = metricNumber(row?.book_ask_qty) ?? 0;
+  return {
+    row,
+    bids: [[bid, bidQty]],
+    asks: [[ask, askQty]],
+    source: "Binance book WS",
+    sourceKind: "binance_book_ws",
+  };
+}
+
 function externalDepthSnapshotTimeMicro(snapshot) {
   return metricNumber(snapshot?.row?.receive_time_micro)
     ?? metricNumber(snapshot?.row?.event_time_micro)
@@ -5057,17 +5080,21 @@ function labelExternalDepthSnapshot(snapshot) {
     ...snapshot,
     stale: ageMs !== null && ageMs > BINANCE_DEPTH_TABLE_STALE_MS,
     ageMs,
-    source: "Binance depth WS",
-    sourceKind: "binance_depth_ws",
+    source: snapshot.source || "Binance depth WS",
+    sourceKind: snapshot.sourceKind || "binance_depth_ws",
   };
 }
 
 function latestExternalDepthSnapshotForMarket(market, rawPoints) {
-  const snapshots = liveTickPointsForCurrentWindow(market, (row) => backendEventKind(row) === "depth")
+  const rows = liveTickPointsForCurrentWindow(market, isExternalBookPricePoint)
+    .sort((left, right) => (pointTimestampMicro(right) ?? 0) - (pointTimestampMicro(left) ?? 0));
+  const depthSnapshot = rows
     .map(externalDepthSnapshotFromRow)
     .filter(Boolean)
-    .sort((left, right) => externalDepthSnapshotTimeMicro(right) - externalDepthSnapshotTimeMicro(left));
-  return snapshots.length ? labelExternalDepthSnapshot(snapshots[0]) : null;
+    .sort((left, right) => externalDepthSnapshotTimeMicro(right) - externalDepthSnapshotTimeMicro(left))[0];
+  if (depthSnapshot) return labelExternalDepthSnapshot(depthSnapshot);
+  const topBookSnapshot = rows.map(externalTopBookSnapshotFromRow).find(Boolean);
+  return topBookSnapshot ? labelExternalDepthSnapshot(topBookSnapshot) : null;
 }
 
 function formatBookMoney(value) {
@@ -5500,9 +5527,7 @@ function paperPanelOutcomeProbabilities(market, latestRaw, latestBookRaw) {
 
 function paperPanelDisplayOutcomeProbabilities(market, latestRaw, latestBookRaw) {
   if (!market) return { up: null, down: null, upNoSellers: false, downNoSellers: false, askBookObserved: false };
-  const cached = cachedOutcomeOddsForMarket(market);
   const candidates = [
-    cached,
     latestBookRaw,
     latestRaw,
     market,
@@ -5515,23 +5540,28 @@ function paperPanelDisplayOutcomeProbabilities(market, latestRaw, latestBookRaw)
     ...liveTickPointsForMarket(market).slice(-80).reverse(),
   ].filter(Boolean);
   const bookOdds = outcomeDisplayBookOddsFromCandidates(candidates);
-  if (bookOdds.askBookObserved) {
-    rememberOutcomeOddsForWindow(market, candidates);
-    const resolved = stickyOutcomeOddsForMarket(market, bookOdds);
-    return { ...bookOdds, ...resolved, up: resolved.up, down: resolved.down };
-  }
-  const resolved = stickyOutcomeOddsForMarket(market, bookOdds);
-  if (resolved.up !== null || resolved.down !== null) {
-    return {
-      ...resolved,
-      up: resolved.up,
-      down: resolved.down,
-      upNoSellers: false,
-      downNoSellers: false,
-      askBookObserved: false,
-    };
-  }
-  return { up: null, down: null, upNoSellers: false, downNoSellers: false, askBookObserved: false };
+  const directOdds = outcomeDirectDisplayOddsFromCandidates(candidates);
+  const resolved = {
+    ...bookOdds,
+    up: bookOdds.up ?? directOdds.up,
+    down: bookOdds.down ?? directOdds.down,
+    upNoSellers: bookOdds.up === null && directOdds.up === null && bookOdds.upNoSellers,
+    downNoSellers: bookOdds.down === null && directOdds.down === null && bookOdds.downNoSellers,
+    askBookObserved: bookOdds.askBookObserved || directOdds.up !== null || directOdds.down !== null,
+  };
+  if (resolved.askBookObserved) rememberOutcomeOddsForWindow(market, candidates);
+  return resolved;
+}
+
+function outcomeDirectDisplayOddsFromCandidates(candidates) {
+  const rows = outcomeRowsNewestFirst(candidates);
+  const firstDirect = (key) => rows
+    .map((row) => outcomeDirectProbability(row, key))
+    .find((value) => value !== null) ?? null;
+  return {
+    up: firstDirect("up"),
+    down: firstDirect("down"),
+  };
 }
 
 function bestOutcomeProbability(side, candidates) {
@@ -5617,13 +5647,10 @@ function renderPaperOddsStrip(market, latestRaw, latestBookRaw, odds = null) {
   const oddsMarket = resolvedPaperOddsMarket(market);
   if (!oddsMarket) return "";
   const displayOdds = odds || paperPanelDisplayOutcomeProbabilities(oddsMarket, latestRaw, latestBookRaw);
-  const sticky = stickyOutcomeOddsForMarket(oddsMarket, displayOdds);
   const resolved = {
     ...displayOdds,
-    up: sticky.up,
-    down: sticky.down,
-    market_odds_stale: sticky.market_odds_stale ?? displayOdds.market_odds_stale,
-    _odds_sticky_only: sticky._odds_sticky_only ?? displayOdds._odds_sticky_only,
+    up: metricNumber(displayOdds.up),
+    down: metricNumber(displayOdds.down),
   };
   const staleLabel = resolved._odds_sticky_only || resolved.market_odds_stale ? " stale" : "";
   return `
@@ -6078,13 +6105,6 @@ function outcomeBookProbability(row, side) {
 function outcomeDisplayBookProbability(row, side) {
   const ask = sideField(row, side, "ask");
   if (ask !== null) return clampOutcomeProbability(ask);
-  const bid = sideField(row, side, "bid");
-  const opposite = oppositeSideKey(side);
-  const oppositeAsk = sideField(row, opposite, "ask");
-  const oppositeBid = sideField(row, opposite, "bid");
-  if (oppositeAsk !== null) return complementDisplayProbability(oppositeAsk);
-  if (bid !== null && isResolvedBookPrice(bid)) return clampOutcomeProbability(bid);
-  if (oppositeBid !== null && isResolvedBookPrice(oppositeBid)) return complementDisplayProbability(oppositeBid);
   return null;
 }
 
@@ -6358,9 +6378,10 @@ function renderOrderBookTable(market, rawPoints, latestRaw, latestQuote) {
   const snapshot = selectedOrderBookSnapshot(market, rawPoints, latestRaw);
   const rows = orderBookTableRows(market, rawPoints, latestRaw, latestQuote, snapshot);
   const ageText = ageMsText(snapshot.ageMs);
+  const sourceName = snapshot.source || "Binance depth WS";
   const depthLabel = snapshot.waiting
     ? "waiting for Binance depth WS"
-    : (snapshot.stale ? `Binance depth WS stale${ageText ? ` | ${ageText}` : ""}` : `Binance depth WS${ageText ? ` | ${ageText}` : ""}`);
+    : (snapshot.stale ? `${sourceName} stale${ageText ? ` | ${ageText}` : ""}` : `${sourceName}${ageText ? ` | ${ageText}` : ""}`);
   const body = !isOpen ? "" : rows.length ? rows.map((row) => `
     <tr class="paper-book-row is-${escapeHtml(row.sideClass || "neutral")}">
       <th scope="row">${escapeHtml(row.side)}</th>
@@ -7289,16 +7310,16 @@ function renderLiveChart() {
 }
 
 function renderStatus() {
-  const q = state.workflow.data_quality || {};
-  const b = state.workflow.backtest.summary || {};
+  const q = state.workflow?.data_quality || {};
+  const b = state.workflow?.backtest?.summary || {};
   const active = activeCandidateStrategy();
-  const activeSummary = active?.summary || state.workflow.active_backtest?.summary || {};
+  const activeSummary = active?.summary || state.workflow?.active_backtest?.summary || {};
   const seriesManifest = backtestSeriesManifestSummary();
   const activeBuys = Number(activeSummary.algorithm_fills || activeSummary.traded_markets || activeSummary.quoted_markets || b.signals || 0);
   const activeRoi = metricNumber(activeSummary.algorithm_roi_on_filled_cost ?? activeSummary.roi_on_filled_cost ?? b.roi_after_slippage_haircut);
   const validatedMarkets = metricNumber(activeSummary.algorithm_admitted_markets ?? q.clean_markets ?? activeSummary.clean_markets_scanned);
   const chartMarkets = seriesManifest.markets || metricNumber(activeSummary.complete_series_markets ?? activeSummary.admitted_markets ?? q.complete_series_markets);
-  const policy = state.workflow.live_trade?.execution_policy || {};
+  const policy = state.workflow?.live_trade?.execution_policy || {};
   const makerRoi = metricNumber(policy.walkforward_roi_on_planned_cost ?? activeSummary.maker_walkforward_roi_on_planned_cost);
   const makerTarget = metricNumber(policy.min_walkforward_roi_on_planned_cost) || 0.03;
   const makerReady = Boolean(policy.maker_route_ready);
