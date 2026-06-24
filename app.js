@@ -1,12 +1,12 @@
 const fmt = new Intl.NumberFormat("en-US");
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const moneyCents = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const ACTIVE_BACKTEST_KEY = "portfolio_auto_highroi3_bookmom_a4070_then_a55_bucket_near_expask_midexp_sharedcap10";
+const ACTIVE_BACKTEST_KEY = "portfolio_ranked_gate8318_then_bookmom_sharedcap10";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
-const ACTIVE_PAPER_EDGE_ID = "portfolio_auto_highroi3_bookmom_a4070_then_a55_bucket_near_expask_midexp_sharedcap10_native";
+const ACTIVE_PAPER_EDGE_ID = "portfolio_ranked_gate8318_then_bookmom_sharedcap10_native";
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_STREAM_WATCHDOG_MS = 30000;
-const LIVE_TICK_RENDER_THROTTLE_MS = 50;
+const LIVE_TICK_RENDER_THROTTLE_MS = 33;
 const LIVE_SIDE_RENDER_THROTTLE_MS = 250;
 const LIVE_CHART_CLOCK_MS = 500;
 const LIVE_TICK_STALE_MS = 10000;
@@ -15,8 +15,9 @@ const LIVE_SOCKET_CONNECT_TIMEOUT_MS = 3500;
 const LOCAL_BACKEND_BASE_KEY = "POLYMARKET_LOCAL_BACKEND_BASE";
 const LOCAL_PAPER_EDGE_KEY = "POLYMARKET_PAPER_EDGE_ID";
 const DEFAULT_BACKEND_BASE = "http://127.0.0.1:8788";
+const PUBLIC_BACKEND_BASE = "https://incorporated-oscar-ent-sheer.trycloudflare.com";
 const LIVE_TICK_RENDER_MAX_POINTS = 520;
-const LIVE_AUX_RENDER_THROTTLE_MS = 1500;
+const LIVE_AUX_RENDER_THROTTLE_MS = 750;
 const LIVE_TICK_PERSIST_MS = 5000;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 720;
 const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 36;
@@ -69,8 +70,9 @@ const LIVE_RENDER_MIN_POINTS_PER_LINE = 120;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 600;
 const LIVE_RENDER_POINTS_PER_PIXEL = 0.85;
 const LIVE_AUX_VERSION_THROTTLE_MS = 750;
-const LIVE_CHART_SCHEMA_VERSION = "paper-live-v49-fast-odds-slot";
-const LIVE_BINANCE_MAX_RENDER_JUMP_DOLLARS = 60;
+const LIVE_CHART_SCHEMA_VERSION = "paper-live-v51-public-paper-tab";
+const LIVE_BINANCE_MAX_RENDER_JUMP_DOLLARS = 35;
+const LIVE_CHAINLINK_MAX_RENDER_SPIKE_DOLLARS = 80;
 const DISPLAY_CERTAIN_OPPOSITE_PRICE = 0.011;
 const POLYMARKET_TRUTH_CURRENT_STALE_MS = 12000;
 const POLYMARKET_TRUTH_EVENT_STALE_MS = 18000;
@@ -216,6 +218,7 @@ function configuredBackendBase() {
   const protocol = window.location.protocol === "https:" ? "https:" : "http:";
   const isLocalHost = ["127.0.0.1", "localhost", "::1", ""].includes(host);
   if (isLocalHost) return DEFAULT_BACKEND_BASE;
+  if (host === "yongkanglin.github.io") return PUBLIC_BACKEND_BASE;
   const saved = window.localStorage?.getItem(LOCAL_BACKEND_BASE_KEY);
   if (saved) return String(saved).replace(/\/+$/, "");
   if (host && !["127.0.0.1", "localhost", "yongkanglin.github.io"].includes(host)) {
@@ -2191,6 +2194,9 @@ const PERSISTED_ROW_FIELDS = new Set([
   "market_odds_fetched_at",
   "market_odds_stale",
   "market_odds_error",
+  "upNoSellers",
+  "downNoSellers",
+  "askBookObserved",
   ...OUTCOME_ODDS_FIELDS,
   ...POLYMARKET_BOOK_FIELDS,
 ]);
@@ -3323,6 +3329,39 @@ function outcomeDisplayBookOddsFromCandidates(candidates) {
   };
 }
 
+function resolveDisplayOutcomeOdds(bookOdds, directOdds) {
+  const book = bookOdds || {};
+  const direct = directOdds || {};
+  const bookUp = metricNumber(book.up);
+  const bookDown = metricNumber(book.down);
+  const directUp = metricNumber(direct.up);
+  const directDown = metricNumber(direct.down);
+  const upBookSeen = bookUp !== null || book.upNoSellers === true;
+  const downBookSeen = bookDown !== null || book.downNoSellers === true;
+  let up = upBookSeen ? bookUp : directUp;
+  let down = downBookSeen ? bookDown : directDown;
+  let upNoSellers = book.upNoSellers === true && bookUp === null;
+  let downNoSellers = book.downNoSellers === true && bookDown === null;
+  if (upNoSellers && down !== null && down <= DISPLAY_CERTAIN_OPPOSITE_PRICE) {
+    up = 1;
+    upNoSellers = false;
+  }
+  if (downNoSellers && up !== null && up <= DISPLAY_CERTAIN_OPPOSITE_PRICE) {
+    down = 1;
+    downNoSellers = false;
+  }
+  if (!upBookSeen && up === null && down !== null) up = complementDisplayProbability(down);
+  if (!downBookSeen && down === null && up !== null) down = complementDisplayProbability(up);
+  return {
+    ...book,
+    up,
+    down,
+    upNoSellers,
+    downNoSellers,
+    askBookObserved: Boolean(book.askBookObserved || directUp !== null || directDown !== null),
+  };
+}
+
 function preferBookOdds(bookOdds, fallbackOdds) {
   if (bookOdds.up !== null || bookOdds.down !== null) {
     return {
@@ -3748,6 +3787,29 @@ function paperGraphSamples(rows, startPrice, source) {
   return (rows || [])
     .map((row, index) => paperGraphSample(row, index, rows.length, startPrice, source))
     .filter(Boolean);
+}
+
+function withoutOneTickPriceSpikes(samples, maxSpikeDollars) {
+  const ordered = orderedUniqueSamples(samples);
+  const maxSpike = metricNumber(maxSpikeDollars);
+  if (ordered.length < 3 || maxSpike === null || maxSpike <= 0) return ordered;
+  const output = [ordered[0]];
+  for (let index = 1; index < ordered.length - 1; index += 1) {
+    const previous = output[output.length - 1];
+    const current = ordered[index];
+    const next = ordered[index + 1];
+    const prevDelta = Math.abs(current.dollarMove - previous.dollarMove);
+    const nextDelta = Math.abs(current.dollarMove - next.dollarMove);
+    const neighborDelta = Math.abs(previous.dollarMove - next.dollarMove);
+    const elapsedGap = next.elapsedSeconds - previous.elapsedSeconds;
+    const isolatedSpike = prevDelta > maxSpike
+      && nextDelta > maxSpike
+      && neighborDelta <= maxSpike / 3
+      && elapsedGap <= 2;
+    if (!isolatedSpike) output.push(current);
+  }
+  output.push(ordered[ordered.length - 1]);
+  return output;
 }
 
 function chainlinkStartAnchorSample(market, startMeta) {
@@ -5721,14 +5783,7 @@ function paperPanelDisplayOutcomeProbabilities(market, latestRaw, latestBookRaw)
   ].filter(Boolean);
   const bookOdds = outcomeDisplayBookOddsFromCandidates(candidates);
   const directOdds = outcomeDirectDisplayOddsFromCandidates(candidates);
-  const resolved = {
-    ...bookOdds,
-    up: bookOdds.up ?? directOdds.up,
-    down: bookOdds.down ?? directOdds.down,
-    upNoSellers: bookOdds.up === null && directOdds.up === null && bookOdds.upNoSellers,
-    downNoSellers: bookOdds.down === null && directOdds.down === null && bookOdds.downNoSellers,
-    askBookObserved: bookOdds.askBookObserved || directOdds.up !== null || directOdds.down !== null,
-  };
+  const resolved = resolveDisplayOutcomeOdds(bookOdds, directOdds);
   if (resolved.askBookObserved) rememberOutcomeOddsForWindow(market, candidates);
   return resolved;
 }
@@ -5826,7 +5881,10 @@ function resolvedPaperOddsMarket(market) {
 function renderPaperOddsStrip(market, latestRaw, latestBookRaw, odds = null) {
   const oddsMarket = resolvedPaperOddsMarket(market);
   if (!oddsMarket) return "";
-  const displayOdds = odds || paperPanelDisplayOutcomeProbabilities(oddsMarket, latestRaw, latestBookRaw);
+  const rawDisplayOdds = odds || paperPanelDisplayOutcomeProbabilities(oddsMarket, latestRaw, latestBookRaw);
+  const displayOdds = rawDisplayOdds.askBookObserved
+    ? rawDisplayOdds
+    : stickyOutcomeOddsForMarket(oddsMarket, rawDisplayOdds);
   const resolved = {
     ...displayOdds,
     up: metricNumber(displayOdds.up),
@@ -5852,7 +5910,7 @@ function refreshVisiblePaperOddsSlots(market = null) {
   if (!html) return;
   ["paperChart", "liveChart"].forEach((chartId) => {
     const chart = byId(chartId);
-    const slot = chart?.querySelector?.(".paper-live-odds-slot, .paper-live-status-slot");
+    const slot = chart?.querySelector?.(".paper-live-odds-slot");
     if (!slot || slot._paperOddsHtml === html) return;
     slot.innerHTML = html;
     slot._paperOddsHtml = html;
@@ -5921,6 +5979,9 @@ function stickyOutcomeOddsForMarket(market, odds) {
       market_odds_error: sourceRow?.market_odds_error,
       _odds_updated_micro: sourceTime,
       _odds_sticky_only: stickyOnly,
+      upNoSellers: Boolean(odds?.upNoSellers),
+      downNoSellers: Boolean(odds?.downNoSellers),
+      askBookObserved: Boolean(odds?.askBookObserved),
     };
     keys.forEach((key) => {
       state.lastDisplayedOutcomeOddsByWindow.set(key, stored);
@@ -6851,9 +6912,19 @@ function paperActionLogRows(market, rawPoints) {
   const seen = new Set();
   const sorted = rows
     .filter((row, index) => {
-      const key = row.point_id
-        || row.event_id
-        || `${row.event_type || row.decision}:${row.quote_id || ""}:${row.signal_id || ""}:${paperRowTimeMicro(row, index)}:${row.reason || ""}`;
+      const elapsed = paperPointElapsedSeconds(row);
+      const marketSecond = Number.isFinite(elapsed) ? Math.round(elapsed) : Math.round((paperRowTimeMicro(row, index) || 0) / 1_000_000);
+      const quotePrice = metricNumber(row.quote_price ?? row.maker_quote_price ?? row.price);
+      const semanticKey = [
+        row.event_type || row.decision || paperMarkerType(row),
+        row.side || row.outcome || row.intended_outcome || "",
+        quotePrice === null ? "" : quotePrice.toFixed(4),
+        metricNumber(row.filled_cost ?? row.cost) ?? "",
+        metricNumber(row.shares ?? row.filled_shares) ?? "",
+        row.reason || row.fill_reason || row.cancel_reason || "",
+        marketSecond,
+      ].join(":");
+      const key = semanticKey || row.event_id || row.point_id || `${paperRowTimeMicro(row, index)}:${index}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -6907,13 +6978,14 @@ function renderPaperDecisionGraph(options = {}) {
   const rawPoints = market ? paperChartPointsFor(market) : [];
   const chart = byId(options.chartId || "paperChart");
   const selectedCurrent = (state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE && isCurrentPaperMarket(market);
+  const initialMarketTruthPoint = chainlinkPointFromMarket(market);
   const emptyAuxHtml = renderPaperEmptyAuxHtml({
     chartId: chart?.id || options.chartId || "paperChart",
     selectedCurrent,
     market,
     isLiveView,
   });
-  if (!market || !rawPoints.length) {
+  if (!market || (!rawPoints.length && !initialMarketTruthPoint)) {
     if ((state.paperGraph || PAPER_CURRENT_VALUE) === PAPER_CURRENT_VALUE) {
       renderPaperStartupChart({
         chart,
@@ -6967,9 +7039,10 @@ function renderPaperDecisionGraph(options = {}) {
   ] : [])
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
   const latestElapsedSeed = newestElapsedSeconds(rawTruthSamples, rawExternalSamples);
-  const sharedRenderElapsed = selectedCurrent ? latestElapsedSeed : null;
-  const truthSamples = selectedCurrent ? limitLiveSamplesForRender(rawTruthSamples, sharedRenderElapsed) : rawTruthSamples;
-  const externalSamples = selectedCurrent ? limitLiveSamplesForRender(rawExternalSamples, sharedRenderElapsed) : rawExternalSamples;
+  const truthRenderElapsed = selectedCurrent ? newestElapsedSeconds(rawTruthSamples) : null;
+  const externalRenderElapsed = selectedCurrent ? newestElapsedSeconds(rawExternalSamples) : null;
+  const truthSamples = selectedCurrent ? limitLiveSamplesForRender(rawTruthSamples, truthRenderElapsed) : rawTruthSamples;
+  const externalSamples = selectedCurrent ? limitLiveSamplesForRender(rawExternalSamples, externalRenderElapsed) : rawExternalSamples;
   const allSamples = [...truthSamples, ...externalSamples]
     .sort((left, right) => left.elapsedSeconds - right.elapsedSeconds);
 
@@ -7016,8 +7089,14 @@ function renderPaperDecisionGraph(options = {}) {
   if (xDomain.max - xDomain.min < 1) xDomain.max = xDomain.min + 1;
   const samples = allSamples.filter((point) => point.elapsedSeconds >= xDomain.min && point.elapsedSeconds <= xDomain.max);
   const visibleSamples = samples.length ? samples : allSamples.slice(-1);
-  const visibleTruthSamples = visibleSamplesWithCarry(truthSamples, xDomain);
-  const visibleExternalSamples = visibleSamplesWithCarry(externalSamples, xDomain);
+  const visibleTruthSamples = withoutOneTickPriceSpikes(
+    visibleSamplesWithCarry(truthSamples, xDomain),
+    LIVE_CHAINLINK_MAX_RENDER_SPIKE_DOLLARS,
+  );
+  const visibleExternalSamples = withoutOneTickPriceSpikes(
+    visibleSamplesWithCarry(externalSamples, xDomain),
+    LIVE_BINANCE_MAX_RENDER_JUMP_DOLLARS,
+  );
   const useUPlot = canUseUPlot();
   const maxLinePoints = selectedCurrent ? liveRenderPointLimit(plotWidth, useUPlot) : LIVE_TICK_RENDER_MAX_POINTS;
   const truthLineSamples = selectedCurrent
@@ -7036,8 +7115,8 @@ function renderPaperDecisionGraph(options = {}) {
   const dollarDomain = selectedCurrent ? livePaperDollarDomain(market, visibleSamples) : paperDollarDomain(visibleSamples, 2);
   if (useUPlot) {
     const uplotHeadSample = selectedCurrent
-      ? (displayedTruthSample || latestTruth || truthSamples[truthSamples.length - 1] || latestExternal || allSamples[allSamples.length - 1])
-      : latest;
+      ? (displayedTruthSample || latestTruth || truthSamples[truthSamples.length - 1] || null)
+      : (displayedTruthSample || latestTruth || latest);
     const hasTruthHead = Boolean(uplotHeadSample);
     const latestRaw = uplotHeadSample?.row || marketTruthPoint || market || {};
     const latestBookRaw = latestBookRowForMarket(market, rawPoints) || latestRaw;
