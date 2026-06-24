@@ -1,9 +1,9 @@
 const fmt = new Intl.NumberFormat("en-US");
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const moneyCents = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const ACTIVE_BACKTEST_KEY = "portfolio_auto_highroi3_bookmom_dual4565p50_4070p0_then_a55_bucket_near_expask_midexp_sharedcap10";
+const ACTIVE_BACKTEST_KEY = "portfolio_auto_highroi3_bookmom_a4070_then_a55_bucket_near_expask_midexp_sharedcap10";
 const ACTIVE_BACKTEST_VALUE = `candidate:${ACTIVE_BACKTEST_KEY}`;
-const ACTIVE_PAPER_EDGE_ID = "portfolio_auto_highroi3_bookmom_dual4565p50_4070p0_then_a55_bucket_near_expask_midexp_sharedcap10_native";
+const ACTIVE_PAPER_EDGE_ID = "portfolio_auto_highroi3_bookmom_a4070_then_a55_bucket_near_expask_midexp_sharedcap10_native";
 const PAPER_CURRENT_VALUE = "__current__";
 const PAPER_STREAM_WATCHDOG_MS = 30000;
 const LIVE_TICK_RENDER_THROTTLE_MS = 50;
@@ -228,8 +228,6 @@ function configuredPaperEdgeId() {
   const explicit = params.get("paper_edge_id") || params.get("edge_id");
   if (explicit) return String(explicit);
   if (window.POLYMARKET_PAPER_EDGE_ID) return String(window.POLYMARKET_PAPER_EDGE_ID);
-  const saved = window.localStorage?.getItem(LOCAL_PAPER_EDGE_KEY);
-  if (saved) return String(saved);
   return "";
 }
 
@@ -263,7 +261,9 @@ function normalizeWorkflow(workflow) {
     }
     return row;
   });
-  backtest.signals = inflateRows(backtest.signal_columns, backtest.signals);
+  backtest.signals = backtest.signal_source === "markets" && !(backtest.signals || []).length
+    ? backtest.markets
+    : inflateRows(backtest.signal_columns, backtest.signals);
   const profileSkew = workflow.profile_skew || {};
   profileSkew.markets = inflateRows(profileSkew.market_columns, profileSkew.markets);
   const profileCheapPair = workflow.profile_cheap_pair || {};
