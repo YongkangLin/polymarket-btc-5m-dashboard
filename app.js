@@ -4359,9 +4359,9 @@ function renderStrategyPanels() {
   const quoteMarkets = activeSummary.algorithm_quote_markets ?? activeSummary.quote_markets ?? signalRows().length;
   const totalPnl = activeSummary.algorithm_pnl_dollars ?? activeSummary.pnl_dollars;
   const totalRoi = activeSummary.algorithm_roi_on_filled_cost ?? activeSummary.roi_on_planned_cost;
-  const validatedMarkets = activeSummary.algorithm_admitted_markets ?? activeSummary.clean_markets_scanned ?? activeSummary.admitted_markets;
-  const chartMarkets = seriesManifest.markets || activeSummary.complete_series_markets || activeSummary.admitted_markets;
-  const chartStatus = seriesManifest.complete ? "full-series charted" : "charted subset";
+  const validatedMarkets = activeSummary.validated_replay_markets ?? activeSummary.algorithm_admitted_markets ?? activeSummary.clean_markets_scanned ?? activeSummary.admitted_markets;
+  const chartMarkets = seriesManifest.markets || activeSummary.charted_series_markets || activeSummary.chart_complete_series_markets || activeSummary.complete_series_markets;
+  const chartStatus = seriesManifest.complete ? "complete chart series" : "charted subset";
   const policy = state.workflow.live_trade?.execution_policy || {};
   const liveStatus = policy.maker_route_ready
     ? "Disabled until manual enable"
@@ -4371,7 +4371,7 @@ function renderStrategyPanels() {
     strategyCell("Buy Rule", ruleSummaryText()),
     strategyCell(
       "Result",
-      `${fmt.format(quoteMarkets)} quotes | ${formatSignedMoney(totalPnl)} P&L | ${formatPercent(totalRoi)} return | ${fmt.format(validatedMarkets || 0)} replay admitted | ${fmt.format(chartMarkets || 0)} ${chartStatus}`,
+      `${fmt.format(quoteMarkets)} quotes | ${formatSignedMoney(totalPnl)} P&L | ${formatPercent(totalRoi)} return | ${fmt.format(validatedMarkets || 0)} validated markets | ${fmt.format(chartMarkets || 0)} ${chartStatus}`,
     ),
   ].join("");
   const paperStrategy = byId("paperStrategy");
@@ -4391,12 +4391,13 @@ function marketDecisionSummary(row, market, isSignal) {
   const activeSummary = state.workflow.active_backtest?.summary || state.workflow.backtest?.summary || {};
   const cleanMarkets = metricNumber(
     activeSummary.algorithm_admitted_markets
-      ?? activeSummary.complete_series_markets
+      ?? activeSummary.validated_replay_markets
       ?? activeSummary.admitted_markets
-      ?? activeSummary.clean_markets_scanned,
+      ?? activeSummary.clean_markets_scanned
+      ?? activeSummary.complete_series_markets,
   );
   const buyCount = metricNumber(activeSummary.algorithm_fills ?? activeSummary.fills ?? activeSummary.filled_markets ?? activeSummary.signals) ?? 0;
-  const chartMarkets = metricNumber(activeSummary.complete_series_markets ?? activeSummary.admitted_markets);
+  const chartMarkets = metricNumber(activeSummary.charted_series_markets ?? activeSummary.chart_complete_series_markets ?? activeSummary.complete_series_markets);
   const totalPnl = metricNumber(activeSummary.algorithm_pnl_dollars ?? activeSummary.pnl_dollars);
   const totalRoi = metricNumber(activeSummary.algorithm_roi_on_filled_cost ?? activeSummary.roi_on_filled_cost ?? activeSummary.roi_on_planned_cost);
   const winRate = metricNumber(activeSummary.algorithm_win_rate_on_fills ?? activeSummary.win_rate_on_fills);
@@ -4425,7 +4426,7 @@ function marketDecisionSummary(row, market, isSignal) {
     : `The closest checked moment failed the rule: ${rejectReasonLabel(row.reason)}.`;
   return {
     totalHeadline: `${formatSignedMoney(totalPnl)} total P&L`,
-    totalResult: `${fmt.format(buyCount)} buys | ${formatPercent(totalRoi)} return | ${fmt.format(cleanMarkets || 0)} replay admitted / ${fmt.format(chartMarkets || 0)} full-series charted`,
+    totalResult: `${fmt.format(buyCount)} buys | ${formatPercent(totalRoi)} return | ${fmt.format(cleanMarkets || 0)} validated / ${fmt.format(chartMarkets || 0)} charted`,
     headline,
     result,
     reason,
@@ -4446,9 +4447,10 @@ function backtestPerformanceSummary() {
   const activeSummary = state.workflow.active_backtest?.summary || state.workflow.backtest?.summary || {};
   const cleanMarkets = metricNumber(
     activeSummary.algorithm_admitted_markets
-      ?? activeSummary.complete_series_markets
+      ?? activeSummary.validated_replay_markets
       ?? activeSummary.admitted_markets
-      ?? activeSummary.clean_markets_scanned,
+      ?? activeSummary.clean_markets_scanned
+      ?? activeSummary.complete_series_markets,
   ) ?? 0;
   const buyCount = metricNumber(activeSummary.algorithm_fills ?? activeSummary.fills ?? activeSummary.filled_markets ?? activeSummary.signals) ?? 0;
   const quoteMarkets = metricNumber(activeSummary.algorithm_quote_markets ?? activeSummary.quote_markets ?? activeSummary.quoted_markets) ?? buyCount;
@@ -4477,7 +4479,7 @@ function backtestPerformanceSummary() {
 
 function backtestSeriesManifestSummary() {
   const manifest = state.workflow?.backtest?.series_chunk_manifest || {};
-  const markets = metricNumber(manifest.markets) ?? metricNumber(state.workflow?.backtest?.summary?.complete_series_markets) ?? 0;
+  const markets = metricNumber(manifest.markets) ?? metricNumber(state.workflow?.backtest?.summary?.charted_series_markets ?? state.workflow?.backtest?.summary?.complete_series_markets) ?? 0;
   const chunks = metricNumber(manifest.chunks) ?? metricNumber(state.workflow?.backtest?.series_chunk_count) ?? 0;
   const rows = metricNumber(manifest.rows) ?? metricNumber(state.workflow?.backtest?.series_shipped_rows) ?? 0;
   const expectedRows = metricNumber(manifest.expected_rows) ?? (markets ? markets * 301 : null);
@@ -4488,7 +4490,7 @@ function backtestSeriesManifestSummary() {
 function backtestSeriesManifestText() {
   const manifest = backtestSeriesManifestSummary();
   if (!manifest.markets) return "Chart series not loaded";
-  const status = manifest.complete ? "full 5m" : "incomplete";
+  const status = manifest.complete ? "complete 5m series" : "incomplete chart series";
   return `${fmt.format(manifest.markets)} markets | ${status}`;
 }
 
@@ -4825,6 +4827,7 @@ function renderAllBacktestsSummary(rows) {
   const chartCost = boughtRows.reduce((sum, row) => sum + (metricNumber(row.filled_cost) ?? 0), 0);
   const chartRoi = chartCost > 0 ? chartPnl / chartCost : null;
   const signalItems = [
+    ["Validated markets", fmt.format(perf.cleanMarkets)],
     ["Charted markets", fmt.format(rows.length)],
     ["Bought", fmt.format(boughtRows.length)],
     ["Wins", boughtRows.length ? `${fmt.format(wonRows.length)} / ${fmt.format(boughtRows.length)}` : "--"],
@@ -4842,12 +4845,12 @@ function renderAllBacktestsSummary(rows) {
     <div class="decision-block decision-main">
       <span class="decision-kicker">Backtest Result</span>
       <strong>${escapeHtml(formatSignedMoney(perf.totalPnl))} total P&L</strong>
-      <span>${escapeHtml(`${fmt.format(perf.buyCount)} buys | ${formatPercent(perf.totalRoi)} return | ${fmt.format(rows.length)} full-series charted`)}</span>
+      <span>${escapeHtml(`${fmt.format(perf.buyCount)} buys | ${formatPercent(perf.totalRoi)} return | ${fmt.format(perf.cleanMarkets)} validated / ${fmt.format(rows.length)} charted`)}</span>
     </div>
     <div class="decision-block decision-rule">
       <span class="decision-kicker">${escapeHtml(backtestFilterTitle())}</span>
-      <strong>${escapeHtml(`${fmt.format(rows.length)} charted markets`)}</strong>
-      <span>${escapeHtml("Top line is cumulative profit. Bottom strip is each 5-minute market: green won, red lost, gray no buy.")}</span>
+      <strong>${escapeHtml(`${fmt.format(rows.length)} charted market series`)}</strong>
+      <span>${escapeHtml("The chart is a browser-sized subset; the P&L and return use the full validated replay.")}</span>
     </div>
     <div class="decision-block decision-signals">
       ${signalItems}
@@ -7920,8 +7923,8 @@ function renderStatus() {
   const seriesManifest = backtestSeriesManifestSummary();
   const activeBuys = Number(activeSummary.algorithm_fills || activeSummary.traded_markets || activeSummary.quoted_markets || b.signals || 0);
   const activeRoi = metricNumber(activeSummary.algorithm_roi_on_filled_cost ?? activeSummary.roi_on_filled_cost ?? b.roi_after_slippage_haircut);
-  const validatedMarkets = metricNumber(activeSummary.algorithm_admitted_markets ?? q.clean_markets ?? activeSummary.clean_markets_scanned);
-  const chartMarkets = seriesManifest.markets || metricNumber(activeSummary.complete_series_markets ?? activeSummary.admitted_markets ?? q.complete_series_markets);
+  const validatedMarkets = metricNumber(activeSummary.validated_replay_markets ?? activeSummary.algorithm_admitted_markets ?? activeSummary.admitted_markets ?? activeSummary.clean_markets_scanned ?? q.clean_markets);
+  const chartMarkets = seriesManifest.markets || metricNumber(activeSummary.charted_series_markets ?? activeSummary.chart_complete_series_markets ?? activeSummary.complete_series_markets ?? q.charted_series_markets ?? q.complete_series_markets);
   const policy = state.workflow?.live_trade?.execution_policy || {};
   const makerRoi = metricNumber(policy.walkforward_roi_on_planned_cost ?? activeSummary.maker_walkforward_roi_on_planned_cost);
   const makerTarget = metricNumber(policy.min_walkforward_roi_on_planned_cost) || 0.03;
