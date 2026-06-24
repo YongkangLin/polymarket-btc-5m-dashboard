@@ -4361,7 +4361,7 @@ function renderStrategyPanels() {
   const totalRoi = activeSummary.algorithm_roi_on_filled_cost ?? activeSummary.roi_on_planned_cost;
   const validatedMarkets = activeSummary.validated_replay_markets ?? activeSummary.algorithm_admitted_markets ?? activeSummary.clean_markets_scanned ?? activeSummary.admitted_markets;
   const chartMarkets = seriesManifest.markets || activeSummary.charted_series_markets || activeSummary.chart_complete_series_markets || activeSummary.complete_series_markets;
-  const chartStatus = seriesManifest.complete ? "complete chart series" : "charted subset";
+  const chartStatus = seriesManifest.complete ? "charted for speed" : "shown subset";
   const policy = state.workflow.live_trade?.execution_policy || {};
   const liveStatus = policy.maker_route_ready
     ? "Disabled until manual enable"
@@ -4371,7 +4371,7 @@ function renderStrategyPanels() {
     strategyCell("Buy Rule", ruleSummaryText()),
     strategyCell(
       "Result",
-      `${fmt.format(quoteMarkets)} quotes | ${formatSignedMoney(totalPnl)} P&L | ${formatPercent(totalRoi)} return | ${fmt.format(validatedMarkets || 0)} validated markets | ${fmt.format(chartMarkets || 0)} ${chartStatus}`,
+      `${fmt.format(quoteMarkets)} quotes | ${formatSignedMoney(totalPnl)} P&L | ${formatPercent(totalRoi)} return | ${fmt.format(validatedMarkets || 0)} tested | ${fmt.format(chartMarkets || 0)} ${chartStatus}`,
     ),
   ].join("");
   const paperStrategy = byId("paperStrategy");
@@ -4426,7 +4426,7 @@ function marketDecisionSummary(row, market, isSignal) {
     : `The closest checked moment failed the rule: ${rejectReasonLabel(row.reason)}.`;
   return {
     totalHeadline: `${formatSignedMoney(totalPnl)} total P&L`,
-    totalResult: `${fmt.format(buyCount)} buys | ${formatPercent(totalRoi)} return | ${fmt.format(cleanMarkets || 0)} validated / ${fmt.format(chartMarkets || 0)} charted`,
+    totalResult: `${fmt.format(buyCount)} buys | ${formatPercent(totalRoi)} return | ${fmt.format(cleanMarkets || 0)} tested / ${fmt.format(chartMarkets || 0)} charted`,
     headline,
     result,
     reason,
