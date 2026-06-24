@@ -919,7 +919,8 @@ select {
   fill: var(--muted);
 }
 
-.paper-book-table {
+.paper-book-table,
+.paper-strategy-table {
   min-width: 820px;
   margin-top: 14px;
   border-top: 1px solid var(--line);
@@ -936,6 +937,7 @@ select {
 }
 
 .paper-session-history,
+.paper-strategy-table,
 .paper-action-log {
   min-width: 820px;
   margin-top: 14px;
@@ -1014,6 +1016,7 @@ select {
 }
 
 .paper-session-history table,
+.paper-strategy-table table,
 .paper-action-log table,
 .paper-book-table table {
   width: 100%;
@@ -1023,6 +1026,8 @@ select {
 
 .paper-session-history th,
 .paper-session-history td,
+.paper-strategy-table th,
+.paper-strategy-table td,
 .paper-action-log th,
 .paper-action-log td,
 .paper-book-table th,
@@ -1035,6 +1040,8 @@ select {
 
 .paper-session-history th:first-child,
 .paper-session-history td:first-child,
+.paper-strategy-table th:first-child,
+.paper-strategy-table td:first-child,
 .paper-action-log th:first-child,
 .paper-action-log td:first-child,
 .paper-book-table th:first-child,
@@ -1042,6 +1049,8 @@ select {
   text-align: left;
 }
 
+.paper-strategy-table th:last-child,
+.paper-strategy-table td:last-child,
 .paper-action-log th:last-child,
 .paper-action-log td:last-child {
   text-align: left;
@@ -1049,6 +1058,7 @@ select {
 }
 
 .paper-session-history thead th,
+.paper-strategy-table thead th,
 .paper-action-log thead th,
 .paper-book-table thead th {
   color: var(--muted);
@@ -1062,8 +1072,15 @@ select {
   font-weight: 900;
 }
 
+.paper-strategy-table tbody th {
+  color: var(--ink);
+  font-weight: 900;
+  text-align: left;
+}
+
 .paper-action-log tbody td,
 .paper-session-history tbody td,
+.paper-strategy-table tbody td,
 .paper-book-table tbody td {
   color: var(--ink);
   font-weight: 700;
@@ -1075,6 +1092,14 @@ select {
 
 .paper-session-row.is-loss {
   background: linear-gradient(90deg, rgba(190, 61, 61, 0.12), rgba(190, 61, 61, 0.04));
+}
+
+.paper-session-row.is-no-action {
+  background: #fbfcfd;
+}
+
+.paper-session-row.is-no-action td {
+  color: var(--muted);
 }
 
 .paper-session-row.is-empty td {

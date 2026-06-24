@@ -17,7 +17,7 @@ const LOCAL_PAPER_EDGE_KEY = "POLYMARKET_PAPER_EDGE_ID";
 const DEFAULT_BACKEND_BASE = "http://127.0.0.1:8788";
 const PUBLIC_BACKEND_BASE = "https://incorporated-oscar-ent-sheer.trycloudflare.com";
 const LIVE_TICK_RENDER_MAX_POINTS = 520;
-const LIVE_AUX_RENDER_THROTTLE_MS = 750;
+const LIVE_AUX_RENDER_THROTTLE_MS = 250;
 const LIVE_TICK_PERSIST_MS = 5000;
 const LIVE_TICK_STORE_MAX_POINTS_PER_MARKET = 720;
 const LIVE_TICK_STORE_MAX_BOOK_POINTS_PER_MARKET = 36;
@@ -69,7 +69,7 @@ const LIVE_RENDER_MAX_SOURCE_ROWS_PER_LINE = 700;
 const LIVE_RENDER_MIN_POINTS_PER_LINE = 120;
 const LIVE_RENDER_MAX_POINTS_PER_LINE = 600;
 const LIVE_RENDER_POINTS_PER_PIXEL = 0.85;
-const LIVE_AUX_VERSION_THROTTLE_MS = 750;
+const LIVE_AUX_VERSION_THROTTLE_MS = 250;
 const LIVE_CHART_SCHEMA_VERSION = "paper-live-v51-public-paper-tab";
 const LIVE_BINANCE_MAX_RENDER_JUMP_DOLLARS = 35;
 const LIVE_CHAINLINK_MAX_RENDER_SPIKE_DOLLARS = 80;
@@ -96,9 +96,10 @@ const DEFAULT_PAPER_SESSION = Object.freeze({
   available_capital: null,
   committed_capital: null,
   market_count: null,
-  market_limit: 36,
+  market_limit: null,
   positions: [],
   pnl_history: [],
+  market_history: [],
 });
 const DEFAULT_LIVE_SESSION = Object.freeze({
   mode: "live",
@@ -110,9 +111,10 @@ const DEFAULT_LIVE_SESSION = Object.freeze({
   available_capital: null,
   committed_capital: null,
   market_count: 0,
-  market_limit: 36,
+  market_limit: null,
   positions: [],
   pnl_history: [],
+  market_history: [],
 });
 
 function configuredInitialTab() {
@@ -965,6 +967,7 @@ function renderPaperAuxHtml({ chartId, selectedCurrent, market, rawPoints, lates
   const cached = cacheable ? state.paperAuxRenderCache.get(cacheKey) : null;
   if (cached && now - cached.renderedAt < LIVE_AUX_RENDER_THROTTLE_MS) return cached.html;
   const html = [
+    renderPaperStrategyPanel(),
     renderPaperActionLog(market, rawPoints),
     renderPolymarketBookTable(market, rawPoints),
     renderOrderBookTable(market, rawPoints, latestBookRaw || latestRaw || null, latestQuote || null),
@@ -4129,6 +4132,88 @@ function paperSleeveCount(edgeId) {
   return counts[route] || null;
 }
 
+function paperStrategySleeves(edgeId) {
+  const route = routeKeyFromEdge(edgeId);
+  const strategies = {
+    portfolio_ranked_gate8318_then_bookmom_sharedcap10: [
+      {
+        name: "58-80c pressure",
+        window: "91-150s left",
+        rule: "Buy the side BTC already favors when the Polymarket ask is 58-80c, Binance pressure is strong, and visible queue is not too deep.",
+      },
+      {
+        name: "55-75c pressure",
+        window: "91-150s left",
+        rule: "Same maker idea at a cheaper 55-75c ask band, with a tighter near-strike queue check so we do not sit behind stale size.",
+      },
+      {
+        name: "60-80c near-strike",
+        window: "91-150s left",
+        rule: "A stricter higher-confidence sleeve that only buys when queue quality is strong enough near the strike.",
+      },
+      {
+        name: "Book momentum",
+        window: "61-120s left",
+        rule: "Uses Polymarket repricing momentum plus Binance pressure to catch lag when the market has started moving but has not fully repriced.",
+      },
+    ],
+    portfolio_auto_highroi3_bookmom_a4070_then_a55_bucket_near_expask_midexp_sharedcap10: [
+      { name: "Front queue", window: "91-150s left", rule: "Quotes only when we can be near the front of the queue and BTC pressure supports the selected side." },
+      { name: "55-75c pressure 100k", window: "91-150s left", rule: "Buys the leading side when Binance pressure is at least 100k and visible Polymarket size is favorable." },
+      { name: "55-75c pressure 150k", window: "91-150s left", rule: "Same idea with a stronger Binance pressure requirement." },
+      { name: "Wide book momentum", window: "61-120s left", rule: "Looks for Polymarket momentum in a wider 40-70c ask band while Binance is not fighting the trade." },
+      { name: "Focus 55-80c", window: "91-150s left", rule: "Coverage sleeve for ordinary favorable-price maker quotes." },
+      { name: "Near strike bucket", window: "91-150s left", rule: "Small edge near the start price where queue quality matters most." },
+      { name: "Expensive ask bucket", window: "91-150s left", rule: "Only buys higher-priced contracts when edge and pressure are strong enough to justify the risk." },
+      { name: "Mid expensive bucket", window: "91-150s left", rule: "Middle band between near-strike and expensive-ask behavior." },
+    ],
+  };
+  if (strategies[route]) return strategies[route];
+  const count = paperSleeveCount(edgeId);
+  if (count && count > 1) {
+    return [{
+      name: `${fmt.format(count)}-sleeve portfolio`,
+      window: "varies",
+      rule: "Multiple validated maker sleeves compete for the same shared market bankroll cap; the first sleeve with enough edge can quote.",
+    }];
+  }
+  return [{
+    name: humanReason(route || "paper strategy"),
+    window: "current market",
+    rule: "Post-only maker quote rule using Chainlink truth, Polymarket books, Binance external pressure, queue quality, and bankroll limits.",
+  }];
+}
+
+function renderPaperStrategyPanel() {
+  const edgeId = activePaperEdgeId();
+  const rows = paperStrategySleeves(edgeId);
+  const body = rows.map((row) => `
+    <tr>
+      <th scope="row">${escapeHtml(row.name)}</th>
+      <td>${escapeHtml(row.window)}</td>
+      <td>${escapeHtml(row.rule)}</td>
+    </tr>`).join("");
+  return renderCollapsiblePanel(
+    "paper_strategies",
+    "paper-strategy-table",
+    "Active Paper Strategies",
+    activeStrategyLabel(edgeId),
+    `
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Strategy</th>
+            <th scope="col">When</th>
+            <th scope="col">Explanation</th>
+          </tr>
+        </thead>
+        <tbody>${body}</tbody>
+      </table>
+    `,
+    true,
+  );
+}
+
 function activeStrategyLabel(edgeId) {
   const count = paperSleeveCount(edgeId);
   if (count) return `Multi-strat portfolio (${fmt.format(count)} sleeves)`;
@@ -4214,7 +4299,7 @@ function renderStrategyPanels() {
   const totalRoi = activeSummary.algorithm_roi_on_filled_cost ?? activeSummary.roi_on_planned_cost;
   const validatedMarkets = activeSummary.algorithm_admitted_markets ?? activeSummary.clean_markets_scanned ?? activeSummary.admitted_markets;
   const chartMarkets = seriesManifest.markets || activeSummary.complete_series_markets || activeSummary.admitted_markets;
-  const chartStatus = seriesManifest.complete ? "full chart series" : "charted subset";
+  const chartStatus = seriesManifest.complete ? "full-series charted" : "charted subset";
   const policy = state.workflow.live_trade?.execution_policy || {};
   const liveStatus = policy.maker_route_ready
     ? "Disabled until manual enable"
@@ -4224,7 +4309,7 @@ function renderStrategyPanels() {
     strategyCell("Buy Rule", ruleSummaryText()),
     strategyCell(
       "Result",
-      `${fmt.format(quoteMarkets)} quotes | ${formatSignedMoney(totalPnl)} P&L | ${formatPercent(totalRoi)} return | ${fmt.format(validatedMarkets || 0)} validated | ${fmt.format(chartMarkets || 0)} ${chartStatus}`,
+      `${fmt.format(quoteMarkets)} quotes | ${formatSignedMoney(totalPnl)} P&L | ${formatPercent(totalRoi)} return | ${fmt.format(validatedMarkets || 0)} replay admitted | ${fmt.format(chartMarkets || 0)} ${chartStatus}`,
     ),
   ].join("");
   const paperStrategy = byId("paperStrategy");
@@ -4278,7 +4363,7 @@ function marketDecisionSummary(row, market, isSignal) {
     : `The closest checked moment failed the rule: ${rejectReasonLabel(row.reason)}.`;
   return {
     totalHeadline: `${formatSignedMoney(totalPnl)} total P&L`,
-    totalResult: `${fmt.format(buyCount)} buys | ${formatPercent(totalRoi)} return | ${fmt.format(cleanMarkets || 0)} validated / ${fmt.format(chartMarkets || 0)} charted`,
+    totalResult: `${fmt.format(buyCount)} buys | ${formatPercent(totalRoi)} return | ${fmt.format(cleanMarkets || 0)} replay admitted / ${fmt.format(chartMarkets || 0)} full-series charted`,
     headline,
     result,
     reason,
@@ -4695,7 +4780,7 @@ function renderAllBacktestsSummary(rows) {
     <div class="decision-block decision-main">
       <span class="decision-kicker">Backtest Result</span>
       <strong>${escapeHtml(formatSignedMoney(perf.totalPnl))} total P&L</strong>
-      <span>${escapeHtml(`${fmt.format(perf.buyCount)} buys | ${formatPercent(perf.totalRoi)} return | ${fmt.format(perf.cleanMarkets)} validated`)}</span>
+      <span>${escapeHtml(`${fmt.format(perf.buyCount)} buys | ${formatPercent(perf.totalRoi)} return | ${fmt.format(rows.length)} full-series charted`)}</span>
     </div>
     <div class="decision-block decision-rule">
       <span class="decision-kicker">${escapeHtml(backtestFilterTitle())}</span>
@@ -6215,6 +6300,7 @@ function normalizeTradeSession(session, defaults) {
     market_limit: metricNumber(source.market_limit ?? source.paper_session_market_limit) ?? defaults.market_limit,
     positions,
     pnl_history: Array.isArray(source.pnl_history) ? source.pnl_history : [],
+    market_history: Array.isArray(source.market_history) ? source.market_history : [],
   };
 }
 
@@ -6231,8 +6317,10 @@ function tradeViewSession(isLiveView) {
 }
 
 function paperSessionHistoryRows(session) {
-  const history = Array.isArray(session?.pnl_history) ? session.pnl_history : [];
-  const limit = Math.max(1, Math.min(metricNumber(session?.market_limit) ?? 36, 200));
+  const history = Array.isArray(session?.market_history) && session.market_history.length
+    ? session.market_history
+    : (Array.isArray(session?.pnl_history) ? session.pnl_history : []);
+  const limit = Math.max(1, Math.min(metricNumber(session?.history_limit) ?? 300, 500));
   return history.slice(-limit);
 }
 
@@ -6469,8 +6557,8 @@ function latestSessionMetric(market, rawPoints, session, keys) {
 function renderPaperSessionHistory(session) {
   const history = paperSessionHistoryRows(session);
   const startingCapital = metricNumber(session?.starting_capital ?? session?.paper_session_starting_capital);
-  const marketsSeen = metricNumber(session?.market_count) ?? 0;
-  const marketLimit = metricNumber(session?.market_limit) ?? 36;
+  const marketsSeen = metricNumber(session?.market_count) ?? history.length;
+  const buyMarkets = history.filter((row) => (metricNumber(row.pnl_dollars) !== null) || (metricNumber(row.position_shares) ?? 0) > 0 || (metricNumber(row.cost) ?? 0) > 0).length;
   let runningCapital = startingCapital;
   const chronologicalRows = history.map((row) => {
     const pnl = metricNumber(row.pnl_dollars);
@@ -6479,31 +6567,33 @@ function renderPaperSessionHistory(session) {
   });
   const rows = chronologicalRows.length ? chronologicalRows.reverse().map((row) => {
     const pnl = metricNumber(row.pnl_dollars);
-    const tone = pnl === null ? "" : pnl < 0 ? "is-loss" : "is-win";
-    const slug = String(row.slug || "--").replace(/^btc-updown-5m-/, "");
+    const hasBuy = (metricNumber(row.position_shares) ?? 0) > 0 || (metricNumber(row.cost) ?? 0) > 0 || pnl !== null;
+    const tone = hasBuy ? (pnl === null ? "" : pnl < 0 ? "is-loss" : "is-win") : "is-no-action";
+    const slug = String(row.slug || row.market_key || "--").replace(/^btc-updown-5m-/, "");
     const capitalAfter = metricNumber(row._displayCapitalAfter) ?? metricNumber(row.capital_after);
-    const position = row.position_label || paperPositionLabel({
+    const position = hasBuy ? (row.position_label || paperPositionLabel({
       side: row.position_side || row.side,
       shares: row.position_shares,
       entry_price: row.position_entry_price,
-    });
+    })) : (row.action_label || "No buy");
+    const outcome = row.winner || row.result || (hasBuy ? "--" : "No action");
     return `
       <tr class="paper-session-row ${tone}">
         <td>${escapeHtml(slug)}</td>
         <td>${escapeHtml(position)}</td>
-        <td>${escapeHtml(row.winner || "--")}</td>
-        <td>${escapeHtml(formatSignedMoney(pnl))}</td>
+        <td>${escapeHtml(outcome)}</td>
+        <td>${escapeHtml(pnl === null ? "--" : formatSignedMoney(pnl))}</td>
         <td>${escapeHtml(capitalAfter === null ? "--" : moneyCents.format(capitalAfter))}</td>
       </tr>`;
   }).join("") : `
       <tr class="paper-session-row is-empty">
-        <td colspan="5">No closed buys yet. This section stays visible and fills in after the bot buys, holds, and the market closes.</td>
+        <td colspan="5">No checked markets recorded yet. This section stays visible and fills in as the session runs.</td>
       </tr>`;
   return renderCollapsiblePanel(
     "session_pnl",
     "paper-session-history",
-    "Historical Session P&L",
-    `${chronologicalRows.length} closed | ${marketsSeen}/${marketLimit} P&L markets`,
+    "Historical Session",
+    `${marketsSeen} checked | ${buyMarkets} buy markets | open-ended`,
     `
       <table>
         <thead>
@@ -6720,9 +6810,9 @@ function polymarketBookTableRows(snapshot = null) {
   if (!snapshot) return [];
   const sideRows = (outcome, bookSide, levels) => {
     const isBuy = bookSide === "Bid";
-    return levels.slice(0, 5).map(([price, shares], index) => ({
+    return levels.slice(0, 1).map(([price, shares]) => ({
       outcome,
-      side: `${isBuy ? "Buy" : "Sell"} ${index + 1}`,
+      side: `Best ${isBuy ? "Bid" : "Ask"}`,
       sideClass: isBuy ? "buy" : "sell",
       limit: formatPrice(price),
       shares: formatBookQty(shares),
@@ -6760,7 +6850,7 @@ function renderPolymarketBookTable(market, rawPoints) {
   return renderCollapsiblePanel(
     panelId,
     "paper-book-table",
-    "Polymarket Up/Down Depth",
+    "Polymarket Up/Down Top Of Book",
     sourceLabel,
     `
       <table>
