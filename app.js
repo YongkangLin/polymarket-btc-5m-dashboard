@@ -4109,14 +4109,29 @@ function strategyCell(title, body) {
     </div>`;
 }
 
-function activeSleeves() {
-  const summary = state.workflow?.active_backtest?.summary || state.workflow?.backtest?.summary || {};
-  return Array.isArray(summary.sleeves) ? summary.sleeves : [];
+function routeKeyFromEdge(edgeId) {
+  return String(edgeId || "").replace(/_native$/, "");
+}
+
+function paperSleeveCount(edgeId) {
+  const route = routeKeyFromEdge(edgeId);
+  const counts = {
+    portfolio_ranked_gate8318_then_bookmom_sharedcap10: 4,
+    portfolio_auto_highroi3_then_a55_sharedcap10: 4,
+    portfolio_auto_highroi3_then_bookmom_a4565_e200_p50_q50_then_a55_sharedcap10: 5,
+    portfolio_auto_highroi3_bookmom_a4070_then_a55_bucket_near_expask_midexp_sharedcap10: 8,
+    portfolio_auto_highroi3_bookmom_a4565p50_then_a55_bucket_near_expask_midexp_sharedcap10: 8,
+    portfolio_auto_highroi3_bookmom_a4565p50q100_then_a55_bucket_near_expask_midexp_sharedcap10: 8,
+    portfolio_auto_highroi3_bookmom_dual4565p50_4070p0_then_a55_bucket_near_expask_midexp_sharedcap10: 9,
+    portfolio_auto_highroi3_bookmom_a4565p50q100_then_a55_bucket_near_expask_midexp_a4070p0q10n1_sharedcap10: 9,
+    portfolio_order_sweep_top61_sharedcap10: 61,
+  };
+  return counts[route] || null;
 }
 
 function activeStrategyLabel(edgeId) {
-  const sleeves = activeSleeves();
-  if (sleeves.length > 1) return `Multi-strat portfolio (${fmt.format(sleeves.length)} sleeves)`;
+  const count = paperSleeveCount(edgeId);
+  if (count) return `Multi-strat portfolio (${fmt.format(count)} sleeves)`;
   if (edgeId && edgeId.includes("portfolio")) return "Multi-strat portfolio";
   if (edgeId) return compactNote(humanReason(edgeId), 44);
   return "Paper strategy";
