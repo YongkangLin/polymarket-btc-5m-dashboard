@@ -80,6 +80,7 @@ const BINANCE_DEPTH_TABLE_STALE_MS = 15000;
 const LOCAL_BACKEND_BASE = configuredBackendBase();
 const LOCAL_BACKEND_WS = window.POLYMARKET_BACKEND_WS || "";
 const DASHBOARD_DATA_VERSION = window.POLYMARKET_DASHBOARD_DATA_VERSION || LIVE_CHART_SCHEMA_VERSION;
+const DASHBOARD_DATA_CACHE_BUST = `${DASHBOARD_DATA_VERSION}-${Date.now().toString(36)}`;
 const BACKEND_WS_CHAINLINK_SNAPSHOT_LIMIT = 240;
 const BACKEND_WS_BINANCE_SNAPSHOT_LIMIT = 240;
 const BACKEND_WS_SNAPSHOT_SECONDS = 15;
@@ -240,11 +241,14 @@ function configuredPaperEdgeId() {
 }
 
 function loadJson(path) {
-  const separator = String(path).includes("?") ? "&" : "?";
-  return fetch(`${path}${separator}v=${encodeURIComponent(DASHBOARD_DATA_VERSION)}`, {
-    cache: "no-cache",
+  const url = new URL(path, window.location.href);
+  url.searchParams.set("v", DASHBOARD_DATA_VERSION);
+  url.searchParams.set("cb", DASHBOARD_DATA_CACHE_BUST);
+  return fetch(url.toString(), {
+    cache: "no-store",
     headers: {
-      "Cache-Control": "no-cache",
+      "Cache-Control": "no-store, max-age=0",
+      "Pragma": "no-cache",
     },
   }).then((response) => {
     if (!response.ok) throw new Error(`${path} returned ${response.status}`);
