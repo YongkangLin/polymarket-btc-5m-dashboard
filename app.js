@@ -4397,8 +4397,8 @@ function renderStrategyPanels() {
 function marketDecisionSummary(row, market, isSignal) {
   const activeSummary = state.workflow.active_backtest?.summary || state.workflow.backtest?.summary || {};
   const cleanMarkets = metricNumber(
-    activeSummary.algorithm_admitted_markets
-      ?? activeSummary.validated_replay_markets
+    activeSummary.validated_replay_markets
+      ?? activeSummary.algorithm_admitted_markets
       ?? activeSummary.admitted_markets
       ?? activeSummary.clean_markets_scanned
       ?? activeSummary.complete_series_markets,
@@ -4453,8 +4453,8 @@ function marketDecisionSummary(row, market, isSignal) {
 function backtestPerformanceSummary() {
   const activeSummary = state.workflow.active_backtest?.summary || state.workflow.backtest?.summary || {};
   const cleanMarkets = metricNumber(
-    activeSummary.algorithm_admitted_markets
-      ?? activeSummary.validated_replay_markets
+    activeSummary.validated_replay_markets
+      ?? activeSummary.algorithm_admitted_markets
       ?? activeSummary.admitted_markets
       ?? activeSummary.clean_markets_scanned
       ?? activeSummary.complete_series_markets,
@@ -4833,6 +4833,9 @@ function renderAllBacktestsSummary(rows) {
   const wonRows = boughtRows.filter((row) => row.outcome_win);
   const chartCost = boughtRows.reduce((sum, row) => sum + (metricNumber(row.filled_cost) ?? 0), 0);
   const chartRoi = chartCost > 0 ? chartPnl / chartCost : null;
+  const chartScopeText = rows.length === perf.cleanMarkets
+    ? "Every validated replay market is charted in the shipped 5m series."
+    : "This filter shows a subset of charted markets; P&L and return above use the full validated replay.";
   const signalItems = [
     ["Validated markets", fmt.format(perf.cleanMarkets)],
     ["Charted markets", fmt.format(rows.length)],
@@ -4857,7 +4860,7 @@ function renderAllBacktestsSummary(rows) {
     <div class="decision-block decision-rule">
       <span class="decision-kicker">${escapeHtml(backtestFilterTitle())}</span>
       <strong>${escapeHtml(`${fmt.format(rows.length)} charted market series`)}</strong>
-      <span>${escapeHtml("The chart is a browser-sized subset; the P&L and return use the full validated replay.")}</span>
+      <span>${escapeHtml(chartScopeText)}</span>
     </div>
     <div class="decision-block decision-signals">
       ${signalItems}
