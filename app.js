@@ -242,7 +242,10 @@ function configuredPaperEdgeId() {
 function loadJson(path) {
   const separator = String(path).includes("?") ? "&" : "?";
   return fetch(`${path}${separator}v=${encodeURIComponent(DASHBOARD_DATA_VERSION)}`, {
-    cache: "default",
+    cache: "no-cache",
+    headers: {
+      "Cache-Control": "no-cache",
+    },
   }).then((response) => {
     if (!response.ok) throw new Error(`${path} returned ${response.status}`);
     return response.json();
